@@ -27,7 +27,7 @@ class Student(models.Model):
     updated_At = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.full_name} -{self.ward}"
+        return f"{self.full_name} -{self.is_verified}"
     def has_active_award(self):
         return bool(self.active_award)
 
