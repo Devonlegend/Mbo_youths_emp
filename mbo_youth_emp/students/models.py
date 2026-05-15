@@ -2,16 +2,16 @@ from django.db import models
 import uuid
 
 WARD_CHOICES = [
-    ('effiat','Effiat'),
-    ('ewang','Ewang'),
-    ('ebughu','Ebughu'),
-    ('uda','Uda'),
-    ('unyene','Unyene'),
-    
-
-
-
-
+    ('efiat','Efiat'),
+    ('efiat II','Efiat II'),
+    ('enwang I','Enwang I'),
+    ('enwang II','Enwang II'),
+    ('ebughu I','Ebughu I'),
+    ('ebughu II','Ebughu II'),
+    ('ibaka','Ibaka'),
+    ('uda I','Uda I'),
+    ('uda II','Uda II'),
+    ('udesi','Udesi'),
 ]
 
 class Student(models.Model):
@@ -20,7 +20,7 @@ class Student(models.Model):
     ward = models.CharField(max_length=40)
     nin_hash = models.CharField(max_length=64,unique=True)
     cgpa = models.DecimalField(max_digits=4, decimal_places=2, null=True ,blank=True)
-    level = models.IntegerField
+    level = models.IntegerField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     active_award = models.CharField(max_length=300 ,blank = True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -31,7 +31,7 @@ class Student(models.Model):
     def has_active_award(self):
         return bool(self.active_award)
 
-class Academic_record(models.Model):
+class AcademicRecord(models.Model):
     student = models.ForeignKey(Student,on_delete=models.CASCADE)
     institution_name = models.CharField(max_length=100)
     course_of_study = models.CharField(max_length=100)
