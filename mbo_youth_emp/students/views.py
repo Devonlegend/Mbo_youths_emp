@@ -1,81 +1,77 @@
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
-from django.http import JsonResponse
-from .models import Student
+from .models import Student, AcademicRecord
+from .serializers import StudentSerializer, StudentCreateSerializer, AcademicRecordSerializer
+from accounts.permissions import IsAdmin, IsStudent, IsVerifier
 
-def students_list(request):
-    students = Student.object.all()
 
-    data = []
-    for student in students:
-        data.append({
-            "id": str(student.id),
-            "full_name": student.full_name,
-            "ward": student.ward,
-            "level": student.level,
-            "cgpa": float(student.cgpa) if student.cgpa else None,
-            "is_verified": student.is_verified,
-        })
-    return JsonResponse({students:data})
+class StudentViewSet(viewsets.ModelViewSet):
+    queryset           = Student.objects.all().order_by('full_name')
+    serializer_class   = StudentSerializer
+    permission_classes = [IsAuthenticated]
 
-def student_detail(request, student_id):
-    try:
-        student = Student.object.get(id = student_id)
-    except Student.DoesNotExist:
-        return JsonResponse({"errer":"Student not found"}, status=404)
-    
-    data ={
-        "id": str(student.id),
-        "full_name": student.full_name,
-        "ward": student.ward,
-        "level": student.level,
-        "cgpa": float(student.cgpa) if student.cgpa else None,
-        "is_verified": student.is_verified,
-        "has_active_award":student.has_active_award(),
-        "active_award": student.active_award,
-    }
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return StudentCreateSerializer
+        return StudentSerializer
 
-    return JsonResponse(data)
+    def get_permissions(self):
+        """
+        Different actions need different permissions.
+        Students can only see their own profile.
+        Admins can see everyone.
+        """
+        if self.action in ['list', 'destroy']:
+            return [IsAdmin()]
+        return [IsAuthenticated()]
 
-from django.http import JsonResponse
-from .models import Student
+    @action(detail=True, methods=['get'], url_path='eligibility-check')
+    def eligibility_check(self, request, pk=None):
+        student = self.get_object()
 
-def check_eligibility(request, student_id):
-  
-    student = Student.objects.filter(id=student_id).first()
-    if not student:
-        return JsonResponse({"error": "Student not found"}, status=404)
+        try:
+            min_cgpa       = float(request.query_params.get('min_cgpa', 2.20))
+            required_level = request.query_params.get('level', '')
+        except ValueError:
+            return Response({"error": "Invalid parameters"}, status=400)
 
-    # Get scheme rules from the URL query parameters
-    try:
-        min_cgpa      = float(request.GET.get("min_cgpa", 2.20))
-        required_level = request.GET.get("level", "")
-    except ValueError:
-        return JsonResponse({"error": "Invalid parameters"}, status=400)
+        
 
-    student_cgpa = float(student.cgpa) if student.cgpa else 0.0
-    cgpa_passed  = student_cgpa >= min_cgpa
-    level_passed = (student.level == required_level) if required_level else True
-    has_conflict = student.has_active_award()
-    eligible = cgpa_passed and level_passed and not has_conflict
+        student_cgpa = float(student.cgpa) if student.cgpa else 0.0
+        cgpa_ok      = student_cgpa >= min_cgpa
+        level_ok     = (student.level == required_level) if required_level else True
+        conflict     = student.has_active_award()
 
-    return JsonResponse({
-        "student":    student.full_name,
-        "ward":       student.ward,
-        "eligible":   eligible,
-        "checks": {
-            "cgpa": {
-                "passed":             cgpa_passed,
-                "student_cgpa":       student_cgpa,
-               
-            },
-            "level": {
-                "passed":         level_passed,
-                "student_level":  student.level,
-                "required_level": required_level,
-            },
-            "conflict": {
-                "has_conflict":  has_conflict,
-                "active_award":  student.active_award,
+        return Response({
+            "student":  student.full_name,
+            "eligible": cgpa_ok and level_ok and not conflict,
+            "checks": {
+                "cgpa":     {"passed": cgpa_ok,  "value": student_cgpa, "required": min_cgpa},
+                "level":    {"passed": level_ok, "value": student.level, "required": required_level},
+                "conflict": {"has_conflict": conflict, "active_award": student.active_award},
             }
-        }
-    })
+        })
+
+    @action(detail=False, methods=['get'], url_path='stats')
+    def stats(self, request):
+        """GET /students/stats/"""
+        from django.db.models import Count
+
+        total        = Student.objects.count()
+        verified     = Student.objects.filter(is_verified=True).count()
+        with_award   = Student.objects.exclude(active_award='').count()
+
+        by_ward = {}
+        for student in Student.objects.values('ward').annotate(count=Count('id')):
+            by_ward[student['ward']] = student['count']
+
+        return Response({
+            "total_students":    total,
+            "verified":          verified,
+            "unverified":        total - verified,
+            "with_active_award": with_award,
+            "by_ward":           by_ward,
+        })
