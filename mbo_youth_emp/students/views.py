@@ -19,11 +19,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         return StudentSerializer
 
     def get_permissions(self):
-        """
-        Different actions need different permissions.
-        Students can only see their own profile.
-        Admins can see everyone.
-        """
+       
         if self.action in ['list', 'destroy']:
             return [IsAdmin()]
         return [IsAuthenticated()]
