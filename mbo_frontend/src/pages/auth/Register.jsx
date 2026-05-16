@@ -37,6 +37,9 @@ export default function Register() {
         password: data.password,
         role: 'student',
       })
+      // Store tokens before calling /me so the interceptor attaches the header
+      localStorage.setItem('access_token',  res.data.tokens.access)
+      localStorage.setItem('refresh_token', res.data.tokens.refresh)
       const me = await authAPI.me()
       login(res.data.tokens, me.data)
       navigate('/student')
