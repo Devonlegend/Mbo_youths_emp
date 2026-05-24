@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import {
   Eye, EyeOff, User, Mail, Phone, CreditCard,
-  Calendar, MapPin, ChevronDown, ArrowRight,
-  ShieldCheck, Check, X
+  MapPin, ChevronDown, ArrowRight,
+  ShieldCheck, Check, X, UploadCloud, FileText, Trash2, RotateCcw
 } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -20,6 +20,8 @@ const months = [
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 60 }, (_, i) => currentYear - i);
 
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+
 function PasswordStrength({ password }) {
   const checks = [
     { label: "At least 8 characters", pass: password.length >= 8 },
@@ -30,7 +32,7 @@ function PasswordStrength({ password }) {
   const score = checks.filter((c) => c.pass).length;
   const strength = score <= 1 ? "Weak" : score === 2 ? "Fair" : score === 3 ? "Good" : "Strong";
   const colors = { Weak: "#ef4444", Fair: "#f59e0b", Good: "#3b82f6", Strong: "#15803d" };
-  if (!password) return null;
+  if (!password || score === 4) return null;
   return (
     <div className={styles.strengthWrap}>
       <div className={styles.strengthRow}>
@@ -58,9 +60,18 @@ function PasswordStrength({ password }) {
 }
 
 export default function RegisterPage() {
+  const [step, setStep] = useState("register"); // "register" | "verify"
+  const [verifyMethod, setVerifyMethod] = useState("email"); // "email" | "phone"
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [otpError, setOtpError] = useState("");
+  const [countdown, setCountdown] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+  const inputs = useRef([]);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [certificate, setCertificate] = useState(null);
+  const [certError, setCertError] = useState("");
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "",
     nin: "", dobDay: "", dobMonth: "", dobYear: "",
@@ -73,6 +84,18 @@ export default function RegisterPage() {
     setErrors({ ...errors, [e.target.name]: "" });
   }
 
+  function handleCertificateChange(e) {
+    const file = e.target.files[0];
+    setCertError("");
+    if (!file) return;
+    if (file.type !== "application/pdf") { setCertError("Only PDF files are allowed."); e.target.value = ""; return; }
+    if (file.size > MAX_FILE_SIZE) { setCertError("File size must not exceed 2MB."); e.target.value = ""; return; }
+    setCertificate(file);
+  }
+
+  function removeCertificate() { setCertificate(null); setCertError(""); }
+  function formatFileSize(bytes) { return (bytes / 1024).toFixed(1) + " KB"; }
+
   function validate() {
     const e = {};
     if (!form.firstName.trim()) e.firstName = "Required";
@@ -82,13 +105,26 @@ export default function RegisterPage() {
     if (!form.phone.trim()) e.phone = "Required";
     if (!form.nin.trim()) e.nin = "Required";
     else if (form.nin.length !== 11) e.nin = "Must be exactly 11 digits";
-    if (!form.dobDay || !form.dobMonth || !form.dobYear) e.dob = "Please select a complete date of birth";
+
+  if (!form.dobDay || !form.dobMonth || !form.dobYear) {
+  e.dob = "Please select a complete date of birth";
+  } else {
+  const monthIndex = months.indexOf(form.dobMonth);
+  const dob = new Date(Number(form.dobYear), monthIndex, Number(form.dobDay));
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  if (age < 18) e.dob = "You must be at least 18 years old to register.";
+  }
+
     if (!form.gender) e.gender = "Required";
     if (!form.lga) e.lga = "Required";
     if (!form.password) e.password = "Required";
     else if (form.password.length < 8) e.password = "Minimum 8 characters";
     if (!form.confirm) e.confirm = "Required";
     else if (form.password !== form.confirm) e.confirm = "Passwords do not match";
+    if (!certificate) e.certificate = "Certificate of Origin is required.";
     return e;
   }
 
@@ -96,34 +132,167 @@ export default function RegisterPage() {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-    setSubmitted(true);
+    // API call goes here
+    setStep("verify");
+    startCountdown();
   }
 
-  if (submitted) {
+  function startCountdown() {
+    setCountdown(60);
+    setCanResend(false);
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) { clearInterval(interval); setCanResend(true); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+
+  function handleOtpChange(index, value) {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
+    setOtpError("");
+    if (value && index < 5) inputs.current[index + 1]?.focus();
+  }
+
+  function handleOtpKeyDown(index, e) {
+    if (e.key === "Backspace" && !otp[index] && index > 0) inputs.current[index - 1]?.focus();
+  }
+
+  function handlePaste(e) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const newOtp = [...otp];
+    pasted.split("").forEach((char, i) => { newOtp[i] = char; });
+    setOtp(newOtp);
+    inputs.current[Math.min(pasted.length, 5)]?.focus();
+  }
+
+  function handleResend() {
+    if (!canResend) return;
+    setOtp(["", "", "", "", "", ""]);
+    setOtpError("");
+    startCountdown();
+    inputs.current[0]?.focus();
+    // Resend API call goes here
+  }
+
+  function handleOtpSubmit(e) {
+    e.preventDefault();
+    const code = otp.join("");
+    if (code.length < 6) { setOtpError("Please enter the complete 6-digit code."); return; }
+    // Verify API call goes here
+  }
+
+  // ── VERIFY STEP ──────────────────────────────────────────────────────────
+  if (step === "verify") {
     return (
       <div className={styles.page}>
         <div className={styles.main}>
           <div className={styles.card}>
-            <div className={styles.success}>
-              <div className={styles.successIconWrap}>
-                <ShieldCheck size={36} color="#15803d" strokeWidth={1.5} />
-              </div>
-              <h2 className={styles.successTitle}>Account Created!</h2>
-              <p className={styles.successDesc}>
-                Your account has been successfully created.
-                You can now sign in and start your application.
-              </p>
-              <Link href="/login" className={styles.successBtn}>
-                Sign In Now <ArrowRight size={16} strokeWidth={2} />
+
+            {/* LOGO */}
+            <div className={styles.logoWrap}>
+              <Link href="/" className={styles.logo}>
+                <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
+                <div className={styles.logoText}>
+                  <span className={styles.logoName}>RMHCDT</span>
+                  <span className={styles.logoSub}>Youth Portal</span>
+                </div>
               </Link>
-              <Link href="/" className={styles.successBack}>Back to Home</Link>
             </div>
+
+            {/* HEADER */}
+            <div className={styles.cardHeader}>
+              <h1 className={styles.cardTitle}>Verify Account</h1>
+              <p className={styles.cardSubtitle}>
+                Choose how you want to receive your verification code.
+              </p>
+            </div>
+
+            <form className={styles.form} onSubmit={handleOtpSubmit}>
+
+              {/* METHOD TOGGLE */}
+              <div className={styles.sectionLabel}>Verification Method</div>
+              <div className={styles.verifyToggle}>
+                <button
+                  type="button"
+                  onClick={() => { setVerifyMethod("email"); setOtp(["","","","","",""]); setOtpError(""); startCountdown(); }}
+                  className={styles.verifyToggleBtn + (verifyMethod === "email" ? " " + styles.verifyToggleActive : "")}
+                >
+                  <Mail size={15} /> Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setVerifyMethod("phone"); setOtp(["","","","","",""]); setOtpError(""); startCountdown(); }}
+                  className={styles.verifyToggleBtn + (verifyMethod === "phone" ? " " + styles.verifyToggleActive : "")}
+                >
+                  <Phone size={15} /> Phone
+                </button>
+              </div>
+
+              <span className={styles.hint} style={{ textAlign: "center" }}>
+                {verifyMethod === "email"
+                  ? <>Code sent to <strong style={{ color: "#0f172a" }}>{form.email}</strong></>
+                  : <>Code sent to <strong style={{ color: "#0f172a" }}>{form.phone}</strong></>
+                }
+              </span>
+
+              {/* OTP INPUTS */}
+              <div className={styles.sectionLabel}>Enter Code</div>
+              <div className={styles.otpWrap}>
+                {otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => (inputs.current[i] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    onPaste={handlePaste}
+                    className={styles.otpInput + (otpError ? " " + styles.inputError : "")}
+                  />
+                ))}
+              </div>
+
+              {otpError && <span className={styles.error} style={{ textAlign: "center" }}>{otpError}</span>}
+
+              <span className={styles.hint} style={{ textAlign: "center" }}>
+                {canResend ? (
+                  <button type="button" onClick={handleResend} className={styles.resendBtn}>
+                    <RotateCcw size={13} /> Resend Code
+                  </button>
+                ) : (
+                  <>Resend code in <strong style={{ color: "#0f172a" }}>{countdown}s</strong></>
+                )}
+              </span>
+
+              <button type="submit" className={styles.submitBtn}>
+                Verify Account <ArrowRight size={15} strokeWidth={2} />
+              </button>
+
+              <button type="button" onClick={() => setStep("register")} className={styles.signinBtn}>
+                Back to Registration
+              </button>
+
+            </form>
+
+            <div className={styles.bottomBadge}>
+              <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
+              <span>Secured under the Petroleum Industry Act, 2021</span>
+            </div>
+
           </div>
         </div>
       </div>
     );
   }
 
+  // ── REGISTER STEP ─────────────────────────────────────────────────────────
   return (
     <div className={styles.page}>
       <div className={styles.main}>
@@ -160,9 +329,11 @@ export default function RegisterPage() {
                 <label className={styles.label}>First Name</label>
                 <div className={styles.inputWrap}>
                   <User size={15} color="#94a3b8" className={styles.inputIcon} />
+                  
                   <input name="firstName" value={form.firstName} onChange={handleChange}
                     placeholder="First name"
                     className={styles.input + (errors.firstName ? " " + styles.inputError : "")} />
+
                 </div>
                 {errors.firstName && <span className={styles.error}>{errors.firstName}</span>}
               </div>
@@ -193,8 +364,10 @@ export default function RegisterPage() {
                 <div className={styles.inputWrap}>
                   <Phone size={15} color="#94a3b8" className={styles.inputIcon} />
                   <input name="phone" value={form.phone} onChange={handleChange}
-                    placeholder="08012345678"
-                    className={styles.input + (errors.phone ? " " + styles.inputError : "")} />
+                  placeholder="08012345678" maxLength={11}
+                  style={{ paddingLeft: "34px", paddingRight: "40px" }}
+                  className={styles.input + (errors.phone ? " " + styles.inputError : "")} />
+                  <span className={styles.ninCount}>{form.phone.length}/11</span>
                 </div>
                 {errors.phone && <span className={styles.error}>{errors.phone}</span>}
               </div>
@@ -213,10 +386,10 @@ export default function RegisterPage() {
               </div>
               {errors.nin
                 ? <span className={styles.error}>{errors.nin}</span>
-                : <span className={styles.hint}>One NIN per account — used to verify your identity.</span>}
+                : <span className={styles.hint}>One NIN per account used to verify your identity.</span>}
             </div>
 
-            {/* DATE OF BIRTH — 3 SELECTS */}
+            {/* DATE OF BIRTH */}
             <div className={styles.field}>
               <label className={styles.label}>Date of Birth</label>
               <div className={styles.dobRow}>
@@ -255,7 +428,7 @@ export default function RegisterPage() {
                   <ChevronDown size={15} color="#94a3b8" className={styles.inputIconRight} />
                   <select name="gender" value={form.gender} onChange={handleChange}
                     className={styles.select + (errors.gender ? " " + styles.inputError : "")}>
-                    <option value="">Select gender</option>
+                    <option value="">Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
                   </select>
@@ -275,6 +448,33 @@ export default function RegisterPage() {
                 </div>
                 {errors.lga && <span className={styles.error}>{errors.lga}</span>}
               </div>
+            </div>
+
+            {/* DOCUMENTS */}
+            <div className={styles.sectionLabel}>Documents</div>
+            <div className={styles.field}>
+              <label className={styles.label}>Certificate of Origin</label>
+              {!certificate ? (
+                <label className={styles.uploadArea + (errors.certificate ? " " + styles.inputError : "")}>
+                  <input type="file" accept="application/pdf" onChange={handleCertificateChange} style={{ display: "none" }} />
+                  <UploadCloud size={22} color="#94a3b8" />
+                  <span className={styles.uploadTitle}>Click to upload PDF</span>
+                  <span className={styles.uploadHint}>PDF only · Max 2MB</span>
+                </label>
+              ) : (
+                <div className={styles.filePreview}>
+                  <FileText size={20} color="#15803d" />
+                  <div className={styles.fileInfo}>
+                    <span className={styles.fileName}>{certificate.name}</span>
+                    <span className={styles.fileSize}>{formatFileSize(certificate.size)}</span>
+                  </div>
+                  <button type="button" onClick={removeCertificate} className={styles.fileRemove}>
+                    <Trash2 size={15} color="#ef4444" />
+                  </button>
+                </div>
+              )}
+              {certError && <span className={styles.error}>{certError}</span>}
+              {errors.certificate && !certError && <span className={styles.error}>{errors.certificate}</span>}
             </div>
 
             {/* SECURITY */}
@@ -321,10 +521,8 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            {/* SUBMIT */}
             <button type="submit" className={styles.submitBtn}>
-              Create Account
-              <ArrowRight size={15} strokeWidth={2} />
+              Create Account <ArrowRight size={15} strokeWidth={2} />
             </button>
           </form>
 
@@ -335,12 +533,10 @@ export default function RegisterPage() {
             <span className={styles.dividerLine} />
           </div>
 
-          {/* SIGN IN */}
           <Link href="/login" className={styles.signinBtn}>
             Sign In to Your Account
           </Link>
 
-          {/* BOTTOM BADGE */}
           <div className={styles.bottomBadge}>
             <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
             <span>Secured under the Petroleum Industry Act, 2021</span>
