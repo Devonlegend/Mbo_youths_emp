@@ -20,7 +20,7 @@ const faqs = [
   },
   {
     q: "What if I received support from another organisation?",
-    a: "You must declare it in your self-declaration. The system will flag it for administrative review. This does not automatically disqualify you — an administrator will review the details and make a documented decision.",
+    a: "You must declare it in your self-declaration. The system will flag it for administrative review. This does not automatically disqualify you an administrator will review the details and make a documented decision.",
     color: "#1d4ed8",
     bg: "#eff6ff",
     border: "#bfdbfe",

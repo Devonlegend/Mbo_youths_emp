@@ -13,7 +13,7 @@ export default function CTABanner() {
         <div className={styles.floatingIcons}>
           {icons.map((Icon, i) => (
             <div key={i} className={styles.floatingIcon} style={{ animationDelay: (i * 0.4) + "s" }}>
-              <Icon size={20} color="rgba(74, 222, 128, 0.4)" strokeWidth={1.5} />
+              <Icon size={20} color="rgba(183, 242, 204)" strokeWidth={1.5} />
             </div>
           ))}
         </div>

@@ -1,0 +1,413 @@
+/* ── WRAPPER ─────────────────────────────────────────────────────────────── */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── IDLE TRIGGER BUTTON ─────────────────────────────────────────────────── */
+.triggerBtn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.triggerBtn:hover {
+  border-color: #15803d;
+  background: #f0fdf4;
+}
+
+.triggerError {
+  border-color: #ef4444 !important;
+}
+
+.triggerIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(21, 128, 61, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.triggerText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.triggerTitle {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.triggerHint {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.triggerBadge {
+  font-family: var(--font-jakarta), sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #15803d;
+  background: rgba(21, 128, 61, 0.08);
+  border: 1px solid rgba(21, 128, 61, 0.2);
+  border-radius: 5px;
+  padding: 3px 7px;
+}
+
+/* ── ERROR BOX ───────────────────────────────────────────────────────────── */
+.camErrorBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.retryBtn {
+  margin-left: auto;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── CAMERA VIEWFINDER ───────────────────────────────────────────────────── */
+.cameraWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid #e2e8f0;
+  background: #000;
+}
+
+.viewfinder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: #111;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Mirror for natural selfie feel */
+  transform: scaleX(-1);
+}
+
+/* Corner bracket guides */
+.bracket {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  z-index: 3;
+}
+
+.bracketTL { top: 12px; left: 12px; border-top: 2.5px solid #fbbf24; border-left: 2.5px solid #fbbf24; border-radius: 3px 0 0 0; }
+.bracketTR { top: 12px; right: 12px; border-top: 2.5px solid #fbbf24; border-right: 2.5px solid #fbbf24; border-radius: 0 3px 0 0; }
+.bracketBL { bottom: 12px; left: 12px; border-bottom: 2.5px solid #fbbf24; border-left: 2.5px solid #fbbf24; border-radius: 0 0 0 3px; }
+.bracketBR { bottom: 12px; right: 12px; border-bottom: 2.5px solid #fbbf24; border-right: 2.5px solid #fbbf24; border-radius: 0 0 3px 0; }
+
+/* Oval face guide */
+.ovalGuide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -54%);
+  width: 52%;
+  aspect-ratio: 3 / 4;
+  border: 2px dashed rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Hint overlay */
+.hintOverlay {
+  position: absolute;
+  bottom: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  border-radius: 20px;
+  padding: 6px 14px;
+  white-space: nowrap;
+  z-index: 4;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fbbf24;
+}
+
+/* Instruction strip at bottom of viewfinder */
+.instructionStrip {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.65));
+  padding: 20px 16px 10px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  z-index: 3;
+}
+
+/* ── CONTROLS ────────────────────────────────────────────────────────────── */
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #0f172a;
+}
+
+.cancelBtn {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 0.2s;
+  width: 72px;
+}
+
+.cancelBtn:hover { color: rgba(255,255,255,0.9); }
+
+/* Shutter button */
+.shutterBtn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.shutterBtn:hover { transform: scale(1.05); }
+.shutterBtn:active { transform: scale(0.93); }
+.shutterBtn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.shutterInner {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: background 0.15s;
+}
+
+.shutterBtn:hover .shutterInner { background: #f0fdf4; }
+
+/* ── PREVIEW ─────────────────────────────────────────────────────────────── */
+.previewWrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f8fafc;
+  border: 1.5px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.previewCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.previewImgWrap {
+  position: relative;
+  width: 64px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #bbf7d0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.previewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.previewZoom {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.previewImgWrap:hover .previewZoom {
+  background: rgba(0,0,0,0.35);
+}
+
+.previewMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.previewLabel {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.previewSub {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 9px;
+  color: #94a3b8;
+}
+
+.previewStatus {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+}
+
+.previewStatus {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  flex: 1;
+  gap: 6px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #15803d;
+}
+
+.retakeBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  padding: 6px 11px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.retakeBtn:hover {
+  border-color: #15803d;
+  color: #15803d;
+  background: #f0fdf4;
+}
+
+/* ── LIGHTBOX ────────────────────────────────────────────────────────────── */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 24px;
+  cursor: pointer;
+}
+
+.lightboxClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.lightboxClose:hover { background: rgba(255,255,255,0.25); }
+
+.lightboxImg {
+  max-width: 320px;
+  max-height: 80vh;
+  width: 100%;
+  border-radius: 14px;
+  object-fit: contain;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+}
+
+/* ── ERROR TEXT ──────────────────────────────────────────────────────────── */
+.errorText {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ef4444;
+}
