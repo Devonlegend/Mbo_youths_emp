@@ -210,6 +210,21 @@
   padding-right: 36px;
 }
 
+/* API ERROR BANNER */
+.apiBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  color: #dc2626;
+  font-weight: 500;
+}
+
 /* DATE INPUT — hides native calendar icon, uses custom icon on left */
 .inputDate {
   padding-left: 34px;

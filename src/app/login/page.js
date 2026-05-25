@@ -6,6 +6,7 @@ import {
   ShieldCheck, AlertCircle, RotateCcw
 } from "lucide-react";
 import styles from "./page.module.css";
+import { login, otpLogin, otpResend } from "@/services/api";
 
 export default function LoginPage() {
   const [step, setStep] = useState("login");
@@ -62,18 +63,26 @@ export default function LoginPage() {
     setApiError("");
 
     try {
-      // TODO: API call — POST /auth/login/ with { email, password }
-      // const res = await login({ email: form.email, password: form.password });
-      // Backend should return { otp_required: true } or similar
-      setStep("otp");
-      startCountdown();
-    } catch (err) {
-      setApiError(
-        err?.detail ||
-        err?.non_field_errors?.[0] ||
-        "Invalid email or password. Please try again."
-      );
-    } finally {
+  const { data } = await login({ email: form.email, password: form.password });
+  if (data.tokens) {
+    // backend returned tokens directly, no OTP needed
+    localStorage.setItem("access_token", data.tokens.access);
+    localStorage.setItem("refresh_token", data.tokens.refresh);
+    window.location.href = "/dashboard";
+  } else {
+    // backend wants OTP verification
+    setStep("otp");
+    startCountdown();
+  }
+}
+    catch (err) {
+    setApiError(
+      err?.response?.data?.error ||
+      err?.response?.data?.detail ||
+      "Invalid email or password. Please try again."
+    );
+  }
+    finally {
       setLoading(false);
     }
   }
@@ -100,14 +109,19 @@ export default function LoginPage() {
     inputs.current[Math.min(pasted.length, 5)]?.focus();
   }
 
-  function handleResend() {
-    if (!canResend) return;
-    setOtp(["", "", "", "", "", ""]);
-    setOtpError("");
-    startCountdown();
-    inputs.current[0]?.focus();
-    // TODO: API call — POST /auth/otp/resend/ with { email: form.email, method: verifyMethod }
+  async function handleResend() {
+  if (!canResend) return;
+  setOtp(["", "", "", "", "", ""]);
+  setOtpError("");
+  startCountdown();
+  inputs.current[0]?.focus();
+  
+  try {
+    await otpResend({ email: form.email });
+  } catch (err) {
+    setOtpError(err?.response?.data?.message || "Failed to resend code. Please try again.");
   }
+}
 
   function switchMethod(method) {
     setVerifyMethod(method);
@@ -127,18 +141,19 @@ export default function LoginPage() {
     setOtpError("");
 
     try {
-      // TODO: API call — POST /auth/otp/login/ with { email: form.email, code, method: verifyMethod }
-      // const res = await otpLogin({ email: form.email, code, method: verifyMethod });
-      // Save tokens from response
-      // localStorage.setItem("access_token", res.access_token);
-      // localStorage.setItem("refresh_token", res.refresh_token);
+      const { data } = await otpLogin({ email: form.email, code });
+      localStorage.setItem("access_token", data.tokens.access);
+      localStorage.setItem("refresh_token", data.tokens.refresh);
       window.location.href = "/dashboard";
-    } catch (err) {
-      setOtpError(
-        err?.detail ||
-        "Invalid or expired code. Please try again."
-      );
-    } finally {
+    }
+    catch (err) {
+  setOtpError(
+    err?.response?.data?.error ||
+    err?.response?.data?.detail ||
+    "Invalid or expired code. Please try again."
+  );
+}
+    finally {
       setLoading(false);
     }
   }

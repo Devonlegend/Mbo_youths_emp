@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   Eye, EyeOff, User, Mail, Phone, CreditCard,
   MapPin, ChevronDown, ArrowRight,
-  ShieldCheck, Check, X, UploadCloud, FileText, Trash2, RotateCcw
+  ShieldCheck, Check, X, UploadCloud, FileText, AlertCircle, Trash2, RotateCcw
 } from "lucide-react";
 import styles from "./page.module.css";
 import PassportCapture from "@/components/PassportCapture";
@@ -61,7 +61,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [certificate, setCertificate] = useState(null);
-  const [passport, setPassport] = useState(null);
+  const [passport, setPassport] = useState(null); // File | null
   const [certError, setCertError] = useState("");
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "",
@@ -69,6 +69,8 @@ export default function RegisterPage() {
     password: "", confirm: "",
   });
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -119,7 +121,6 @@ export default function RegisterPage() {
   function validate() {
     const e = {};
     if (!form.firstName.trim()) e.firstName = "Required";
-    if (!passport) e.passport = "Passport photo is required.";
     if (!form.lastName.trim()) e.lastName = "Required";
     if (!form.email.trim()) e.email = "Required";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email";
@@ -138,47 +139,48 @@ export default function RegisterPage() {
       if (age < 18) e.dob = "You must be at least 18 years old to register.";
     }
     if (!form.gender) e.gender = "Required";
-    if (!form.lga) e.lga = "Required";
+    if (!form.lga.trim()) e.lga = "Required";
     if (!form.ward.trim()) e.ward = "Required";
+    if (!passport) e.passport = "Passport photo is required.";
+    if (!certificate) e.certificate = "Certificate of Origin is required.";
     if (!form.password) e.password = "Required";
     else if (form.password.length < 8) e.password = "Minimum 8 characters";
     if (!form.confirm) e.confirm = "Required";
     else if (form.password !== form.confirm) e.confirm = "Passwords do not match";
-    if (!certificate) e.certificate = "Certificate of Origin is required.";
     return e;
   }
 
-  function handleSubmit(e) {
-  e.preventDefault();
-  const errs = validate();
-  if (Object.keys(errs).length > 0) { 
-    setErrors(errs); 
-    return; 
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
+    setLoading(true);
+    setApiError("");
+
+    try {
+      // TODO: API call — POST /api/auth/register (multipart/form-data)
+      const formData = new FormData();
+      Object.keys(form).forEach((key) => formData.append(key, form[key]));
+      if (passport) formData.append("passport", passport);       // File object from PassportCapture
+      if (certificate) formData.append("certificate", certificate);
+      // await registerUser(formData);
+
+      setStep("verify");
+      startCountdown();
+    } catch (err) {
+      setApiError(
+        err?.response?.data?.message ||
+        err?.detail ||
+        "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
-
-  // TODO: API call — POST /api/auth/register with form data + files
-  const formData = new FormData();
-  
-  // Append ALL text fields automatically
-  Object.keys(form).forEach(key => {
-    formData.append(key, form[key]);
-  });
-
-  if (passport) formData.append("passport", passport);
-  if (certificate) formData.append("certificate", certificate);
-
-  console.log("FormData ready with passport photo");
-
-  // TODO: Send to backend
-  // Example:
-  // axios.post('/api/auth/register', formData, {
-  //   headers: { "Content-Type": "multipart/form-data" }
-  // })
-
-  setStep("verify");
-  startCountdown();
-}
-
 
   function handleOtpChange(index, value) {
     if (!/^\d*$/.test(value)) return;
@@ -202,13 +204,39 @@ export default function RegisterPage() {
     inputs.current[Math.min(pasted.length, 5)]?.focus();
   }
 
+  async function handleOtpSubmit(e) {
+    e.preventDefault();
+    const code = otp.join("");
+    if (code.length < 6) {
+      setOtpError("Please enter the complete 6-digit code.");
+      return;
+    }
+
+    setLoading(true);
+    setOtpError("");
+
+    try {
+      // TODO: API call — POST /api/auth/verify-otp with { code, method: verifyMethod, email: form.email }
+      // await verifyOtp({ code, method: verifyMethod, email: form.email });
+      setStep("success");
+    } catch (err) {
+      setOtpError(
+        err?.response?.data?.message ||
+        err?.detail ||
+        "Invalid or expired code. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleResend() {
     if (!canResend) return;
     setOtp(["", "", "", "", "", ""]);
     setOtpError("");
     startCountdown();
     inputs.current[0]?.focus();
-    // TODO: API call — POST /api/auth/resend-otp with { method: verifyMethod, email: form.email, phone: form.phone }
+    // TODO: API call — POST /api/auth/resend-otp with { method: verifyMethod, email: form.email }
   }
 
   // SUCCESS STEP
@@ -217,7 +245,6 @@ export default function RegisterPage() {
       <div className={styles.page}>
         <div className={styles.main}>
           <div className={styles.card}>
-
             <div className={styles.logoWrap}>
               <Link href="/" className={styles.logo}>
                 <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
@@ -227,7 +254,6 @@ export default function RegisterPage() {
                 </div>
               </Link>
             </div>
-
             <div className={styles.success}>
               <div className={styles.successIconWrap}>
                 <Check size={32} color="#15803d" strokeWidth={2.5} />
@@ -241,12 +267,10 @@ export default function RegisterPage() {
               </Link>
               <Link href="/" className={styles.successBack}>Back to Home</Link>
             </div>
-
             <div className={styles.bottomBadge}>
               <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
               <span>Secured under the Petroleum Industry Act, 2021</span>
             </div>
-
           </div>
         </div>
       </div>
@@ -259,7 +283,6 @@ export default function RegisterPage() {
       <div className={styles.page}>
         <div className={styles.main}>
           <div className={styles.card}>
-
             <div className={styles.logoWrap}>
               <Link href="/" className={styles.logo}>
                 <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
@@ -269,16 +292,13 @@ export default function RegisterPage() {
                 </div>
               </Link>
             </div>
-
             <div className={styles.cardHeader}>
               <h1 className={styles.cardTitle}>Verify Account</h1>
               <p className={styles.cardSubtitle}>
                 Choose how you want to receive your verification code.
               </p>
             </div>
-
             <form className={styles.form} onSubmit={handleOtpSubmit}>
-
               <div className={styles.sectionLabel}>Verification Method</div>
               <div className={styles.verifyToggle}>
                 <button
@@ -298,14 +318,9 @@ export default function RegisterPage() {
                   <span style={{ fontSize: "10px", color: "#94a3b8", fontWeight: 500 }}>(Soon)</span>
                 </button>
               </div>
-
               <span className={styles.hint} style={{ textAlign: "center" }}>
-                {verifyMethod === "email"
-                  ? <>Code sent to <strong style={{ color: "#0f172a" }}>{form.email}</strong></>
-                  : <>Code sent to <strong style={{ color: "#0f172a" }}>{form.phone}</strong></>
-                }
+                Code sent to <strong style={{ color: "#0f172a" }}>{form.email}</strong>
               </span>
-
               <div className={styles.sectionLabel}>Enter Code</div>
               <div className={styles.otpWrap}>
                 {otp.map((digit, i) => (
@@ -323,11 +338,9 @@ export default function RegisterPage() {
                   />
                 ))}
               </div>
-
               {otpError && (
                 <span className={styles.error} style={{ textAlign: "center" }}>{otpError}</span>
               )}
-
               <span className={styles.hint} style={{ textAlign: "center" }}>
                 {canResend ? (
                   <button type="button" onClick={handleResend} className={styles.resendBtn}>
@@ -337,11 +350,9 @@ export default function RegisterPage() {
                   <>Resend code in <strong style={{ color: "#0f172a" }}>{countdown}s</strong></>
                 )}
               </span>
-
-              <button type="submit" className={styles.submitBtn}>
-                Verify Account <ArrowRight size={15} strokeWidth={2} />
+              <button type="submit" className={styles.submitBtn} disabled={loading}>
+                {loading ? "Verifying..." : <>Verify Account <ArrowRight size={15} strokeWidth={2} /></>}
               </button>
-
               <button
                 type="button"
                 onClick={() => setStep("register")}
@@ -350,14 +361,11 @@ export default function RegisterPage() {
               >
                 Back to Registration
               </button>
-
             </form>
-
             <div className={styles.bottomBadge}>
               <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
               <span>Secured under the Petroleum Industry Act, 2021</span>
             </div>
-
           </div>
         </div>
       </div>
@@ -369,7 +377,6 @@ export default function RegisterPage() {
     <div className={styles.page} onTouchStart={dismissKeyboard}>
       <div className={styles.main}>
         <div className={styles.card}>
-
           <div className={styles.logoWrap}>
             <Link href="/" className={styles.logo}>
               <div className={styles.logoBox}>
@@ -381,15 +388,20 @@ export default function RegisterPage() {
               </div>
             </Link>
           </div>
-
           <div className={styles.cardHeader}>
             <h1 className={styles.cardTitle}>Create Account</h1>
             <p className={styles.cardSubtitle}>
               Join the portal to access scholarships, grants, training and funding.
             </p>
           </div>
-
           <form className={styles.form} onSubmit={handleSubmit}>
+
+            {apiError && (
+              <div className={styles.apiBanner}>
+                <AlertCircle size={16} color="#dc2626" strokeWidth={2} />
+                {apiError}
+              </div>
+            )}
 
             {/* PERSONAL */}
             <div className={styles.sectionLabel}>Personal Information</div>
@@ -546,54 +558,56 @@ export default function RegisterPage() {
             </div>
 
             {/* DOCUMENTS */}
-<div className={styles.sectionLabel}>Documents</div>
-{/* Passport Photo */}
-<div className={styles.field}>
-  <label className={styles.label}>Passport Photo</label>
-  <PassportCapture
-    value={passport}
-    onChange={(file) => {
-      setPassport(file);
-      setErrors((prev) => ({ ...prev, passport: "" }));
-    }}
-    error={errors.passport}
-  />
-  {!passport && !errors.passport && (
-    <span className={styles.hint}>
-      A clear front-facing photo · Used for identity verification only
-    </span>
-  )}
-</div>
-{/* Certificate of Origin */}
-<div className={styles.field}>
-  <label className={styles.label}>Certificate of Origin</label>
-  {!certificate ? (
-    <label className={`${styles.uploadArea}${errors.certificate ? " " + styles.inputError : ""}`}>
-      <input
-        type="file"
-        accept="application/pdf,image/jpeg,image/png"
-        onChange={handleCertificateChange}
-        style={{ display: "none" }}
-      />
-      <UploadCloud size={22} color="#94a3b8" />
-      <span className={styles.uploadTitle}>Click to upload</span>
-      <span className={styles.uploadHint}>PDF, JPG or PNG · Max 5MB</span>
-    </label>
-  ) : (
-    <div className={styles.filePreview}>
-      <FileText size={20} color="#15803d" />
-      <div className={styles.fileInfo}>
-        <span className={styles.fileName}>{certificate.name}</span>
-        <span className={styles.fileSize}>{formatFileSize(certificate.size)}</span>
-      </div>
-      <button type="button" onClick={removeCertificate} className={styles.fileRemove}>
-        <Trash2 size={15} color="#ef4444" />
-      </button>
-    </div>
-  )}
-  {certError && <span className={styles.error}>{certError}</span>}
-  {errors.certificate && !certError && <span className={styles.error}>{errors.certificate}</span>}
-</div>
+            <div className={styles.sectionLabel}>Documents</div>
+
+            {/* Passport Photo */}
+            <div className={styles.field}>
+              <label className={styles.label}>Passport Photo</label>
+              <PassportCapture
+                value={passport}
+                onChange={(file) => {
+                  setPassport(file);
+                  setErrors((prev) => ({ ...prev, passport: "" }));
+                }}
+                error={errors.passport}
+              />
+              {!passport && !errors.passport && (
+                <span className={styles.hint}>
+                  A clear front-facing photo · Used for identity verification only
+                </span>
+              )}
+            </div>
+
+            {/* Certificate of Origin */}
+            <div className={styles.field}>
+              <label className={styles.label}>Certificate of Origin</label>
+              {!certificate ? (
+                <label className={styles.uploadArea + (errors.certificate ? " " + styles.inputError : "")}>
+                  <input
+                    type="file"
+                    accept="application/pdf,image/jpeg,image/png"
+                    onChange={handleCertificateChange}
+                    style={{ display: "none" }}
+                  />
+                  <UploadCloud size={22} color="#94a3b8" />
+                  <span className={styles.uploadTitle}>Click to upload</span>
+                  <span className={styles.uploadHint}>PDF, JPG or PNG · Max 5MB</span>
+                </label>
+              ) : (
+                <div className={styles.filePreview}>
+                  <FileText size={20} color="#15803d" />
+                  <div className={styles.fileInfo}>
+                    <span className={styles.fileName}>{certificate.name}</span>
+                    <span className={styles.fileSize}>{formatFileSize(certificate.size)}</span>
+                  </div>
+                  <button type="button" onClick={removeCertificate} className={styles.fileRemove}>
+                    <Trash2 size={15} color="#ef4444" />
+                  </button>
+                </div>
+              )}
+              {certError && <span className={styles.error}>{certError}</span>}
+              {errors.certificate && !certError && <span className={styles.error}>{errors.certificate}</span>}
+            </div>
 
             {/* SECURITY */}
             <div className={styles.sectionLabel}>Account Security</div>
@@ -641,8 +655,8 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            <button type="submit" className={styles.submitBtn}>
-              Create Account <ArrowRight size={15} strokeWidth={2} />
+            <button type="submit" className={styles.submitBtn} disabled={loading}>
+              {loading ? "Creating Account..." : <>Create Account <ArrowRight size={15} strokeWidth={2} /></>}
             </button>
 
           </form>

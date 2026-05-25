@@ -34,6 +34,10 @@ export const otpLogin = (body) =>
   // body: { email, code } → returns simplejwt tokens
   api.post("/auth/otp/login/", body);
 
+export const otpResend = (body) =>
+  // body: { email }
+  api.post("/auth/otp/resend/", body);  
+
 export const getMe = () =>
   // returns user profile + role
   api.get("/auth/me/");
