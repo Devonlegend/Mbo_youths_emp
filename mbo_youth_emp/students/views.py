@@ -9,7 +9,7 @@ from accounts.permissions import IsAdmin, IsStudent, IsVerifier
 
 
 class StudentViewSet(viewsets.ModelViewSet):
-    queryset           = Student.objects.all().order_by('full_name')
+    queryset           = Student.objects.all().order_by('firstname')
     serializer_class   = StudentSerializer
     permission_classes = [IsAuthenticated]
 
@@ -75,3 +75,13 @@ class StudentViewSet(viewsets.ModelViewSet):
             "with_active_award": with_award,
             "by_ward":           by_ward,
         })
+
+    @action(detail=False, methods=['get'], url_path='me')
+    def me(self, request):
+        """GET /students/me/ — return current user's student profile."""
+        user = request.user
+        student = getattr(user, 'student_profile', None)
+        if student is None:
+            return Response({"error": "No student profile found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = self.get_serializer(student)
+        return Response(serializer.data)

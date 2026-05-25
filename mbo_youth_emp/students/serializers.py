@@ -19,7 +19,7 @@ class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Student
         fields = [
-            'id', 'full_name', 'ward', 'level', 'cgpa',
+            'id', 'firstname', 'lastname', 'ward', 'level', 'cgpa',
             'is_verified', 'is_host_community',
             'active_award', 'has_active_award', 'academic_records',
         ]
@@ -33,6 +33,6 @@ class StudentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Student
         fields = [
-            'full_name', 'ward', 'level', 'cgpa',
-            'has_disability', 'is_host_community',
+            'firstname', 'lastname', 'ward', 'level', 'cgpa',
+            'nin_hash', 'active_award'
         ] 

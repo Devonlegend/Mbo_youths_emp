@@ -18,8 +18,11 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         user = self.request.user
         # Students see only their own applications
         if user.role == 'student':
+            student_profile = getattr(user, 'student_profile', None)
+            if student_profile is None:
+                return Application.objects.none()
             return Application.objects.filter(
-                student__user=user
+                student=student_profile
             ).select_related('scheme', 'student')
         # Admins see everything
         return Application.objects.all().select_related('scheme', 'student')
@@ -138,21 +141,21 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         application.student.save()
 
         return Response({"message": "Waiver accepted. Application is now under review."})
-    
-@action(detail=True, methods=['post'], url_path='review')
-def review(self, request, pk=None):
-    """
-    POST /applications/{id}/review/
-    Admin reviews the application and approves or rejects it.
-    Body: { "approve": true/false, "notes": "optional notes" }
-    """
-    application = self.get_object()
 
-    if application.status not in [ApplicationStatus.SUBMITTED, ApplicationStatus.DOUBLE_DIP_FLAG]:
-        return Response({"error": "Only submitted applications can be reviewed"}, status=400)
+    @action(detail=True, methods=['post'], url_path='review')
+    def review(self, request, pk=None):
+        """
+        POST /applications/{id}/review/
+        Admin reviews the application and approves or rejects it.
+        Body: { "approve": true/false, "notes": "optional notes" }
+        """
+        application = self.get_object()
 
-    approve = request.data.get('approve')
-    notes   = request.data.get('notes', '')
+        if application.status not in [ApplicationStatus.SUBMITTED, ApplicationStatus.DOUBLE_DIP_FLAG]:
+            return Response({"error": "Only submitted applications can be reviewed"}, status=400)
 
-    if approve is None:
-        return Response({"error": "approve field is required and must be true or false"}, status=400)
+        approve = request.data.get('approve')
+        notes   = request.data.get('notes', '')
+
+        if approve is None:
+            return Response({"error": "approve field is required and must be true or false"}, status=400)

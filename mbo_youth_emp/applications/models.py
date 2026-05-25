@@ -17,12 +17,9 @@ class ApplicationStatus(models.TextChoices):
 
 class Application(models.Model):
     id              = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    student         = models.ForeignKey('students.Student', on_delete=models.CASCADE,
-                                         related_name='applications')
-    scheme          = models.ForeignKey('schemes.ScholarshipScheme', on_delete=models.CASCADE,
-                                         related_name='applications')
-    status          = models.CharField(max_length=30, choices=ApplicationStatus.choices,
-                                        default=ApplicationStatus.DRAFT)
+    student         = models.ForeignKey('students.Student', on_delete=models.CASCADE, related_name='applications')
+    scheme          = models.ForeignKey('schemes.ScholarshipScheme', on_delete=models.CASCADE, related_name='applications')
+    status          = models.CharField(max_length=30, choices=ApplicationStatus.choices, default=ApplicationStatus.DRAFT)
     submission_date = models.DateTimeField(null=True, blank=True)
 
     # Eligibility result — populated by EligibilityEngine
