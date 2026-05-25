@@ -7,6 +7,7 @@ import {
   ShieldCheck, Check, X, UploadCloud, FileText, Trash2, RotateCcw
 } from "lucide-react";
 import styles from "./page.module.css";
+import PassportCapture from "@/components/PassportCapture";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -60,6 +61,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [certificate, setCertificate] = useState(null);
+  const [passport, setPassport] = useState(null);
   const [certError, setCertError] = useState("");
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "",
@@ -117,6 +119,7 @@ export default function RegisterPage() {
   function validate() {
     const e = {};
     if (!form.firstName.trim()) e.firstName = "Required";
+    if (!passport) e.passport = "Passport photo is required.";
     if (!form.lastName.trim()) e.lastName = "Required";
     if (!form.email.trim()) e.email = "Required";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email";
@@ -146,14 +149,36 @@ export default function RegisterPage() {
   }
 
   function handleSubmit(e) {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-    // TODO: API call — POST /api/auth/register with form data + certificate file
-    // On success, proceed to OTP verification step
-    setStep("verify");
-    startCountdown();
+  e.preventDefault();
+  const errs = validate();
+  if (Object.keys(errs).length > 0) { 
+    setErrors(errs); 
+    return; 
   }
+
+  // TODO: API call — POST /api/auth/register with form data + files
+  const formData = new FormData();
+  
+  // Append ALL text fields automatically
+  Object.keys(form).forEach(key => {
+    formData.append(key, form[key]);
+  });
+
+  if (passport) formData.append("passport", passport);
+  if (certificate) formData.append("certificate", certificate);
+
+  console.log("FormData ready with passport photo");
+
+  // TODO: Send to backend
+  // Example:
+  // axios.post('/api/auth/register', formData, {
+  //   headers: { "Content-Type": "multipart/form-data" }
+  // })
+
+  setStep("verify");
+  startCountdown();
+}
+
 
   function handleOtpChange(index, value) {
     if (!/^\d*$/.test(value)) return;
@@ -184,15 +209,6 @@ export default function RegisterPage() {
     startCountdown();
     inputs.current[0]?.focus();
     // TODO: API call — POST /api/auth/resend-otp with { method: verifyMethod, email: form.email, phone: form.phone }
-  }
-
-  function handleOtpSubmit(e) {
-    e.preventDefault();
-    const code = otp.join("");
-    if (code.length < 6) { setOtpError("Please enter the complete 6-digit code."); return; }
-    // TODO: API call — POST /api/auth/verify-otp with { code, method: verifyMethod, email: form.email }
-    // On success, set step to "success"
-    setStep("success");
   }
 
   // SUCCESS STEP
@@ -530,31 +546,54 @@ export default function RegisterPage() {
             </div>
 
             {/* DOCUMENTS */}
-            <div className={styles.sectionLabel}>Documents</div>
-            <div className={styles.field}>
-              <label className={styles.label}>Certificate of Origin</label>
-              {!certificate ? (
-                <label className={styles.uploadArea + (errors.certificate ? " " + styles.inputError : "")}>
-                  <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={handleCertificateChange} style={{ display: "none" }} />
-                  <UploadCloud size={22} color="#94a3b8" />
-                  <span className={styles.uploadTitle}>Click to upload PDF</span>
-                  <span className={styles.uploadHint}>PDF, JPG or PNG · Max 5MB</span>
-                </label>
-              ) : (
-                <div className={styles.filePreview}>
-                  <FileText size={20} color="#15803d" />
-                  <div className={styles.fileInfo}>
-                    <span className={styles.fileName}>{certificate.name}</span>
-                    <span className={styles.fileSize}>{formatFileSize(certificate.size)}</span>
-                  </div>
-                  <button type="button" onClick={removeCertificate} className={styles.fileRemove}>
-                    <Trash2 size={15} color="#ef4444" />
-                  </button>
-                </div>
-              )}
-              {certError && <span className={styles.error}>{certError}</span>}
-              {errors.certificate && !certError && <span className={styles.error}>{errors.certificate}</span>}
-            </div>
+<div className={styles.sectionLabel}>Documents</div>
+{/* Passport Photo */}
+<div className={styles.field}>
+  <label className={styles.label}>Passport Photo</label>
+  <PassportCapture
+    value={passport}
+    onChange={(file) => {
+      setPassport(file);
+      setErrors((prev) => ({ ...prev, passport: "" }));
+    }}
+    error={errors.passport}
+  />
+  {!passport && !errors.passport && (
+    <span className={styles.hint}>
+      A clear front-facing photo · Used for identity verification only
+    </span>
+  )}
+</div>
+{/* Certificate of Origin */}
+<div className={styles.field}>
+  <label className={styles.label}>Certificate of Origin</label>
+  {!certificate ? (
+    <label className={`${styles.uploadArea}${errors.certificate ? " " + styles.inputError : ""}`}>
+      <input
+        type="file"
+        accept="application/pdf,image/jpeg,image/png"
+        onChange={handleCertificateChange}
+        style={{ display: "none" }}
+      />
+      <UploadCloud size={22} color="#94a3b8" />
+      <span className={styles.uploadTitle}>Click to upload</span>
+      <span className={styles.uploadHint}>PDF, JPG or PNG · Max 5MB</span>
+    </label>
+  ) : (
+    <div className={styles.filePreview}>
+      <FileText size={20} color="#15803d" />
+      <div className={styles.fileInfo}>
+        <span className={styles.fileName}>{certificate.name}</span>
+        <span className={styles.fileSize}>{formatFileSize(certificate.size)}</span>
+      </div>
+      <button type="button" onClick={removeCertificate} className={styles.fileRemove}>
+        <Trash2 size={15} color="#ef4444" />
+      </button>
+    </div>
+  )}
+  {certError && <span className={styles.error}>{certError}</span>}
+  {errors.certificate && !certError && <span className={styles.error}>{errors.certificate}</span>}
+</div>
 
             {/* SECURITY */}
             <div className={styles.sectionLabel}>Account Security</div>

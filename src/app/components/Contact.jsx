@@ -7,7 +7,7 @@ const contactInfo = [
   {
     icon: MapPin,
     label: "Address",
-    value: "Royal Mbo Host Community Development Trust, Mbo LGA, Akwa Ibom State",
+    value: "RMHCDT, Mbo LGA, Akwa Ibom State",
     color: "#15803d",
     bg: "#f0fdf4",
     border: "#bbf7d0",
@@ -23,7 +23,7 @@ const contactInfo = [
   {
     icon: Phone,
     label: "Phone",
-    value: "Available on programme announcements",
+    value: "+234 070 1234 5678",
     color: "#b45309",
     bg: "#fffbeb",
     border: "#fde68a",

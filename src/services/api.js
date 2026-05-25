@@ -1,104 +1,82 @@
+import axios from "axios";
+
 const BASE_URL = "http://127.0.0.1:8000";
 
-//-- HELPERS --
+// -- HELPERS --
 
 function getToken() {
   return localStorage.getItem("access_token");
 }
 
-async function request(method, path, body = null, auth = false) {
-  const headers = { "Content-Type": "application/json" };
-  if (auth) headers["Authorization"] = `Bearer ${getToken()}`;
+const api = axios.create({
+  baseURL: BASE_URL,
+  headers: { "Content-Type": "application/json" },
+});
 
-  const options = { method, headers };
-  if (body) options.body = JSON.stringify(body);
+// Attach token to every request automatically
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers["Authorization"] = `Bearer ${token}`;
+  return config;
+});
 
-  const res = await fetch(`${BASE_URL}${path}`, options);
-  const data = await res.json();
-  if (!res.ok) throw data;
-  return data;
-}
-
-// --AUTH --
+// -- AUTH --
 
 export const register = (body) =>
   // body: { email, phone_number, password, role }
-  request("POST", "/auth/register/", body);
+  api.post("/auth/register/", body);
 
 export const login = (body) =>
   // body: { email, password } → returns { otp_required: true }
-  request("POST", "/auth/login/", body);
+  api.post("/auth/login/", body);
 
 export const otpLogin = (body) =>
   // body: { email, code } → returns simplejwt tokens
-  request("POST", "/auth/otp/login/", body);
+  api.post("/auth/otp/login/", body);
 
 export const getMe = () =>
   // returns user profile + role
-  request("GET", "/auth/me/", null, true);
+  api.get("/auth/me/");
 
-// --STUDENTS --
+// -- STUDENTS --
 
-export const getStudentProfile = () =>
-  request("GET", "/students/me/", null, true);
-
-export const updateStudentProfile = (body) =>
-  request("PATCH", "/students/me/", body, true);
-
-export const getStudentStats = () =>
-  request("GET", "/students/stats/", null, true);
-
-export const getAcademicRecords = () =>
-  request("GET", "/students/academic-records/", null, true);
-
-export const addAcademicRecord = (body) =>
-  request("POST", "/students/academic-records/", body, true);
-
-export const getBankDetail = () =>
-  request("GET", "/students/bank-detail/", null, true);
-
+export const getStudentProfile = () => api.get("/students/me/");
+export const updateStudentProfile = (body) => api.patch("/students/me/", body);
+export const getStudentStats = () => api.get("/students/stats/");
+export const getAcademicRecords = () => api.get("/students/academic-records/");
+export const addAcademicRecord = (body) => api.post("/students/academic-records/", body);
+export const getBankDetail = () => api.get("/students/bank-detail/");
 export const addBankDetail = (body) =>
   // Paystack name verification runs automatically
-  request("POST", "/students/bank-detail/", body, true);
+  api.post("/students/bank-detail/", body);
 
 // -- SCHEMES --
 
-export const getSchemes = () =>
-  request("GET", "/schemes/", null, true);
-
+export const getSchemes = () => api.get("/schemes/");
 export const createScheme = (body) =>
   // Admin only
-  request("POST", "/schemes/", body, true);
-
-export const publishScheme = (id) =>
-  request("POST", `/schemes/${id}/publish/`, null, true);
-
-export const closeScheme = (id) =>
-  request("POST", `/schemes/${id}/close/`, null, true);
+  api.post("/schemes/", body);
+export const publishScheme = (id) => api.post(`/schemes/${id}/publish/`);
+export const closeScheme = (id) => api.post(`/schemes/${id}/close/`);
 
 // -- APPLICATIONS --
 
 export const submitApplication = (body) =>
   // body: { scheme_id }
-  request("POST", "/applications/submit/", body, true);
-
-export const submitWaiver = (id) =>
-  request("POST", `/applications/${id}/waiver/`, null, true);
-
+  api.post("/applications/submit/", body);
+export const submitWaiver = (id) => api.post(`/applications/${id}/waiver/`);
 export const reviewApplication = (id, body) =>
   // body: { approve: boolean, notes: string }
-  request("POST", `/applications/${id}/review/`, body, true);
+  api.post(`/applications/${id}/review/`, body);
 
 // -- VERIFICATION --
 
 export const verifyNIN = (body) =>
   // body: { nin }
-  request("POST", "/verification/nin/", body, true);
-
+  api.post("/verification/nin/", body);
 export const verifyBank = (body) =>
   // body: { account_number, bank_code }
-  request("POST", "/verification/bank/", body, true);
+  api.post("/verification/bank/", body);
+export const getBanks = () => api.get("/verification/banks/");
 
-export const getBanks = () =>
-  // returns list of Nigerian banks
-  request("GET", "/verification/banks/", null, true);
+export default api;
