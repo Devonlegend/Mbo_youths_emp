@@ -712,6 +712,76 @@
   color: #15803d;
 }
 
+/* LOADING SPINNER */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.submitBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* API ERROR BANNER */
+.apiBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* FORGOT PASSWORD */
+.forgotLink {
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #15803d;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.forgotLink:hover { color: #166534; }
+
+/* REGISTER BUTTON */
+.registerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  font-family: var(--font-jakarta), sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #15803d;
+  background: transparent;
+  border: 1.5px solid #15803d;
+  border-radius: 10px;
+  padding: 13px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.registerBtn:hover {
+  background: rgba(21, 128, 61, 0.05);
+}
+
 @media (max-width: 520px) {
   .input {
     font-size: 16px;
