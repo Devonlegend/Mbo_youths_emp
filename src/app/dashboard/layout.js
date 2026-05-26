@@ -36,6 +36,8 @@ export default function DashboardLayout({ children }) {
     );
   }
 
+  return
+
   return (
     <div className={styles.shell} data-dark={dark ? "1" : "0"}>
       <Sidebar dark={dark} setDark={setDark} />
