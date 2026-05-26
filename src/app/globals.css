@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #f9fafb;
+    color: #111827;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-jakarta), sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  p, a, span, li, label, input, button {
+    font-family: var(--font-inter), sans-serif;
+  }
+}

@@ -1,25 +1,73 @@
+from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.contrib.auth import get_user_model
 from accounts.models import Role
 from students.models import Student
 
+from .authentication import ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME
+
 User = get_user_model()
 
+
+# ──────────────────────────── cookie helpers ────────────────────────────
+
+def _cookie_flags():
+    """Resolve secure/samesite from settings, with sane DEBUG defaults."""
+    secure   = getattr(settings, 'JWT_COOKIE_SECURE', not settings.DEBUG)
+    samesite = getattr(settings, 'JWT_COOKIE_SAMESITE', 'Lax')
+    return secure, samesite
+
+
+def _set_jwt_cookies(response, refresh):
+    """Attach access + refresh JWTs to the response as httpOnly cookies."""
+    from rest_framework_simplejwt.settings import api_settings as jwt_settings
+
+    secure, samesite = _cookie_flags()
+    access_token = refresh.access_token
+
+    response.set_cookie(
+        ACCESS_COOKIE_NAME,
+        str(access_token),
+        max_age=int(jwt_settings.ACCESS_TOKEN_LIFETIME.total_seconds()),
+        httponly=True,
+        secure=secure,
+        samesite=samesite,
+        path='/',
+    )
+    response.set_cookie(
+        REFRESH_COOKIE_NAME,
+        str(refresh),
+        max_age=int(jwt_settings.REFRESH_TOKEN_LIFETIME.total_seconds()),
+        httponly=True,
+        secure=secure,
+        samesite=samesite,
+        path='/',
+    )
+
+
+def _clear_jwt_cookies(response):
+    response.delete_cookie(ACCESS_COOKIE_NAME, path='/')
+    response.delete_cookie(REFRESH_COOKIE_NAME, path='/')
+
+
+# ──────────────────────────── endpoints ────────────────────────────
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
     """
     POST /auth/register/
-    Body: { email, phone_number, password, role? }
+    Body: { email, firstname, lastname, phone_number, password, nin_hash,
+            date_of_birth?, ward?, gender?, lga?, passport?, certificate? }
 
     Every registered user is also created as a Student (multi-table inheritance),
     so request.user.student_profile is always available after registration.
+    On success, JWTs are set as httpOnly cookies (access_token, refresh_token).
     """
     email        = request.data.get('email')
     firstname    = request.data.get('firstname')
@@ -34,7 +82,6 @@ def register(request):
     passport    = request.FILES.get('passport')
     certificate = request.FILES.get('certificate')
 
-    # Validation
     if not all([email, firstname, lastname, phone_number, password, nin_hash]):
         return Response({"error": "All fields are required"},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -63,7 +110,6 @@ def register(request):
         lga=lga
     )
 
-
     if passport:
         user.passport = passport
     if certificate:
@@ -71,17 +117,14 @@ def register(request):
     if passport or certificate:
         user.save()
 
-    # Generate tokens immediately so they're logged in after registering
     refresh = RefreshToken.for_user(user)
 
-    return Response({
-        "message": "Account created successfully",
-        "role":    user.role,
-        "tokens": {
-            "access":  str(refresh.access_token),
-            "refresh": str(refresh),
-        }
-    }, status=status.HTTP_201_CREATED)
+    response = Response(
+        {"message": "Account created successfully", "role": user.role},
+        status=status.HTTP_201_CREATED,
+    )
+    _set_jwt_cookies(response, refresh)
+    return response
 
 
 @api_view(['POST'])
@@ -90,6 +133,8 @@ def login(request):
     """
     POST /auth/login/
     Body: { email, password }
+
+    On success, JWTs are set as httpOnly cookies. No tokens in the JSON body.
     """
     from django.contrib.auth import authenticate
 
@@ -97,21 +142,19 @@ def login(request):
     password = request.data.get('password')
 
     user = authenticate(request, username=email, password=password)
-
     if not user:
         return Response({"error": "Invalid email or password"},
                         status=status.HTTP_401_UNAUTHORIZED)
 
     refresh = RefreshToken.for_user(user)
 
-    return Response({
-        "role":  user.role,
-        "email": user.email,
-        "tokens": {
-            "access":  str(refresh.access_token),
-            "refresh": str(refresh),
-        }
+    response = Response({
+        "message": "Logged in",
+        "role":    user.role,
+        "email":   user.email,
     })
+    _set_jwt_cookies(response, refresh)
+    return response
 
 
 @api_view(['GET'])
@@ -129,13 +172,43 @@ def me(request):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
+def refresh_token(request):
+    """
+    POST /auth/token/refresh/
+    Reads refresh_token from cookie, rotates the access cookie (and the refresh
+    cookie if SimpleJWT rotation is enabled). Nothing returned in the body.
+    """
+    raw_refresh = request.COOKIES.get(REFRESH_COOKIE_NAME)
+    if not raw_refresh:
+        return Response({"error": "Refresh token cookie missing"},
+                        status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        refresh = RefreshToken(raw_refresh)
+    except (TokenError, InvalidToken):
+        return Response({"error": "Invalid or expired refresh token"},
+                        status=status.HTTP_401_UNAUTHORIZED)
+
+    response = Response({"message": "Token refreshed"})
+    _set_jwt_cookies(response, refresh)
+    return response
+
+
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
-    """POST /auth/logout/ — invalidate the refresh token"""
-    try:
-        refresh_token = request.data["refresh"]
-        token = RefreshToken(refresh_token)
-        token.blacklist()  # This will mark the token as blacklisted
-        return Response({"message": "Logged out successfully"})
-    except Exception as e:
-        return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
+    """
+    POST /auth/logout/
+    Reads refresh_token from cookie, blacklists it, clears both cookies.
+    """
+    raw_refresh = request.COOKIES.get(REFRESH_COOKIE_NAME)
+    if raw_refresh:
+        try:
+            RefreshToken(raw_refresh).blacklist()
+        except TokenError:
+            pass
+
+    response = Response({"message": "Logged out successfully"})
+    _clear_jwt_cookies(response)
+    return response

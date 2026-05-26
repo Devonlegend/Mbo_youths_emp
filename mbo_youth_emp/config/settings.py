@@ -64,14 +64,22 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'accounts.authentication.CookieJWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+# JWT cookie behaviour. In DEBUG we relax `Secure` so localhost (http) works;
+# in production set JWT_COOKIE_SECURE=True and tighten JWT_COOKIE_SAMESITE.
+JWT_COOKIE_SECURE   = not DEBUG
+JWT_COOKIE_SAMESITE = 'Lax'
+
+# Required so the browser will send the cookie cross-origin to the API.
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    'https://*'
+    "http://localhost:3000",
 ]
 ROOT_URLCONF = 'config.urls'
 
