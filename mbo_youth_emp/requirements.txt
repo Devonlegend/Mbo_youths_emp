@@ -9,5 +9,6 @@ dotenv==0.9.9
 pycparser==3.0
 PyJWT==2.12.1
 python-dotenv==1.2.2
+sib-api-v3-sdk==7.6.0
 sqlparse==0.5.5
 tzdata==2026.2

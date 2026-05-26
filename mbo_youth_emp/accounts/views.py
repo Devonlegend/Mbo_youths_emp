@@ -1,4 +1,11 @@
+import logging
+import secrets
+from datetime import timedelta
+
 from django.conf import settings
+from django.db import transaction
+from django.db.models import F
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -6,12 +13,14 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.contrib.auth import get_user_model
-from accounts.models import Role
+from accounts.models import EmailOTP, Role
 from students.models import Student
 
 from .authentication import ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME
+from .services import ApiException, send_otp_email
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 # ──────────────────────────── cookie helpers ────────────────────────────
@@ -117,14 +126,12 @@ def register(request):
     if passport or certificate:
         user.save()
 
-    refresh = RefreshToken.for_user(user)
-
-    response = Response(
-        {"message": "Account created successfully", "role": user.role},
+    # No JWT cookies here — the client must complete the OTP flow
+    # (/auth/otp/send/ → /auth/otp/verify/) before being logged in.
+    return Response(
+        {"message": "Account created. Please verify your email.", "email": user.email},
         status=status.HTTP_201_CREATED,
     )
-    _set_jwt_cookies(response, refresh)
-    return response
 
 
 @api_view(['POST'])
@@ -134,7 +141,8 @@ def login(request):
     POST /auth/login/
     Body: { email, password }
 
-    On success, JWTs are set as httpOnly cookies. No tokens in the JSON body.
+    Validates credentials but does NOT issue JWTs. The client must then call
+    /auth/otp/send/ and /auth/otp/verify/ to receive httpOnly cookies.
     """
     from django.contrib.auth import authenticate
 
@@ -146,16 +154,151 @@ def login(request):
         return Response({"error": "Invalid email or password"},
                         status=status.HTTP_401_UNAUTHORIZED)
 
-    refresh = RefreshToken.for_user(user)
+    return Response({"otp_required": True, "email": user.email})
 
-    response = Response({
-        "message": "Logged in",
-        "role":    user.role,
-        "email":   user.email,
-    })
+
+# ──────────────────────────── OTP ────────────────────────────
+
+def _generate_code() -> str:
+    """Cryptographically-random 6-digit code, zero-padded."""
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def _issue_otp(email):
+    """Generate a fresh OTP for `email`, invalidate prior unused ones, and email
+    it via Brevo. Returns a tuple (response_payload, http_status). Caller is
+    responsible only for wrapping in a Response."""
+    email = (email or '').strip().lower()
+    if not email:
+        return {"error": "Email is required"}, status.HTTP_400_BAD_REQUEST
+
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        # Don't disclose whether the email exists.
+        return {"error": "Unable to send OTP"}, status.HTTP_400_BAD_REQUEST
+
+    now = timezone.now()
+
+    latest = (
+        EmailOTP.objects
+        .filter(email__iexact=user.email)
+        .order_by('-created_at')
+        .first()
+    )
+    if (
+        latest is not None
+        and latest.used_at is None
+        and (now - latest.created_at).total_seconds() < settings.OTP_RESEND_COOLDOWN_SECONDS
+    ):
+        retry_after = int(
+            settings.OTP_RESEND_COOLDOWN_SECONDS
+            - (now - latest.created_at).total_seconds()
+        ) + 1
+        return (
+            {"error": "Please wait before requesting another code.",
+             "retry_after_seconds": retry_after},
+            status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
+    code = _generate_code()
+    with transaction.atomic():
+        EmailOTP.objects.filter(email__iexact=user.email, used_at__isnull=True).update(used_at=now)
+        EmailOTP.objects.create(
+            email=user.email,
+            code=code,
+            expires_at=now + timedelta(seconds=settings.OTP_TTL_SECONDS),
+        )
+
+    try:
+        send_otp_email(user.email, code)
+    except ApiException:
+        logger.exception("Brevo send_transac_email failed for %s", user.email)
+        return {"error": "Failed to send OTP email"}, status.HTTP_502_BAD_GATEWAY
+    except Exception:
+        logger.exception("Unexpected error sending OTP email to %s", user.email)
+        return {"error": "Failed to send OTP email"}, status.HTTP_502_BAD_GATEWAY
+
+    return None, status.HTTP_200_OK
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def otp_send(request):
+    """POST /auth/otp/send/  Body: { email }"""
+    payload, http_status = _issue_otp(request.data.get('email'))
+    if payload is not None:
+        return Response(payload, status=http_status)
+    return Response({"message": "OTP sent"})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def otp_resend(request):
+    """POST /auth/otp/resend/  Body: { email }"""
+    payload, http_status = _issue_otp(request.data.get('email'))
+    if payload is not None:
+        return Response(payload, status=http_status)
+    return Response({"message": "OTP resent"})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def otp_verify(request):
+    """
+    POST /auth/otp/verify/  Body: { email, code }
+
+    On success: marks the user as email-verified and sets httpOnly JWT cookies.
+    """
+    email = (request.data.get('email') or '').strip().lower()
+    code  = (request.data.get('code')  or '').strip()
+
+    if not email or not code:
+        return Response({"error": "Email and code are required"},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        return Response({"error": "Invalid or expired code"},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    now = timezone.now()
+    otp = (
+        EmailOTP.objects
+        .filter(email__iexact=user.email, used_at__isnull=True, expires_at__gt=now)
+        .order_by('-created_at')
+        .first()
+    )
+    if otp is None:
+        return Response({"error": "Invalid or expired code"},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    if otp.attempts >= settings.OTP_MAX_ATTEMPTS:
+        EmailOTP.objects.filter(pk=otp.pk, used_at__isnull=True).update(used_at=now)
+        return Response({"error": "Too many attempts. Request a new code."},
+                        status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+    # Atomic increment so concurrent verify attempts can't race past the cap.
+    EmailOTP.objects.filter(pk=otp.pk).update(attempts=F('attempts') + 1)
+
+    if not secrets.compare_digest(otp.code, code):
+        return Response({"error": "Invalid or expired code"},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    EmailOTP.objects.filter(pk=otp.pk, used_at__isnull=True).update(used_at=now)
+
+    if not user.email_verified:
+        user.email_verified = True
+        user.save(update_fields=['email_verified'])
+
+    refresh = RefreshToken.for_user(user)
+    response = Response({"message": "Verified"})
     _set_jwt_cookies(response, refresh)
     return response
 
+
+# ──────────────────────────── identity ────────────────────────────
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

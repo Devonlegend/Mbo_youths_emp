@@ -55,6 +55,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     firstname    = models.CharField(max_length=50, default="new user" )
     lastname     = models.CharField(max_length=50, default="new user" )
     nin_hash     = models.CharField(max_length=20, default="00000000000", unique=True, null=False, blank=False)
+    email_verified = models.BooleanField(default=False)
 
     objects = UserManager()
 
@@ -71,3 +72,20 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def student_profile(self):
         return getattr(self, 'student', None)
+
+
+class EmailOTP(models.Model):
+    """One-time 6-digit code emailed to a user. One live (unused, unexpired) row
+    per email at a time — issuing a new one invalidates prior unused ones."""
+    email      = models.EmailField(db_index=True)
+    code       = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at    = models.DateTimeField(null=True, blank=True)
+    attempts   = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        indexes = [models.Index(fields=['email', '-created_at'])]
+
+    def __str__(self):
+        return f"OTP({self.email}, used={bool(self.used_at)})"

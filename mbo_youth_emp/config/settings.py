@@ -10,10 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -155,3 +160,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+# ──────────────────────────── Brevo / OTP ────────────────────────────
+# Loaded from .env (see .env.example for the full list).
+
+BREVO_API_KEY      = os.getenv('BREVO_API_KEY', '')
+BREVO_SENDER_EMAIL = os.getenv('BREVO_SENDER_EMAIL', 'no-reply@example.com')
+BREVO_SENDER_NAME  = os.getenv('BREVO_SENDER_NAME', 'Mbo Youth Empowerment')
+
+OTP_TTL_SECONDS             = int(os.getenv('OTP_TTL_SECONDS', '600'))
+OTP_MAX_ATTEMPTS            = int(os.getenv('OTP_MAX_ATTEMPTS', '5'))
+OTP_RESEND_COOLDOWN_SECONDS = int(os.getenv('OTP_RESEND_COOLDOWN_SECONDS', '60'))
