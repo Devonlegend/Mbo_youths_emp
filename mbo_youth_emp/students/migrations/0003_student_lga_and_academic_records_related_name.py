@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 to='students.student',
             ),
         ),
-        migrations.AlterField(
+        migrations.AddField(
             model_name='academicrecord',
             name='admission_year',
             field=models.IntegerField(blank=True, null=True),
