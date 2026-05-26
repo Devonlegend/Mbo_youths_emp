@@ -47,7 +47,6 @@ class ScholarshipScheme(models.Model):
         "min_cgpa": 2.20,
         "allowed_levels": ["200", "300", "400"],
         "ward_restriction": ["effiat", "ewang"],
-        "host_community_only": false,
         "disability_relaxation": true,
         "max_prior_awards": 1
     }
@@ -58,10 +57,11 @@ class ScholarshipScheme(models.Model):
         "max_age": 35,
         "allowed_trades": ["welding", "tailoring", "ICT"],
         "ward_restriction": null,
-        "host_community_only": false,
         "disability_relaxation": true,
         "max_prior_awards": 1
     }
+
+    Note: host_community_only is deprecated and ignored by EligibilityEngine.
     """
     application_open_date  = models.DateField()
     application_close_date = models.DateField()

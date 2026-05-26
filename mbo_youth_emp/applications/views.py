@@ -142,7 +142,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
         return Response({"message": "Waiver accepted. Application is now under review."})
 
-    @action(detail=True, methods=['post'], url_path='review')
+    @action(detail=True, methods=['post'], url_path='review', permission_classes=[IsAuthenticated, IsAdmin])
     def review(self, request, pk=None):
         """
         POST /applications/{id}/review/
@@ -159,3 +159,29 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
         if approve is None:
             return Response({"error": "approve field is required and must be true or false"}, status=400)
+
+        previous_status = application.status
+        new_status = ApplicationStatus.APPROVED if approve else ApplicationStatus.REJECTED
+
+        application.status           = new_status
+        application.reviewed_by      = request.user
+        application.reviewed_at      = timezone.now()
+        application.reviewer_notes   = notes
+        if not approve:
+            application.rejection_reason = notes
+        application.save()
+
+        ApplicationStatusHistory.objects.create(
+            application = application,
+            from_status = previous_status,
+            to_status   = new_status,
+            changed_by  = request.user,
+            reason      = notes or ('Approved by reviewer' if approve else 'Rejected by reviewer'),
+        )
+
+        return Response({
+            "application_id": str(application.id),
+            "status":         application.status,
+            "reviewed_by":    str(request.user.id),
+            "reviewed_at":    application.reviewed_at.isoformat(),
+        })

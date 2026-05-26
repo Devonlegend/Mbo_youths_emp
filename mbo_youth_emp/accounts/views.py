@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from django.contrib.auth import get_user_model
+from accounts.models import Role
 from students.models import Student
 
 User = get_user_model()
@@ -15,19 +16,23 @@ User = get_user_model()
 def register(request):
     """
     POST /auth/register/
-    Body: { email, phone_number, password, role }
+    Body: { email, phone_number, password, role? }
+
+    Every registered user is also created as a Student (multi-table inheritance),
+    so request.user.student_profile is always available after registration.
     """
     email        = request.data.get('email')
     firstname    = request.data.get('firstname')
     lastname     = request.data.get('lastname')
     phone_number = request.data.get('phone_number')
     password     = request.data.get('password')
-    role         = request.data.get('role', 'student')
-    nin_hash     = request.data.get('nin_hash')  
-
-    passport  = request.FILES.get('passport')
-    certificate       = request.FILES.get('certificate')
-    
+    date_of_birth = request.data.get('date_of_birth')
+    nin_hash     = request.data.get('nin_hash')
+    ward         = request.data.get('ward', '')
+    gender       = request.data.get('gender')
+    lga          = request.data.get('lga', '')
+    passport    = request.FILES.get('passport')
+    certificate = request.FILES.get('certificate')
 
     # Validation
     if not all([email, firstname, lastname, phone_number, password, nin_hash]):
@@ -37,21 +42,27 @@ def register(request):
     if User.objects.filter(email=email).exists():
         return Response({"error": "Email already registered"},
                         status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(nin_hash=nin_hash).exists():
+        return Response({"error": "NIN already in use"},
+                        status=status.HTTP_400_BAD_REQUEST)
 
-  
-    if role not in ['student']:
-        return Response({"error": "Invalid role for self-registration"},
-                        status=status.HTTP_403_FORBIDDEN)
-
+    # Every self-registered user is initially a Student. Role is forced here
+    # (ignoring any client-supplied role) so privileged roles can't be claimed
+    # via the public endpoint — admins promote users to other roles later.
     user = Student.objects.create_user(
         email=email,
         phone_number=phone_number,
-        role=role,
+        role=Role.STUDENT,
         password=password,
+        ward=ward,
         firstname=firstname,
         lastname=lastname,
-        nin_hash=nin_hash
+        nin_hash=nin_hash,
+        date_of_birth=date_of_birth,
+        gender=gender,
+        lga=lga
     )
+
 
     if passport:
         user.passport = passport

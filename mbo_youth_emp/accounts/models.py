@@ -11,22 +11,29 @@ class Role(models.TextChoices):
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, firstname, lastname, phone_number, role, nin_hash, password=None):
+    def create_user(self, email, firstname, lastname, phone_number, role, nin_hash,
+                    password=None, ward='', date_of_birth=None, gender=None, **extra_fields):
         if not email:
             raise ValueError("Email is required")
-        user = self.model(
-            email=self.normalize_email(email),
-            firstname=firstname,
-            lastname=lastname,
-            phone_number=phone_number,
-            role=role,
-            nin_hash=nin_hash
-        )
+        fields = {
+            'email': self.normalize_email(email),
+            'firstname': firstname,
+            'lastname': lastname,
+            'phone_number': phone_number,
+            'role': role,
+            'nin_hash': nin_hash,
+            'ward': ward or '',
+            'date_of_birth': date_of_birth,
+        }
+        if gender:
+            fields['gender'] = gender
+        fields.update(extra_fields)
+        user = self.model(**fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, firstname, lastname,nin_hash, phone_number, password):
+    def create_superuser(self, email, firstname, lastname, nin_hash, phone_number, password):
         user = self.create_user(email, firstname, lastname, phone_number, Role.SUPERADMIN, nin_hash, password)
         user.is_staff     = True
         user.is_superuser = True
@@ -43,6 +50,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     role         = models.CharField(max_length=20, choices=Role.choices)
     is_active    = models.BooleanField(default=True)
     is_staff     = models.BooleanField(default=False)
+    date_of_birth = models.DateField(null=True)
     created_at   = models.DateTimeField(auto_now_add=True)
     firstname    = models.CharField(max_length=50, default="new user" )
     lastname     = models.CharField(max_length=50, default="new user" )

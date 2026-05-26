@@ -34,7 +34,6 @@ class EligibilityEngine:
         checks['slots']          = cls._check_slots(scheme)
         checks['window']         = cls._check_application_window(scheme)
         checks['ward']           = cls._check_ward(student, scheme)
-        checks['host_community'] = cls._check_host_community(student, scheme)
         checks['prior_awards']   = cls._check_prior_awards(student, scheme)
         checks['double_dip']     = cls._check_double_dip(student, scheme)
 
@@ -94,15 +93,8 @@ class EligibilityEngine:
             allowed_wards=restricted
         )
 
-    @classmethod
-    def _check_host_community(cls, student, scheme) -> CheckResult:
-        required = scheme.eligibility_criteria.get('host_community_only', False)
-        if not required:
-            return CheckResult(True, note="Not restricted to host communities")
-        return CheckResult(
-            student.is_host_community,
-            is_host_community=student.is_host_community
-        )
+    # _check_host_community removed — host-community gating is deprecated.
+    # Any 'host_community_only' key in scheme.eligibility_criteria is now ignored.
 
     @classmethod
     def _check_cgpa(cls, student, scheme):
