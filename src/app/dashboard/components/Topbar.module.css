@@ -1,0 +1,457 @@
+/* ══════════════════════════════════════
+   TOPBAR — RMHCDT Youth Portal
+   White. Clean. Green accent border.
+══════════════════════════════════════ */
+
+.topbar {
+  height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 12px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+/* Green at very bottom of topbar */
+.topbar::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: #e2e8f0;
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* ── LEFT ── */
+.left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.menuBtn {
+  display: none;
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  border: 1.5px solid #e2e8f0;
+  background: transparent;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  flex-shrink: 0;
+  transition: all 0.18s;
+}
+
+.menuBtn:hover {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.pageTitle {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+/* ── CENTER ── */
+.center {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.cyclePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(21,128,61,0.07);
+  border: 1px solid rgba(21,128,61,0.18);
+  color: #15803d;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 5px 13px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.cycleDot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+  flex-shrink: 0;
+  animation: pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.3; transform: scale(1.7); }
+}
+
+/* ── RIGHT ── */
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  border: 1.5px solid #e2e8f0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  position: relative;
+  transition: all 0.18s;
+}
+
+.iconBtn:hover {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+  box-shadow: 0 4px 10px rgba(21,128,61,0.1);
+}
+
+.notifDot {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 7px; height: 7px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+}
+
+/* ── SEPARATOR ── */
+.sep {
+  width: 1px; height: 22px;
+  background: #e2e8f0;
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* ── AVATAR ── */
+.avatarWrap { position: relative; }
+
+.avatarBtn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 8px 5px 5px;
+  border-radius: 100px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.avatarBtn:hover {
+  background: #f1f5f9;
+}
+
+.avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #15803d, #166534);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.avatarInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+}
+
+.avatarName {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.avatarSub {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 10px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.chevron {
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.chevronOpen { transform: rotate(180deg); }
+
+/* ── DROPDOWN ── */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 200px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  z-index: 50;
+  overflow: hidden;
+  animation: dropIn 0.15s ease;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.dropHeader {
+  padding: 13px 15px 10px;
+}
+
+.dropName {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.dropSub {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+}
+
+.dropDivider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 0 15px;
+}
+
+.dropItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 15px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: #374151;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dropItem:hover { background: #f8fafc; }
+
+.dropLogout { color: #ef4444 !important; }
+.dropLogout:hover { background: #fef2f2 !important; }
+
+/* ── BELL DROPDOWN — append these to Topbar.module.css ── */
+
+/* replace existing .notifDot with this badge */
+.notifBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 100px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #ffffff;
+  line-height: 1;
+}
+
+.bellWrap {
+  position: relative;
+}
+
+.bellDropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+  z-index: 100;
+  overflow: hidden;
+  animation: dropIn 0.18s ease;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.bellHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.bellHeadTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.bellMarkAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #15803d;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.bellMarkAll:hover { color: #166534; }
+
+.bellList {
+  display: flex;
+  flex-direction: column;
+}
+
+.bellItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f8fafc;
+  transition: background 0.13s;
+  cursor: default;
+}
+.bellItem:last-child { border-bottom: none; }
+.bellItem:hover { background: #f8fafc; }
+
+.bellItemIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.bellItemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bellItemTitle {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bellItemMsg {
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bellItemTime {
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.bellFooter {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #15803d;
+  background: #f8fafc;
+  border: none;
+  border-top: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bellFooter:hover { background: #f0fdf4; }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  .topbar { padding: 0 16px; }
+  .menuBtn { display: flex; }
+  .avatarInfo { display: none; }
+  .chevron { display: none; }
+  .avatarBtn { padding: 4px; border: none; background: transparent; }
+  .avatarBtn:hover { background: transparent; border: none; }
+  .cyclePill { font-size: 9.5px; padding: 4px 9px; }
+}
+@media (max-width: 768px) {
+  /* ...your existing mobile styles... */
+
+  .bellDropdown {
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    border-radius: 16px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+}

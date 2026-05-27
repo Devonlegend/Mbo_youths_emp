@@ -221,8 +221,8 @@ export default function PassportCapture({ value, onChange, error }) {
 
           {/* Status pill */}
           <div className={styles.previewStatus}>
-            <CheckCircle2 size={20} color="#15803d" strokeWidth={2} />
-            <span> Photo captured successfully </span>
+            <CheckCircle2 size={17} color="#15803d" strokeWidth={2} />
+            <span> Photo Captured </span>
           </div>
 
           {/* Retake */}

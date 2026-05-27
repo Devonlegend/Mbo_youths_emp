@@ -1,48 +1,42 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Sidebar from "./Sidebar";
-import Topbar from "./Topbar";
+import Sidebar from "./components/Sidebar";
+import Topbar from "./components/Topbar";
 import styles from "./dashboard.module.css";
 
+const mockUser = {
+  first_name: "Chukwu",
+  last_name: "Harrison",
+  lga: "Mbo LGA",
+  email: "c.harrison@mail.com",
+  nin_masked: "****-***-4521",
+  phone_masked: "+234 803 *** 4521",
+  passport_photo: null,
+};
+
 export default function DashboardLayout({ children }) {
-  const router = useRouter();
-  const [dark, setDark] = useState(false);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Close sidebar on desktop resize
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem("access_token");
-    const userData = localStorage.getItem("user");
-
-    if (!token) {
-      router.replace("/login");
-      return;
+    function onResize() {
+      if (window.innerWidth > 768) setSidebarOpen(false);
     }
-
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-
-    setLoading(false);
-  }, [router]);
-
-  if (loading) {
-    return (
-      <div className={styles.loadingScreen}>
-        <div className={styles.loadingSpinner} />
-      </div>
-    );
-  }
-
-  
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   return (
-    <div className={styles.shell} data-dark={dark ? "1" : "0"}>
-      <Sidebar dark={dark} setDark={setDark} />
+    <div className={styles.shell}>
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <div className={styles.mainWrap}>
-        <Topbar dark={dark} setDark={setDark} user={user} />
+        <Topbar
+          user={mockUser}
+          onMenuOpen={() => setSidebarOpen(true)}
+        />
         <main className={styles.content}>
           {children}
         </main>

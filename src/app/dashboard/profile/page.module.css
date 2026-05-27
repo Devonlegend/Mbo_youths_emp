@@ -1,0 +1,437 @@
+/* PROFILE PAGE — RMHCDT Youth Portal */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+
+/* ── HERO ── */
+.hero {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px 28px 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+
+.heroGlow { display: none; }
+
+.heroInner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 20px;
+}
+
+/* ── AVATAR ── */
+.avatarWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatarImg,
+.avatarInitials {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2.5px solid #bbf7d0;
+  object-fit: cover;
+}
+
+.avatarInitials {
+  background: #f0fdf4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+  color: #15803d;
+  letter-spacing: -0.02em;
+}
+
+.avatarOverlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+
+.avatarWrap:hover .avatarOverlay { opacity: 1; }
+
+.photoInput { display: none; }
+
+/* ── HERO META ── */
+.heroMeta { flex: 1; min-width: 0; }
+
+.heroName {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 2px;
+  letter-spacing: -0.03em;
+}
+
+.heroEmail {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 10px;
+}
+
+.heroBadges {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+/* ── STAT ROW (bottom of hero) ── */
+.statRow {
+  border-top: 1px solid #f1f5f9;
+  padding: 13px 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat svg { color: #94a3b8; flex-shrink: 0; }
+
+.statLabel {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.statVal {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.statValMono {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.statDiv {
+  width: 1px;
+  height: 18px;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+/* ── PHOTO NOTE ── */
+.photoNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #15803d;
+  line-height: 1.5;
+}
+
+.photoNoteIcon { 
+  flex-shrink: 0; margin-top: 1px; 
+}
+
+.btnEdit {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; color: #15803d;
+  background: #f0fdf4; border: 1px solid #bbf7d0;
+  border-radius: 8px; padding: 7px 14px; cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btnEdit:hover { background: #dcfce7; border-color: #86efac; }
+
+.btnCancel {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; font-weight: 600; color: #64748b;
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 8px; padding: 7px 14px; cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btnCancel:hover { background: #f1f5f9; }
+
+.input:disabled {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #0f172a;
+  cursor: default;
+  opacity: 1;
+}
+
+select.input:disabled { appearance: none; }
+
+/* ── CARD ── */
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px 28px 28px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;   /* vertically centre icon, text block, and button */
+  justify-content: flex-start;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.cardHeadIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #15803d;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 3px;
+  letter-spacing: -0.02em;
+  text-align: left;
+}
+
+.cardSub {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+  text-align: left;
+}
+
+/* ── FORM ── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.input {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 13.5px;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: #15803d;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(21,128,61,0.08);
+}
+
+select.input { cursor: pointer; }
+
+/* ── FORM FOOTER ── */
+.formFoot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.savedMsg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #15803d;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #15803d;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 22px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(21,128,61,0.2);
+  transition: all 0.2s ease;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: #166534;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(21,128,61,0.28);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ── SPINNER ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.7s linear infinite; }
+
+/* ── SECURITY LINK ── */
+.securityLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.securityLink:hover {
+  border-color: #bbf7d0;
+  box-shadow: 0 4px 20px rgba(21,128,61,0.1);
+  transform: translateY(-1px);
+}
+
+.securityLinkLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.securityIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #15803d;
+  flex-shrink: 0;
+}
+
+.securityTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2px;
+}
+
+.securitySub {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+.securityChevron {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.securityLink:hover .securityChevron {
+  color: #15803d;
+  transform: translateX(3px);
+}
+
+/* ── MOBILE ── */
+@media (max-width: 640px) {
+  .hero { padding: 18px 16px 0; }
+  .heroName { font-size: 18px; }
+  .card { padding: 18px 16px 20px; }
+  .row2 { grid-template-columns: 1fr; }
+  .statRow { gap: 8px; }
+  .statDiv { display: none; }
+}
+
+/* ── ROW DIVIDER (read-only view) ── */
+.rowDivider {
+  border: none;
+  border-top: 1px dashed #e2e8f0;
+  margin: 2px 0;
+}

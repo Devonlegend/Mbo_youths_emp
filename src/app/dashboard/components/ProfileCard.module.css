@@ -1,0 +1,121 @@
+/* ══════════════════════════════════════
+   PROFILE CARD — RMHCDT Youth Portal
+══════════════════════════════════════ */
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+}
+
+/* ── AVATAR ── */
+.avatarWrap { flex-shrink: 0; }
+
+.avatarImg {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e2e8f0;
+  display: block;
+}
+
+.avatarInitials {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: #f0fdf4;
+  border: 2px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #15803d;
+}
+
+/* ── INFO ── */
+.info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.name {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.metaItem svg { color: #94a3b8; flex-shrink: 0; }
+
+.metaDot {
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.hint {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── BUTTON ── */
+.profileBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.18s;
+}
+
+.profileBtn:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+/* ── MOBILE ── */
+@media (max-width: 640px) {
+  .card { flex-wrap: wrap; padding: 16px; gap: 14px; }
+  .profileBtn { width: 100%; justify-content: center; }
+  .metaDot { display: none; }
+}

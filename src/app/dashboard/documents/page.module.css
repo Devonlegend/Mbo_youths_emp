@@ -1,0 +1,406 @@
+/* ══════════════════════════════════════
+   DOCUMENTS PAGE — RMHCDT Youth Portal
+══════════════════════════════════════ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 32px;
+  width: 100%;
+}
+
+/* ── HEADER ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  margin: 0 0 4px;
+}
+
+.sub {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.statsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.statPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(21,128,61,0.07);
+  border: 1px solid rgba(21,128,61,0.18);
+  color: #15803d;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.statPillWarn {
+  background: rgba(180,83,9,0.07);
+  border-color: rgba(180,83,9,0.18);
+  color: #b45309;
+}
+
+.statDotGreen {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+}
+
+.statDotAmber {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #d97706;
+}
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.searchWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 44px;
+  min-width: 0;
+}
+
+.searchIcon { color: #94a3b8; flex-shrink: 0; }
+
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  color: #0f172a;
+  min-width: 0;
+}
+
+.searchInput::placeholder { color: #cbd5e1; }
+
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.18s;
+  position: relative;
+}
+
+.filterBtn:hover { border-color: #bbf7d0; color: #15803d; }
+.filterActive { border-color: #15803d; background: #f0fdf4; color: #15803d; }
+
+.filterDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+  min-width: 160px;
+}
+
+.filterOption {
+  display: flex;
+  align-items: center;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.filterOption:hover { background: #f8fafc; }
+.filterOptionActive { background: #f0fdf4; color: #15803d; font-weight: 600; }
+
+/* ── NOTICE ── */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+/* ── DOC LIST ── */
+.docList {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* ── DOC CARD ── */
+.docCard {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 20px 22px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: box-shadow 0.2s;
+}
+
+.docCard:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.07); }
+.card_verified { border-color: #bbf7d0; }
+.card_missing  { border-color: #fde68a; }
+.card_pending  { border-color: #bfdbfe; }
+
+/* DOC TOP */
+.docTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.docInfo { flex: 1; min-width: 0; }
+
+.docNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+
+.docName {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.reqTag {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  padding: 2px 7px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.docDesc {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+
+.catChip {
+  display: inline-flex;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 2px 8px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* STATUS BADGE */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.sb_verified { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.sb_pending  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.sb_missing  { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+
+/* ── FILE PREVIEW ── */
+.filePreview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  border-radius: 10px;
+}
+
+.fileInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fileName {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileMeta {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.fileActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.fileBtn {
+  width: 30px; height: 30px;
+  border-radius: 7px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.15s;
+}
+
+.fileBtn:hover { border-color: #15803d; color: #15803d; background: #f0fdf4; }
+
+.fileBtnDanger {
+  width: 30px; height: 30px;
+  border-radius: 7px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: all 0.15s;
+}
+
+.fileBtnDanger:hover { border-color: #fca5a5; color: #ef4444; background: #fef2f2; }
+
+/* ── UPLOAD AREA ── */
+.uploadArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 18px;
+  border: 1.5px dashed #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: center;
+}
+
+.uploadArea:hover { border-color: #bbf7d0; background: #f0fdf4; }
+
+.uploadTitle {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.uploadHint {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .docList { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .page { padding: 20px 16px; gap: 16px; }
+  .title { font-size: 20px; }
+  .docList { grid-template-columns: 1fr; }
+  .toolbar { flex-direction: row; align-items: center; gap: 8px; }
+  .searchWrap { height: 42px; }
+  .filterBtn { height: 42px; padding: 0 14px; font-size: 13px; }
+  .docCard { padding: 16px; }
+  .fileActions { gap: 6px; }
+}

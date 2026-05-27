@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import styles from "./page.module.css";
 import PassportCapture from "@/components/PassportCapture";
+import { register, otpSend, otpVerify, otpResend } from "@/services/api"; // ← fixed imports
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -61,7 +62,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [certificate, setCertificate] = useState(null);
-  const [passport, setPassport] = useState(null); // File | null
+  const [passport, setPassport] = useState(null);
   const [certError, setCertError] = useState("");
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "",
@@ -150,31 +151,44 @@ export default function RegisterPage() {
     return e;
   }
 
+  // ── FIXED: handleSubmit ──────────────────────────────────────────────────
   async function handleSubmit(e) {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     setLoading(true);
     setApiError("");
 
     try {
-      // TODO: API call — POST /api/auth/register (multipart/form-data)
+      // Build FormData with correct backend field names
       const formData = new FormData();
-      Object.keys(form).forEach((key) => formData.append(key, form[key]));
-      if (passport) formData.append("passport", passport);       // File object from PassportCapture
+      formData.append("firstname", form.firstName);       // ← not firstName
+      formData.append("lastname", form.lastName);         // ← not lastName
+      formData.append("email", form.email);
+      formData.append("phone_number", form.phone);        // ← not phone
+      formData.append("nin_hash", form.nin);              // ← not nin
+      formData.append("date_of_birth", form.dob);        // ← not dob
+      formData.append("gender", form.gender);
+      // formData.append("lga", form.lga);
+      formData.append("ward", form.ward);
+      formData.append("password", form.password);
+      if (passport) formData.append("passport", passport);
       if (certificate) formData.append("certificate", certificate);
-      // await registerUser(formData);
+
+      // POST /auth/register/ → { message, email }
+      // Backend does NOT auto-send OTP — we must call otpSend separately
+      await register(formData);
+
+      // POST /auth/otp/send/ → { message: "OTP sent" }
+      await otpSend({ email: form.email });
 
       setStep("verify");
       startCountdown();
     } catch (err) {
       setApiError(
+        err?.response?.data?.error ||
         err?.response?.data?.message ||
-        err?.detail ||
         "Something went wrong. Please try again."
       );
     } finally {
@@ -204,25 +218,23 @@ export default function RegisterPage() {
     inputs.current[Math.min(pasted.length, 5)]?.focus();
   }
 
+  // ── FIXED: handleOtpSubmit ───────────────────────────────────────────────
   async function handleOtpSubmit(e) {
     e.preventDefault();
     const code = otp.join("");
-    if (code.length < 6) {
-      setOtpError("Please enter the complete 6-digit code.");
-      return;
-    }
+    if (code.length < 6) { setOtpError("Please enter the complete 6-digit code."); return; }
 
     setLoading(true);
     setOtpError("");
 
     try {
-      // TODO: API call — POST /api/auth/verify-otp with { code, method: verifyMethod, email: form.email }
-      // await verifyOtp({ code, method: verifyMethod, email: form.email });
+      // POST /auth/otp/verify/ → { message: "Verified" } + sets httpOnly cookies
+      await otpVerify({ email: form.email, code });
       setStep("success");
     } catch (err) {
       setOtpError(
-        err?.response?.data?.message ||
-        err?.detail ||
+        err?.response?.data?.error ||
+        err?.response?.data?.detail ||
         "Invalid or expired code. Please try again."
       );
     } finally {
@@ -230,16 +242,27 @@ export default function RegisterPage() {
     }
   }
 
-  function handleResend() {
+  // ── FIXED: handleResend ──────────────────────────────────────────────────
+  async function handleResend() {
     if (!canResend) return;
     setOtp(["", "", "", "", "", ""]);
     setOtpError("");
     startCountdown();
     inputs.current[0]?.focus();
-    // TODO: API call — POST /api/auth/resend-otp with { method: verifyMethod, email: form.email }
+
+    try {
+      // POST /auth/otp/resend/ → { message: "OTP resent" }
+      await otpResend({ email: form.email });
+    } catch (err) {
+      setOtpError(
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        "Failed to resend code. Please try again."
+      );
+    }
   }
 
-  // SUCCESS STEP
+  // SUCCESS STEP — unchanged
   if (step === "success") {
     return (
       <div className={styles.page}>
@@ -277,7 +300,7 @@ export default function RegisterPage() {
     );
   }
 
-  // VERIFY STEP
+  // VERIFY STEP — unchanged
   if (step === "verify") {
     return (
       <div className={styles.page}>
@@ -372,7 +395,7 @@ export default function RegisterPage() {
     );
   }
 
-  // REGISTER STEP
+  // REGISTER STEP — unchanged except handleSubmit is now wired
   return (
     <div className={styles.page} onTouchStart={dismissKeyboard}>
       <div className={styles.main}>

@@ -1,0 +1,393 @@
+/* ══════════════════════════════════════
+   PROGRAMMES PAGE — RMHCDT Youth Portal
+══════════════════════════════════════ */
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── HEADER ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  margin: 0 0 4px;
+}
+
+.sub {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.cyclePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(21,128,61,0.07);
+  border: 1px solid rgba(21,128,61,0.18);
+  color: #15803d;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 6px 13px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cycleDot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #16a34a;
+  animation: pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.3; transform: scale(1.7); }
+}
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.searchWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 44px;
+}
+
+.searchIcon { color: #94a3b8; flex-shrink: 0; }
+
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  color: #0f172a;
+}
+
+.searchInput::placeholder { color: #cbd5e1; }
+
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s;
+  position: relative;
+}
+
+.filterBtn:hover {
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
+.filterActive {
+  border-color: #15803d;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+/* ── FILTER DROPDOWN ── */
+.filterDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+  min-width: 160px;
+}
+
+.filterOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.filterOption:hover { background: #f8fafc; }
+
+.filterOptionActive {
+  background: #f0fdf4;
+  color: #15803d;
+  font-weight: 600;
+}
+
+/* ── GRID ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* ── CARD ── */
+.card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.09);
+}
+
+/* CARD TOP */
+.cardTop {
+  padding: 20px 22px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardIconWrap {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* BADGES */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid transparent;
+}
+
+.badgeOpen    { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.badgeApplied { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.badgeAwarded { background: #0f172a; color: #ffffff; }
+.badgeClosed  { background: #f8fafc; color: #94a3b8; border-color: #e2e8f0; }
+.badgeUrgent  { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
+
+/* CARD BODY */
+.cardBody {
+  padding: 0 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.catTag {
+  display: inline-flex;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  width: fit-content;
+}
+
+.cardTitle {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.cardDesc {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+  flex: 1;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.metaItem svg { flex-shrink: 0; }
+
+/* APPLY BUTTON */
+.applyBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 11px 16px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+  letter-spacing: -0.01em;
+}
+
+.applyBtn:not(.applyBtnDisabled):hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+}
+
+.applyBtnDisabled {
+  background: #f8fafc !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+  cursor: not-allowed;
+}
+
+/* ── EMPTY STATE ── */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #94a3b8;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 14px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 20px 16px;
+    gap: 16px;
+  }
+
+  .title { font-size: 20px; }
+
+  .cyclePill { font-size: 10px; padding: 5px 10px; }
+
+  .toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .searchWrap {
+    flex: 1;
+    min-width: 0;
+    height: 42px;
+  }
+
+  .searchInput {
+    min-width: 0;
+    font-size: 13px;
+  }
+
+  .filterBtn {
+    height: 42px;
+    padding: 0 14px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .filterDropdown {
+    right: 0;
+    left: auto;
+    min-width: 150px;
+  }
+
+  .grid { grid-template-columns: 1fr; }
+
+  .card { border-radius: 16px; }
+
+  .cardTop { padding: 16px 18px 12px; }
+
+  .cardBody { padding: 0 18px 18px; }
+
+  .cardTitle { font-size: 14px; }
+
+  .cardDesc { font-size: 12px; }
+
+  .applyBtn { font-size: 13px; padding: 10px 14px; }
+
+  .header { gap: 8px; }
+}

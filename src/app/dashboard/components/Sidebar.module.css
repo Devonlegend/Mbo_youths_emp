@@ -1,0 +1,220 @@
+/* ══════════════════════════════════════
+   SIDEBAR — RMHCDT Youth Portal
+══════════════════════════════════════ */
+
+.sidebar {
+  width: 232px;
+  background: #0a1f13;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100vh;
+  position: relative;
+  z-index: 40;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── OVERLAY (mobile) ── */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 30;
+  backdrop-filter: blur(2px);
+}
+
+/* ── LOGO ── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+
+.logoIcon {
+  width: 36px;
+  height: 36px;
+  background: #15803d;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(21,128,61,0.4);
+}
+
+.logoIcon span {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fbbf24;
+  letter-spacing: -0.5px;
+}
+
+.logoBrand {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.logoName {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+}
+
+.logoSub {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  opacity: 0.8;
+  line-height: 1.2;
+}
+
+.closeBtn {
+  display: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.07);
+  border: none;
+  color: rgba(255,255,255,0.5);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.closeBtn:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+
+/* ── NAV ── */
+.nav {
+  flex: 1;
+  padding: 10px 0 8px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.nav::-webkit-scrollbar { display: none; }
+
+.sectionLabel {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  padding: 10px 18px 4px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 18px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.45);
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  transition: all 0.18s ease;
+  position: relative;
+  letter-spacing: -0.01em;
+}
+
+.navItem:hover {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.85);
+}
+
+.navItem.active {
+  background: rgba(21,128,61,0.22);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.navIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.18s;
+}
+
+.navItem:hover .navIcon,
+.navItem.active .navIcon {
+  opacity: 1;
+}
+
+.navItem.active .navIcon { color: #4ade80; }
+
+.navLabel { flex: 1; }
+
+/* ── BADGES ── */
+.badge {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 100px;
+  min-width: 20px;
+  text-align: center;
+  color: #fff;
+}
+
+.badgeGreen  { background: #15803d; }
+.badgeWarn   { background: #b45309; }
+.badgeDanger { background: #ef4444; }
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,0.05);
+  margin: 6px 18px;
+}
+
+/* ── BOTTOM ── */
+.bottom {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 8px 0 12px;
+  flex-shrink: 0;
+}
+
+.logout { color: rgba(248,113,113,0.6) !important; }
+.logout:hover {
+  background: rgba(248,113,113,0.07) !important;
+  color: #f87171 !important;
+}
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 100dvh;
+    transform: translateX(-100%);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .overlay { display: block; }
+  .closeBtn { display: flex; }
+}

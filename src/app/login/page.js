@@ -6,7 +6,7 @@ import {
   ShieldCheck, AlertCircle, RotateCcw
 } from "lucide-react";
 import styles from "./page.module.css";
-import { login, otpLogin, otpResend } from "@/services/api";
+import { login, otpVerify, otpResend } from "@/services/api";
 
 export default function LoginPage() {
   const [step, setStep] = useState("login");
@@ -55,37 +55,28 @@ export default function LoginPage() {
   }
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+  e.preventDefault();
+  const errs = validate();
+  if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
-    setLoading(true);
-    setApiError("");
+  setLoading(true);
+  setApiError("");
 
-    try {
-  const { data } = await login({ email: form.email, password: form.password });
-  if (data.tokens) {
-    // backend returned tokens directly, no OTP needed
-    localStorage.setItem("access_token", data.tokens.access);
-    localStorage.setItem("refresh_token", data.tokens.refresh);
-    window.location.href = "/dashboard";
-  } else {
-    // backend wants OTP verification
+  try {
+    await login({ email: form.email, password: form.password });
+    // Backend always requires OTP — no tokens returned here
     setStep("otp");
     startCountdown();
-  }
-}
-    catch (err) {
+  } catch (err) {
     setApiError(
       err?.response?.data?.error ||
       err?.response?.data?.detail ||
       "Invalid email or password. Please try again."
     );
+  } finally {
+    setLoading(false);
   }
-    finally {
-      setLoading(false);
-    }
-  }
+}
 
   function handleOtpChange(index, value) {
     if (!/^\d*$/.test(value)) return;
@@ -133,31 +124,27 @@ export default function LoginPage() {
   }
 
   async function handleOtpSubmit(e) {
-    e.preventDefault();
-    const code = otp.join("");
-    if (code.length < 6) { setOtpError("Please enter the complete 6-digit code."); return; }
+  e.preventDefault();
+  const code = otp.join("");
+  if (code.length < 6) { setOtpError("Please enter the complete 6-digit code."); return; }
 
-    setLoading(true);
-    setOtpError("");
+  setLoading(true);
+  setOtpError("");
 
-    try {
-      const { data } = await otpLogin({ email: form.email, code });
-      localStorage.setItem("access_token", data.tokens.access);
-      localStorage.setItem("refresh_token", data.tokens.refresh);
-      window.location.href = "/dashboard";
-    }
-    catch (err) {
-  setOtpError(
-    err?.response?.data?.error ||
-    err?.response?.data?.detail ||
-    "Invalid or expired code. Please try again."
-  );
-}
-    finally {
-      setLoading(false);
-    }
+  try {
+    await otpVerify({ email: form.email, code });
+    // Cookies are set by the backend — nothing to store, just redirect
+    window.location.href = "/dashboard";
+  } catch (err) {
+    setOtpError(
+      err?.response?.data?.error ||
+      err?.response?.data?.detail ||
+      "Invalid or expired code. Please try again."
+    );
+  } finally {
+    setLoading(false);
   }
-
+}
   // OTP STEP
   if (step === "otp") {
     return (
