@@ -4,7 +4,7 @@ import {
   HelpCircle, MessageSquare, ChevronDown, ChevronUp,
   MapPin, Mail, Phone, Send, CheckCircle,
   FileText, GraduationCap, Wallet, ShieldCheck,
-  Clock, Search, BookOpen, AlertCircle, SlidersHorizontal, X,
+  Clock, Search, BookOpen, AlertCircle, Filter, X,
 } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -181,7 +181,7 @@ export default function HelpPage() {
                 className={`${styles.filterBtn} ${filterOpen || activeCategory !== "All" ? styles.filterBtnActive : ""}`}
                 onClick={() => setFilterOpen((v) => !v)}
               >
-                <SlidersHorizontal size={14} strokeWidth={2} />
+                <Filter size={14} strokeWidth={2} />
                 {activeCategory !== "All" ? activeCategory : "Filter"}
                 {activeCategory !== "All" && (
                   <span

@@ -8,7 +8,7 @@
   gap: 24px;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 32px 32px;
+  padding: 32px;
   width: 100%;
 }
 
@@ -40,9 +40,8 @@
 .countPill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  background: rgba(21,128,61,0.07);
-  border: 1px solid rgba(21,128,61,0.18);
+  background: rgba(21, 128, 61, 0.07);
+  border: 1px solid rgba(21, 128, 61, 0.18);
   color: #15803d;
   font-family: var(--font-dm), 'DM Sans', sans-serif;
   font-size: 11px;
@@ -107,7 +106,6 @@
   white-space: nowrap;
   flex-shrink: 0;
   transition: all 0.18s;
-  position: relative;
 }
 
 .filterBtn:hover { border-color: #bbf7d0; color: #15803d; }
@@ -120,7 +118,7 @@
   background: #ffffff;
   border: 1.5px solid #e2e8f0;
   border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   padding: 6px;
   display: flex;
   flex-direction: column;
@@ -151,25 +149,28 @@
 .appList {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 /* ── APP CARD ── */
 .appCard {
   background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 20px;
+  border: 0.5px solid #e2e8f0;
+  border-radius: 16px;
   padding: 20px 24px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.04);
-  transition: box-shadow 0.2s;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  transition: border-color 0.18s;
 }
 
-.appCard:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.07); }
-.appCardApproved { border-color: #bbf7d0; }
-.appCardRejected { border-color: #fca5a5; }
+.appCard:hover { border-color: #cbd5e1; }
+
+.card_approved { border-color: #bbf7d0; }
+.card_approved:hover { border-color: #86efac; }
+
+.card_rejected { border-color: #fca5a5; }
+.card_rejected:hover { border-color: #f87171; }
 
 /* CARD HEAD */
 .appHead {
@@ -179,9 +180,12 @@
 }
 
 .appIconWrap {
-  width: 42px; height: 42px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -192,12 +196,12 @@
 
 .appTitle {
   font-family: var(--font-sora), 'Sora', sans-serif;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.02em;
   margin-bottom: 6px;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .appMeta {
@@ -211,11 +215,11 @@
   font-family: var(--font-dm), 'DM Sans', sans-serif;
   font-size: 10px;
   font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 6px;
-  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 5px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  border: 1px solid transparent;
+  border: 0.5px solid transparent;
 }
 
 .appDate {
@@ -232,75 +236,17 @@
   font-family: var(--font-dm), 'DM Sans', sans-serif;
   font-size: 11px;
   font-weight: 600;
-  padding: 5px 12px;
+  padding: 4px 11px;
   border-radius: 100px;
   white-space: nowrap;
   flex-shrink: 0;
-  border: 1px solid transparent;
+  border: 0.5px solid transparent;
 }
 
 .st_approved { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
-.st_pending  { background: #fffbeb; color: #b45309; border-color: #fde68a; }
-.st_flagged  { background: #fffbeb; color: #b45309; border-color: #fde68a; }
-.st_rejected { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
-
-/* ── STEPPER ── */
-.stepper {
-  display: flex;
-  align-items: flex-start;
-}
-
-.stepWrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-}
-
-.stepRow {
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.stepDot {
-  width: 26px; height: 26px;
-  border-radius: 50%;
-  border: 1.5px solid #e2e8f0;
-  background: #f8fafc;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 700;
-  color: #94a3b8;
-  flex-shrink: 0;
-  z-index: 1;
-  transition: all 0.2s;
-}
-
-.dotDone   { background: #15803d; border-color: #15803d; color: #fff; }
-.dotFlag   { background: #b45309; border-color: #b45309; color: #fff; }
-.dotReject { background: #ef4444; border-color: #ef4444; color: #fff; }
-
-.stepLine {
-  flex: 1;
-  height: 1.5px;
-  background: #e2e8f0;
-  margin: 0 -1px;
-}
-
-.lineDone { background: #15803d; }
-
-.stepLabel {
-  font-family: var(--font-dm), 'DM Sans', sans-serif;
-  font-size: 10px;
-  color: #94a3b8;
-  margin-top: 6px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.labelDone   { color: #15803d; font-weight: 500; }
-.labelFlag   { color: #b45309; font-weight: 500; }
-.labelReject { color: #ef4444; font-weight: 500; }
+.st_pending  { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.st_flagged  { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.st_rejected { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
 
 /* ── STATUS NOTES ── */
 .flagNote {
@@ -308,13 +254,13 @@
   align-items: flex-start;
   gap: 10px;
   background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 12px;
-  padding: 12px 14px;
+  border: 0.5px solid #fde68a;
+  border-radius: 10px;
+  padding: 11px 14px;
   font-family: var(--font-dm), 'DM Sans', sans-serif;
   font-size: 12.5px;
   color: #92400e;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .rejectNote {
@@ -322,19 +268,19 @@
   align-items: flex-start;
   gap: 10px;
   background: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 12px;
-  padding: 12px 14px;
+  border: 0.5px solid #fca5a5;
+  border-radius: 10px;
+  padding: 11px 14px;
 }
 
 .rejectLabel {
   font-family: var(--font-dm), 'DM Sans', sans-serif;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  color: #ef4444;
+  color: #b91c1c;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
 }
 
 .rejectText {
@@ -349,8 +295,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 14px;
-  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+  border-top: 0.5px solid #f1f5f9;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -358,13 +304,13 @@
 .footNote {
   font-family: var(--font-dm), 'DM Sans', sans-serif;
   font-size: 12px;
-  font-weight: 500;
+  color: #94a3b8;
 }
 
 .fn_approved { color: #15803d; }
-.fn_pending  { color: #b45309; }
-.fn_flagged  { color: #b45309; }
-.fn_rejected { color: #ef4444; }
+.fn_pending  { color: #92400e; }
+.fn_flagged  { color: #92400e; }
+.fn_rejected { color: #b91c1c; }
 
 .footBtns {
   display: flex;
@@ -380,9 +326,9 @@
   font-family: var(--font-dm), 'DM Sans', sans-serif;
   font-size: 12px;
   font-weight: 600;
-  padding: 7px 16px;
+  padding: 7px 15px;
   border-radius: 8px;
-  border: 1.5px solid #e2e8f0;
+  border: 1px solid #e2e8f0;
   background: transparent;
   color: #374151;
   cursor: pointer;
@@ -398,21 +344,16 @@
   font-family: var(--font-dm), 'DM Sans', sans-serif;
   font-size: 12px;
   font-weight: 700;
-  padding: 7px 16px;
+  padding: 7px 15px;
   border-radius: 8px;
   border: none;
   background: #15803d;
   color: #ffffff;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(21,128,61,0.2);
   transition: all 0.18s;
 }
 
-.btnSmPrimary:hover {
-  background: #166534;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(21,128,61,0.3);
-}
+.btnSmPrimary:hover { background: #166534; }
 
 /* ── EMPTY ── */
 .empty {
@@ -427,33 +368,15 @@
 @media (max-width: 640px) {
   .page { padding: 20px 16px; gap: 16px; }
   .title { font-size: 20px; }
-
-  .toolbar {
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-  }
-
+  .toolbar { gap: 8px; }
   .searchWrap { height: 42px; }
   .filterBtn { height: 42px; padding: 0 14px; font-size: 13px; }
-
-  .appCard { padding: 16px 16px; }
-
+  .appCard { padding: 16px; }
   .appHead { flex-wrap: wrap; gap: 10px; }
-
   .appIconWrap { width: 36px; height: 36px; }
-
   .appTitle { font-size: 13.5px; }
-
   .statusTag { font-size: 10.5px; padding: 4px 10px; }
-
-  .stepLabel { font-size: 9px; }
-
-  .stepDot { width: 22px; height: 22px; font-size: 8px; }
-
   .appFoot { flex-direction: column; align-items: flex-start; gap: 10px; }
-
   .footBtns { width: 100%; }
-
   .btnSm, .btnSmPrimary { flex: 1; justify-content: center; }
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   GraduationCap, Briefcase, Wrench, Banknote,
   CheckCircle2, Clock, XCircle, AlertCircle,
-  ArrowRight, Download, Search, Filter, ChevronDown,
+  ArrowRight, Search, Filter, ChevronDown,
 } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -50,11 +50,11 @@ const applications = [
     date: "10 Mar 2026",
     status: "rejected",
     step: 4,
-    rejectionReason: "Applicant did not meet the residency requirement for Mbo LGA as of the 2026 cycle cut-off date. You may re-apply in the next cycle if eligibility conditions are met.",
+    rejectionReason:
+      "Applicant did not meet the residency requirement for Mbo LGA as of the 2026 cycle cut-off date. You may re-apply in the next cycle if eligibility conditions are met.",
   },
 ];
 
-const STEPS = ["Submitted", "Verified", "Review", "Decision"];
 const FILTERS = ["All", "Pending", "Flagged", "Approved", "Rejected"];
 
 const colorMap = {
@@ -79,42 +79,6 @@ function StatusBadge({ status }) {
   );
 }
 
-function Stepper({ step, status }) {
-  return (
-    <div className={styles.stepper}>
-      {STEPS.map((label, i) => {
-        const done = status === "approved" ? true : i < step;
-        const active = i === step - 1 && status !== "approved";
-        const flagged = active && status === "flagged";
-        const rejected = i === step - 1 && status === "rejected";
-        return (
-          <div key={label} className={styles.stepWrap}>
-            <div className={styles.stepRow}>
-              <div className={`${styles.stepDot}
-                ${done ? styles.dotDone : ""}
-                ${flagged ? styles.dotFlag : ""}
-                ${rejected ? styles.dotReject : ""}
-              `}>
-                {done ? "✓" : flagged ? "!" : rejected ? "✕" : i + 1}
-              </div>
-              {i < STEPS.length - 1 && (
-                <div className={`${styles.stepLine} ${done ? styles.lineDone : ""}`} />
-              )}
-            </div>
-            <div className={`${styles.stepLabel}
-              ${done ? styles.labelDone : ""}
-              ${flagged ? styles.labelFlag : ""}
-              ${rejected ? styles.labelReject : ""}
-            `}>
-              {label}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function ApplicationsPage() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState("All");
@@ -122,9 +86,11 @@ export default function ApplicationsPage() {
   const [search, setSearch] = useState("");
 
   const filtered = applications.filter((a) => {
-    const matchFilter = activeFilter === "All" ||
+    const matchFilter =
+      activeFilter === "All" ||
       a.status.toLowerCase() === activeFilter.toLowerCase();
-    const matchSearch = a.title.toLowerCase().includes(search.toLowerCase()) ||
+    const matchSearch =
+      a.title.toLowerCase().includes(search.toLowerCase()) ||
       a.category.toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   });
@@ -138,9 +104,7 @@ export default function ApplicationsPage() {
           <h1 className={styles.title}>My Applications</h1>
           <p className={styles.sub}>Track the status of all your submitted applications.</p>
         </div>
-        <div className={styles.countPill}>
-          {applications.length} total
-        </div>
+        <div className={styles.countPill}>{applications.length} total</div>
       </div>
 
       {/* TOOLBAR */}
@@ -192,12 +156,15 @@ export default function ApplicationsPage() {
             return (
               <div
                 key={app.id}
-                className={`${styles.appCard} ${app.status === "approved" ? styles.appCardApproved : ""} ${app.status === "rejected" ? styles.appCardRejected : ""}`}
+                className={`${styles.appCard} ${styles[`card_${app.status}`]}`}
               >
                 {/* CARD HEAD */}
                 <div className={styles.appHead}>
-                  <div className={styles.appIconWrap} style={{ background: c.bg, border: `1.5px solid ${c.border}` }}>
-                    <Icon size={18} color={c.text} strokeWidth={1.8} />
+                  <div
+                    className={styles.appIconWrap}
+                    style={{ background: c.bg, border: `0.5px solid ${c.border}` }}
+                  >
+                    <Icon size={17} color={c.text} strokeWidth={1.8} />
                   </div>
                   <div className={styles.appLeft}>
                     <div className={styles.appTitle}>{app.title}</div>
@@ -214,19 +181,16 @@ export default function ApplicationsPage() {
                   <StatusBadge status={app.status} />
                 </div>
 
-                {/* STEPPER */}
-                <Stepper step={app.step} status={app.status} />
-
-                {/* STATUS MESSAGE */}
+                {/* STATUS NOTES */}
                 {app.status === "flagged" && (
                   <div className={styles.flagNote}>
-                    <AlertCircle size={14} color="#b45309" />
+                    <AlertCircle size={14} color="#b45309" style={{ flexShrink: 0, marginTop: 1 }} />
                     <span>{app.flagNote}</span>
                   </div>
                 )}
                 {app.status === "rejected" && app.rejectionReason && (
                   <div className={styles.rejectNote}>
-                    <XCircle size={14} color="#ef4444" />
+                    <XCircle size={14} color="#b91c1c" style={{ flexShrink: 0, marginTop: 1 }} />
                     <div>
                       <div className={styles.rejectLabel}>Reason for rejection</div>
                       <div className={styles.rejectText}>{app.rejectionReason}</div>
@@ -237,7 +201,7 @@ export default function ApplicationsPage() {
                 {/* FOOTER */}
                 <div className={styles.appFoot}>
                   <span className={`${styles.footNote} ${styles[`fn_${app.status}`]}`}>
-                    {app.status === "approved" && "✓ Confirmed beneficiary"}
+                    {app.status === "approved" && "Confirmed beneficiary"}
                     {app.status === "pending"  && "Awaiting review"}
                     {app.status === "flagged"  && "Under admin review"}
                     {app.status === "rejected" && "Application unsuccessful"}
@@ -249,11 +213,6 @@ export default function ApplicationsPage() {
                     >
                       View <ArrowRight size={12} strokeWidth={2} />
                     </button>
-                    {app.status === "approved" && (
-                      <button className={styles.btnSmPrimary}>
-                        <Download size={13} strokeWidth={2} /> Download Certificate
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>

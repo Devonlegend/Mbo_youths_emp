@@ -15,7 +15,7 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 20px;
-  padding: 24px 28px 0;
+  padding: 24px 28px;
   position: relative;
   overflow: hidden;
   box-shadow: 0 2px 12px rgba(0,0,0,0.04);
@@ -27,7 +27,6 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  padding-bottom: 20px;
 }
 
 /* ── AVATAR ── */
@@ -88,71 +87,7 @@
 .heroEmail {
   font-size: 13px;
   color: #64748b;
-  margin: 0 0 10px;
-}
-
-.heroBadges {
-  display: flex;
-  gap: 7px;
-  flex-wrap: wrap;
-}
-
-.badge {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 100px;
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
-}
-
-/* ── STAT ROW (bottom of hero) ── */
-.statRow {
-  border-top: 1px solid #f1f5f9;
-  padding: 13px 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.stat {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.stat svg { color: #94a3b8; flex-shrink: 0; }
-
-.statLabel {
-  font-size: 10.5px;
-  font-weight: 600;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.statVal {
-  font-size: 12px;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.statValMono {
-  font-size: 12px;
-  font-weight: 600;
-  color: #0f172a;
-  font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
-  letter-spacing: 0.06em;
-  line-height: 1;
-}
-
-.statDiv {
-  width: 1px;
-  height: 18px;
-  background: #e2e8f0;
-  flex-shrink: 0;
+  margin: 0;
 }
 
 /* ── PHOTO NOTE ── */
@@ -215,7 +150,7 @@ select.input:disabled { appearance: none; }
 
 .cardHead {
   display: flex;
-  align-items: center;   /* vertically centre icon, text block, and button */
+  align-items: center;
   justify-content: flex-start;
   gap: 12px;
   margin-bottom: 22px;
@@ -421,12 +356,10 @@ select.input { cursor: pointer; }
 
 /* ── MOBILE ── */
 @media (max-width: 640px) {
-  .hero { padding: 18px 16px 0; }
+  .hero { padding: 18px 16px; }
   .heroName { font-size: 18px; }
   .card { padding: 18px 16px 20px; }
   .row2 { grid-template-columns: 1fr; }
-  .statRow { gap: 8px; }
-  .statDiv { display: none; }
 }
 
 /* ── ROW DIVIDER (read-only view) ── */

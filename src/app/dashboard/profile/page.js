@@ -18,7 +18,6 @@ const mockUser = {
   lga:          "Mbo LGA",
   ward:         "Eket Ward 2",
   nin_masked:   "**** **** 4521",
-  member_since: "January 2026",
   status:       "Active",
   passport_photo: null,
 };
@@ -104,26 +103,8 @@ export default function ProfilePage() {
           <div className={styles.heroMeta}>
             <h1 className={styles.heroName}>{form.first_name} {form.last_name}</h1>
             <p className={styles.heroEmail}>{form.email}</p>
-            <div className={styles.heroBadges}>
-              <span className={styles.badge}>{mockUser.status}</span>
-            </div>
           </div>
         </div>
-
-        {/* stat strip inside hero */}
-        <div className={styles.statRow}>
-          <div className={styles.stat}>
-            <IdCard size={17} strokeWidth={2} />
-            <span className={styles.statLabel}>NIN</span>
-            <span className={styles.statValMono}>{mockUser.nin_masked}</span>
-          </div>
-          <div className={styles.statDiv} />
-          <div className={styles.stat}>
-            <CalendarDays size={17} strokeWidth={2} />
-            <span className={styles.statLabel}>Member since</span>
-            <span className={styles.statVal}>{mockUser.member_since}</span>
-          </div>
-         </div>
       </div>
 
       {/* ── PHOTO REQUIREMENTS NOTE ── */}
@@ -138,12 +119,10 @@ export default function ProfilePage() {
           <div className={styles.cardHeadIcon}>
             <User size={15} strokeWidth={2.2} />
           </div>
-          {/* Title block — left-aligned, takes remaining space */}
           <div style={{ flex: 1 }}>
             <h2 className={styles.cardTitle}>Personal Information</h2>
             <p className={styles.cardSub}>Your registered profile details.</p>
           </div>
-          {/* Edit / Cancel button — only toggled here, Save is in formFoot */}
           {!editing ? (
             <button type="button" className={styles.btnEdit} onClick={handleEdit}>
               <Pencil size={13} strokeWidth={2} /> Edit
@@ -276,7 +255,19 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Save button + success message — only visible while editing */}
+          {/* ── NIN (always read-only) ── */}
+          <div className={styles.field}>
+            <label className={styles.label}>
+              <IdCard size={12} strokeWidth={2} /> National ID (NIN)
+            </label>
+            <input
+              className={styles.input}
+              value={mockUser.nin_masked}
+              readOnly
+              disabled
+            />
+          </div>
+
           {editing && (
             <div className={styles.formFoot}>
               {saved && (

@@ -25,17 +25,6 @@ export default function ProfileCard({ user, onEdit }) {
       {/* INFO */}
       <div className={styles.info}>
         <p className={styles.name}>{fullName}</p>
-        <div className={styles.meta}>
-          <span className={styles.metaItem}>
-            <MapPin size={11} strokeWidth={2} />
-            {user?.lga || "Mbo LGA"}, Akwa Ibom State
-          </span>
-          <span className={styles.metaDot} />
-          <span className={styles.metaItem}>
-            <CalendarDays size={11} strokeWidth={2} />
-            Member since {user?.member_since || "January 2026"}
-          </span>
-        </div>
         <p className={styles.hint}>
           Keep your profile up to date to stay eligible for all programmes this cycle.
         </p>

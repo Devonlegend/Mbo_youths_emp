@@ -2,7 +2,7 @@
 import { useRouter, useParams } from "next/navigation";
 import {
   GraduationCap, Briefcase, Wrench, Banknote,
-  ArrowLeft, Download, CheckCircle2, Clock,
+  ArrowLeft, CheckCircle2, Clock,
   XCircle, AlertCircle, ShieldCheck, FileText,
   Calendar, MapPin, User, Hash,
 } from "lucide-react";
@@ -227,14 +227,6 @@ export default function ApplicationDetailPage() {
       </div>
     )}
 
-    {/* DOWNLOAD */}
-    {app.status === "approved" && (
-      <div className={styles.actionsRow}>
-        <button className={styles.downloadBtn}>
-          <Download size={14} strokeWidth={2} /> Download Certificate
-        </button>
-      </div>
-    )}
 
     {/* SUBMITTED FIELDS */}
     <div className={styles.fieldsWrap}>
