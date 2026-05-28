@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Eye, EyeOff, Save, Loader2, ShieldCheck,
   Bell, Globe, UserX, ChevronDown, ChevronUp,
@@ -81,16 +81,278 @@ function ToggleRow({ icon, label, sub, checked, onChange }) {
   );
 }
 
-export default function SettingsPage() {
-  /* ── Password ── */
-  const [passwords, setPasswords] = useState({ newPass: "", confirm: "" });
-  const [showNew,     setShowNew]     = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [savingPwd,   setSavingPwd]   = useState(false);
-  const [successPwd,  setSuccessPwd]  = useState(false);
-  const [pwdError,    setPwdError]    = useState("");
-  const [isEditingPwd, setIsEditingPwd] = useState(false);
+/* ── OTP INPUT ── */
+function OtpInput({ value, onChange }) {
+  const inputs = useRef([]);
 
+  function handleKey(e, i) {
+    if (e.key === "Backspace" && !e.target.value && i > 0) {
+      inputs.current[i - 1].focus();
+    }
+  }
+
+  function handleChange(e, i) {
+    const val = e.target.value.replace(/\D/g, "").slice(-1);
+    const next = value.split("");
+    next[i] = val;
+    const joined = next.join("");
+    onChange(joined);
+    if (val && i < 5) inputs.current[i + 1].focus();
+  }
+
+  function handlePaste(e) {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasted) {
+      onChange(pasted.padEnd(6, ""));
+      const focusIdx = Math.min(pasted.length, 5);
+      inputs.current[focusIdx]?.focus();
+      e.preventDefault();
+    }
+  }
+
+  return (
+    <div className={styles.otpRow}>
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <input
+          key={i}
+          ref={(el) => (inputs.current[i] = el)}
+          className={styles.otpBox}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[i] || ""}
+          onChange={(e) => handleChange(e, i)}
+          onKeyDown={(e) => handleKey(e, i)}
+          onPaste={handlePaste}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ── PASSWORD & SECURITY CARD ── */
+function PasswordCard() {
+  const [passwords, setPasswords] = useState({ newPass: "", confirm: "" });
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [pwdError, setPwdError] = useState("");
+
+  // OTP stage
+  const [stage, setStage] = useState("form"); // "form" | "otp" | "success"
+  const [otpChannel, setOtpChannel] = useState("phone"); // "phone" | "email"
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+
+  function handlePwd(e) {
+    setPasswords((p) => ({ ...p, [e.target.name]: e.target.value }));
+    setPwdError("");
+  }
+
+  function handleSubmitPwd(e) {
+    e.preventDefault();
+    if (!isEditing) { setIsEditing(true); return; }
+    if (passwords.newPass.length < 8) { setPwdError("Password must be at least 8 characters."); return; }
+    if (passwords.newPass !== passwords.confirm) { setPwdError("Passwords do not match."); return; }
+    // Move to OTP stage
+    setStage("otp");
+    setOtp("");
+    setOtpError("");
+  }
+
+  async function handleVerifyOtp() {
+    if (otp.length < 6) { setOtpError("Please enter all 6 digits."); return; }
+    setVerifying(true);
+    await new Promise((r) => setTimeout(r, 1200));
+    setVerifying(false);
+    // Simulate success (any 6-digit code works in this demo)
+    setStage("success");
+    setTimeout(() => {
+      setStage("form");
+      setIsEditing(false);
+      setPasswords({ newPass: "", confirm: "" });
+      setOtp("");
+    }, 2000);
+  }
+
+  async function handleResend() {
+    setResending(true);
+    setResent(false);
+    await new Promise((r) => setTimeout(r, 900));
+    setResending(false);
+    setResent(true);
+    setTimeout(() => setResent(false), 3000);
+  }
+
+  function handleCancelOtp() {
+    setStage("form");
+    setOtp("");
+    setOtpError("");
+  }
+
+  return (
+    <div className={styles.card}>
+      {/* Header — always visible */}
+      <div className={styles.pwdCardHead}>
+        <div className={styles.pwdCardHeadLeft}>
+          <div className={styles.cardIcon}><KeyRound size={17} strokeWidth={1.9} /></div>
+          <div>
+            <h2 className={styles.cardTitle}>Password &amp; Security</h2>
+            <p className={styles.cardSub}>Set a strong password to keep your account safe.</p>
+          </div>
+        </div>
+        <span className={styles.pwdBadge}>Security</span>
+      </div>
+
+      {/* ── FORM STAGE ── */}
+      {stage === "form" && (
+        <div className={styles.cardBody}>
+          {pwdError && <div className={styles.errorBanner}>{pwdError}</div>}
+          <form className={styles.form} onSubmit={handleSubmitPwd}>
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label className={styles.label}>New password</label>
+                <div className={styles.pwdWrap}>
+                  <input
+                    className={styles.input}
+                    name="newPass"
+                    type={showNew ? "text" : "password"}
+                    value={passwords.newPass}
+                    onChange={handlePwd}
+                    placeholder="Enter new password"
+                    disabled={!isEditing}
+                  />
+                  <button type="button" className={styles.eyeBtn} onClick={() => setShowNew((v) => !v)}>
+                    {showNew ? <EyeOff size={15} strokeWidth={2} /> : <Eye size={15} strokeWidth={2} />}
+                  </button>
+                </div>
+                <PasswordStrength password={passwords.newPass} />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Confirm new password</label>
+                <div className={styles.pwdWrap}>
+                  <input
+                    className={styles.input}
+                    name="confirm"
+                    type={showConfirm ? "text" : "password"}
+                    value={passwords.confirm}
+                    onChange={handlePwd}
+                    placeholder="Confirm password"
+                    disabled={!isEditing}
+                  />
+                  <button type="button" className={styles.eyeBtn} onClick={() => setShowConfirm((v) => !v)}>
+                    {showConfirm ? <EyeOff size={15} strokeWidth={2} /> : <Eye size={15} strokeWidth={2} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p className={styles.hint}>Minimum 8 characters. Use a mix of letters, numbers, and symbols.</p>
+            <div className={styles.formFoot}>
+              <button
+                type="submit"
+                className={isEditing ? styles.btnPrimary : styles.btnOutline}
+              >
+                {!isEditing
+                  ? <><KeyRound size={14} strokeWidth={2} /> Edit password</>
+                  : <><ShieldCheck size={14} strokeWidth={2} /> Continue</>
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── OTP STAGE ── */}
+      {stage === "otp" && (
+        <div className={`${styles.cardBody} ${styles.otpBody}`}>
+          <div className={styles.otpHeader}>
+            <div className={styles.otpIconWrap}>
+              <ShieldCheck size={22} strokeWidth={1.8} color="#15803d" />
+            </div>
+            <div>
+              <p className={styles.otpTitle}>Verify it's you</p>
+              <p className={styles.otpDesc}>
+                We'll send a 6-digit code to confirm this change.
+              </p>
+            </div>
+          </div>
+
+          {/* Channel picker */}
+          <div className={styles.channelPicker}>
+            <button
+              type="button"
+              className={`${styles.channelBtn} ${otpChannel === "phone" ? styles.channelBtnActive : ""}`}
+              onClick={() => { setOtpChannel("phone"); setResent(false); }}
+            >
+              <Smartphone size={14} strokeWidth={2} />
+              Phone
+            </button>
+            <button
+              type="button"
+              className={`${styles.channelBtn} ${otpChannel === "email" ? styles.channelBtnActive : ""}`}
+              onClick={() => { setOtpChannel("email"); setResent(false); }}
+            >
+              <Mail size={14} strokeWidth={2} />
+              Email
+            </button>
+          </div>
+
+          <p className={styles.otpSentNote}>
+            {otpChannel === "phone"
+              ? "Code sent to your registered phone number"
+              : "Code sent to your registered email address"}
+          </p>
+
+          {/* OTP boxes */}
+          <OtpInput value={otp} onChange={(v) => { setOtp(v); setOtpError(""); }} />
+          {otpError && <p className={styles.otpError}>{otpError}</p>}
+
+          {/* Resend */}
+          <div className={styles.resendRow}>
+            {resent
+              ? <span className={styles.resentMsg}><Check size={12} strokeWidth={2.5} /> Code resent!</span>
+              : <button type="button" className={styles.resendBtn} onClick={handleResend} disabled={resending}>
+                  {resending ? <><Loader2 size={12} className={styles.spin} /> Sending...</> : "Resend code"}
+                </button>
+            }
+          </div>
+
+          {/* Actions */}
+          <div className={styles.otpActions}>
+            <button type="button" className={styles.btnOutline} onClick={handleCancelOtp}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles.btnPrimary}
+              onClick={handleVerifyOtp}
+              disabled={verifying || otp.length < 6}
+            >
+              {verifying
+                ? <><Loader2 size={14} className={styles.spin} /> Verifying...</>
+                : <><ShieldCheck size={14} strokeWidth={2} /> Verify</>
+              }
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUCCESS STAGE ── */}
+      {stage === "success" && (
+        <div className={`${styles.cardBody} ${styles.successStage}`}>
+          <div className={styles.successBanner}>
+            <ShieldCheck size={14} strokeWidth={2} /> Password updated successfully.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function SettingsPage() {
   /* ── Notifications ── */
   const [notifs, setNotifs] = useState({
     sms: true, email: true, announcements: true, events: false, cycleAlerts: true,
@@ -105,107 +367,14 @@ export default function SettingsPage() {
   /* ── Deactivate modal ── */
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
-  function handlePwd(e) {
-    setPasswords((p) => ({ ...p, [e.target.name]: e.target.value }));
-    setPwdError(""); setSuccessPwd(false);
-  }
-
   function toggleNotif(key)   { setNotifs((n)  => ({ ...n, [key]: !n[key] })); }
   function togglePrivacy(key) { setPrivacy((p) => ({ ...p, [key]: !p[key] })); }
-
-  async function handleSavePwd(e) {
-    e.preventDefault();
-    if (!isEditingPwd) { setIsEditingPwd(true); return; }
-    if (passwords.newPass.length < 8) { setPwdError("Password must be at least 8 characters."); return; }
-    if (passwords.newPass !== passwords.confirm) { setPwdError("Passwords do not match."); return; }
-    setSavingPwd(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setSavingPwd(false);
-    setSuccessPwd(true);
-    setIsEditingPwd(false);
-    setPasswords({ newPass: "", confirm: "" });
-  }
 
   return (
     <div className={styles.page}>
 
       {/* ── 1. CHANGE PASSWORD ── */}
-      <div className={styles.card}>
-        <div className={styles.pwdCardHead}>
-          <div className={styles.pwdCardHeadLeft}>
-            <div className={styles.cardIcon}><KeyRound size={17} strokeWidth={1.9} /></div>
-            <div>
-              <h2 className={styles.cardTitle}>Password &amp; Security</h2>
-              <p className={styles.cardSub}>Set a strong password to keep your account safe.</p>
-            </div>
-          </div>
-          <span className={styles.pwdBadge}>Security</span>
-        </div>
-
-        <div className={styles.cardBody}>
-          {successPwd && (
-            <div className={styles.successBanner}>
-              <ShieldCheck size={14} strokeWidth={2} /> Password updated successfully.
-            </div>
-          )}
-          {pwdError && <div className={styles.errorBanner}>{pwdError}</div>}
-
-          <form className={styles.form} onSubmit={handleSavePwd}>
-            <div className={styles.row2}>
-              <div className={styles.field}>
-                <label className={styles.label}>New password</label>
-                <div className={styles.pwdWrap}>
-                  <input
-                    className={styles.input}
-                    name="newPass"
-                    type={showNew ? "text" : "password"}
-                    value={passwords.newPass}
-                    onChange={handlePwd}
-                    placeholder="Enter new password"
-                    disabled={!isEditingPwd}
-                  />
-                  <button type="button" className={styles.eyeBtn} onClick={() => setShowNew((v) => !v)}>
-                    {showNew ? <EyeOff size={15} strokeWidth={2} /> : <Eye size={15} strokeWidth={2} />}
-                  </button>
-                </div>
-                <PasswordStrength password={passwords.newPass} /> 
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Confirm new password</label>
-                <div className={styles.pwdWrap}>
-                  <input
-                    className={styles.input}
-                    name="confirm"
-                    type={showConfirm ? "text" : "password"}
-                    value={passwords.confirm}
-                    onChange={handlePwd}
-                    placeholder="Confirm password"
-                    disabled={!isEditingPwd}
-                  />
-                  <button type="button" className={styles.eyeBtn} onClick={() => setShowConfirm((v) => !v)}>
-                    {showConfirm ? <EyeOff size={15} strokeWidth={2} /> : <Eye size={15} strokeWidth={2} />}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <p className={styles.hint}>Minimum 8 characters. Use a mix of letters, numbers, and symbols.</p>
-            <div className={styles.formFoot}>
-              <button
-                type="submit"
-                className={isEditingPwd ? styles.btnPrimary : styles.btnOutline}
-                disabled={savingPwd}
-              >
-                {!isEditingPwd
-                  ? <><KeyRound size={14} strokeWidth={2} /> Edit password</>
-                  : savingPwd
-                    ? <><Loader2 size={14} strokeWidth={2} className={styles.spin} /> Updating...</>
-                    : <><Save size={14} strokeWidth={2} /> Update password</>
-                }
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+      <PasswordCard />
 
       {/* ── 2. NOTIFICATIONS ── */}
       <Section icon={<Bell size={17} strokeWidth={1.9} />} title="Notifications" sub="Choose how and when you receive alerts.">
@@ -271,7 +440,7 @@ export default function SettingsPage() {
             <div className={styles.modalIcon}>
               <AlertTriangle size={32} strokeWidth={1.8} color="#dc2626" />
             </div>
-              <h3 className={styles.modalTitle}>Deactivate your account?</h3>
+            <h3 className={styles.modalTitle}>Deactivate your account?</h3>
             <p className={styles.modalSub}>
               This will temporarily disable your account. You won't be able to log in until you reactivate it.
               Think twice — are you sure you want to proceed?

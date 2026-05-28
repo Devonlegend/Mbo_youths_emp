@@ -55,7 +55,17 @@
   letter-spacing: -0.02em;
   margin: 0;
 }
+.email {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0px 0;
+}
 
+.phone {
+  font-size: 12px;
+  color: #64748b;
+  margin: 1px 0 4px;
+}
 .meta {
   display: flex;
   align-items: center;
@@ -79,14 +89,6 @@
   border-radius: 50%;
   background: #cbd5e1;
   flex-shrink: 0;
-}
-
-.hint {
-  font-family: var(--font-dm), 'DM Sans', sans-serif;
-  font-size: 12px;
-  color: #94a3b8;
-  margin: 0;
-  line-height: 1.5;
 }
 
 /* ── BUTTON ── */

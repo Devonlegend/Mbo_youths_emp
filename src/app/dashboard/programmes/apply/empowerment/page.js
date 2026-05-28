@@ -183,10 +183,6 @@ export default function EmpowermentForm() {
         </div>
 
         <div className={styles.formFooter}>
-          <div className={styles.securedNote}>
-            <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
-            <span>Secured under the Petroleum Industry Act, 2021</span>
-          </div>
           <button type="submit" className={styles.submitBtn} disabled={loading}>
             {loading ? "Submitting..." : <>Submit Application <ArrowRight size={15} strokeWidth={2} /></>}
           </button>

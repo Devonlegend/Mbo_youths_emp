@@ -36,7 +36,6 @@
 
 .cardHead:hover { background: #f8fafc; }
 
-/* password card header — static, not a button */
 .pwdCardHead {
   display: flex;
   align-items: center;
@@ -104,17 +103,16 @@
 }
 
 .cardBody {
-  padding: 0 22px 22px;
+  padding: 18px 22px 22px;
   border-top: 1px solid #f1f5f9;
-  padding-top: 18px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  animation: slideDown 0.18s ease;
+  animation: slideDown 0.2s ease;
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-6px); }
+  from { opacity: 0; transform: translateY(-8px); }
   to   { opacity: 1; transform: none; }
 }
 
@@ -194,6 +192,12 @@ select.input {
   cursor: pointer;
 }
 
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f1f5f9;
+}
+
 .hint {
   font-size: 12px;
   color: #94a3b8;
@@ -217,6 +221,9 @@ select.input {
   align-items: center;
   transition: color 0.15s;
 }
+
+.eyeBtn:hover { color: #15803d; }
+
 .strengthWrap {
   display: flex;
   flex-direction: column;
@@ -264,14 +271,13 @@ select.input {
   transition: color 0.2s;
 }
 
-.eyeBtn:hover { color: #15803d; }
-
 /* ── FORM FOOTER ── */
 .formFoot {
   display: flex;
   justify-content: flex-end;
 }
 
+/* ── BUTTONS ── */
 .btnPrimary {
   display: inline-flex;
   align-items: center;
@@ -295,8 +301,51 @@ select.input {
 }
 
 .btnPrimary:disabled {
-  opacity: 0.65;
+  opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
+}
+
+.btnOutline {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: #374151;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.btnOutline:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.btnDanger {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid #fecaca;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.btnDanger:hover {
+  background: #fee2e2;
+  border-color: #f87171;
 }
 
 /* ── TOGGLE LIST ── */
@@ -416,53 +465,6 @@ select.input {
   margin: 0;
 }
 
-.btnOutline {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  color: #374151;
-  font-size: 12.5px;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 9px;
-  border: 1px solid #e2e8f0;
-  cursor: pointer;
-  transition: all 0.18s;
-}
-
-.btnOutline:hover {
-  border-color: #94a3b8;
-  background: #f8fafc;
-}
-
-.btnDanger {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #fef2f2;
-  color: #dc2626;
-  font-size: 12.5px;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 9px;
-  border: 1px solid #fecaca;
-  cursor: pointer;
-  transition: all 0.18s;
-}
-
-.btnDanger:hover {
-  background: #fee2e2;
-  border-color: #f87171;
-}
-.input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: #f1f5f9;
-}
-
 .actionRowDanger {
   display: flex;
   align-items: center;
@@ -474,6 +476,7 @@ select.input {
   border: 1px solid #fecaca;
 }
 
+/* ── MODAL ── */
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -495,9 +498,10 @@ select.input {
   text-align: center;
 }
 
-.modalIcon { display: flex; 
-  justify-content: center; 
-  margin-bottom: 12px; 
+.modalIcon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
 }
 
 .modalTitle {
@@ -521,6 +525,173 @@ select.input {
   flex-wrap: wrap;
 }
 
+/* ── OTP STAGE ── */
+.otpBody {
+  align-items: center;
+  text-align: center;
+  padding-top: 24px;
+  padding-bottom: 26px;
+  gap: 18px;
+}
+
+.otpHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.otpIconWrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.otpTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2px;
+  letter-spacing: -0.02em;
+}
+
+.otpDesc {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Channel picker */
+.channelPicker {
+  display: flex;
+  gap: 8px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.channelBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.channelBtnActive {
+  background: #ffffff;
+  color: #15803d;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+}
+
+.otpSentNote {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* OTP digit boxes */
+.otpRow {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.otpBox {
+  width: 46px;
+  height: 54px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  outline: none;
+  transition: all 0.18s;
+  caret-color: #15803d;
+}
+
+.otpBox:focus {
+  border-color: #15803d;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(21,128,61,0.10);
+}
+
+.otpError {
+  font-size: 12px;
+  color: #ef4444;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Resend */
+.resendRow {
+  display: flex;
+  justify-content: center;
+  min-height: 20px;
+}
+
+.resendBtn {
+  background: none;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #15803d;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: opacity 0.15s;
+}
+
+.resendBtn:hover:not(:disabled) { opacity: 0.75; }
+.resendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.resentMsg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+}
+
+/* OTP action row */
+.otpActions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+}
+
+.otpActions .btnPrimary,
+.otpActions .btnOutline {
+  flex: 1;
+  justify-content: center;
+}
+
+/* Success stage */
+.successStage {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
 /* ── SPINNER ── */
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.7s linear infinite; }
@@ -531,4 +702,6 @@ select.input {
   .cardBody { padding: 14px 16px 18px; }
   .row2 { grid-template-columns: 1fr; }
   .actionRow { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .otpBox { width: 40px; height: 48px; font-size: 18px; }
+  .otpRow { gap: 7px; }
 }

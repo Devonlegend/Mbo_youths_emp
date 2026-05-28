@@ -10,7 +10,7 @@ import {
   forgotPasswordRequest,
   forgotPasswordVerifyOtp,
   forgotPasswordReset,
-} from "@/services/api";
+} from "@/services/auth";
 
 // ─── Password strength helper (same as register page) ─────────────────────
 function getStrength(pw) {

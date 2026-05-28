@@ -172,7 +172,7 @@ export default function Topbar({ user, onMenuOpen }) {
               <span className={styles.avatarName}>
                 {user?.first_name} {user?.last_name}
               </span>
-              <span className={styles.avatarSub}>{user?.lga || "Youth Portal"}</span>
+              <span className={styles.avatarSub}>{user?.email || "Youth Portal"}</span>
             </div>
             <ChevronDown
               size={13}
@@ -185,7 +185,7 @@ export default function Topbar({ user, onMenuOpen }) {
             <div className={styles.dropdown}>
               <div className={styles.dropHeader}>
                 <div className={styles.dropName}>{user?.first_name} {user?.last_name}</div>
-                <div className={styles.dropSub}>{user?.lga || "Youth Portal"}</div>
+                <div className={styles.dropSub}>{user?.email || "Youth Portal"}</div>
               </div>
               <div className={styles.dropDivider} />
               <a href="/dashboard/settings" className={styles.dropItem} onClick={() => setDropOpen(false)}>

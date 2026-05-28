@@ -25,9 +25,8 @@ export default function ProfileCard({ user, onEdit }) {
       {/* INFO */}
       <div className={styles.info}>
         <p className={styles.name}>{fullName}</p>
-        <p className={styles.hint}>
-          Keep your profile up to date to stay eligible for all programmes this cycle.
-        </p>
+        <p className={styles.email}>{user?.email || ""}</p>
+        <p className={styles.phone}>{user?.phone || ""}</p>
       </div>
 
       {/* ACTION */}

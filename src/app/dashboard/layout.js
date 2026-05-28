@@ -10,7 +10,7 @@ const mockUser = {
   lga: "Mbo LGA",
   email: "c.harrison@mail.com",
   nin_masked: "****-***-4521",
-  phone_masked: "+234 803 *** 4521",
+  phone: "+2348031234521",
   passport_photo: null,
 };
 
