@@ -1,8 +1,9 @@
 "use client";
 import { useRouter } from "next/navigation";
 import {
+  Calendar, Clock, FileText, CheckCircle2,
   GraduationCap, Briefcase, Wrench, Banknote,
-  ArrowRight, Home, Calendar, Clock, FileText, CheckCircle2,
+  ArrowRight, ChevronRight, AlertCircle, Hourglass,
 } from "lucide-react";
 import ProfileCard from "./components/ProfileCard";
 import styles from "./page.module.css";
@@ -48,6 +49,61 @@ const stats = [
   },
 ];
 
+const quickActions = [
+  {
+    icon: GraduationCap,
+    label: "Scholarship",
+    desc: "Education support",
+    iconClass: "qa_green",
+    href: "/dashboard/programmes?type=scholarship",
+  },
+  {
+    icon: Briefcase,
+    label: "Empowerment",
+    desc: "Business support",
+    iconClass: "qa_blue",
+    href: "/dashboard/programmes?type=empowerment",
+  },
+  {
+    icon: Wrench,
+    label: "Training",
+    desc: "Skill development",
+    iconClass: "qa_amber",
+    href: "/dashboard/programmes?type=training",
+  },
+  {
+    icon: Banknote,
+    label: "Grant",
+    desc: "Funding access",
+    iconClass: "qa_red",
+    href: "/dashboard/programmes?type=grant",
+  },
+];
+
+const recentActivity = [
+  {
+    icon: CheckCircle2,
+    iconClass: "act_green",
+    title: "Scholarship application approved",
+    desc: "2026 University Scholarship",
+    time: "2 days ago",
+  },
+  {
+    icon: Hourglass,
+    iconClass: "act_amber",
+    title: "Grant application under review",
+    desc: "Youth Business Start-Up Grant",
+    time: "5 days ago",
+  },
+  {
+    icon: AlertCircle,
+    iconClass: "act_blue",
+    title: "Training application submitted",
+    desc: "Digital Skills Programme 2026",
+    time: "1 week ago",
+  },
+];
+
 const CYCLE_END = new Date("2026-06-30");
 
 function getDaysLeft() {
@@ -73,9 +129,7 @@ export default function DashboardPage() {
         <h1 className={styles.greetingTitle}>
           Welcome back,{" "}
           <span className={styles.greetingAccent}>{mockUser.first_name}</span>
-          <span className={styles.greetingIcon}>
-            <Home size={14} strokeWidth={2.5} />
-          </span>
+          <span className={styles.greetingWave}>👋</span>
         </h1>
       </div>
 
@@ -115,7 +169,6 @@ export default function DashboardPage() {
                 <div className={styles.statValue}>{s.value}</div>
                 <div className={styles.statLabel}>{s.label}</div>
               </div>
-              {/* mobile pill — only visible on small screens via CSS */}
               <span className={`${styles.statMobilePill} ${styles[s.mobilePillClass]}`}>
                 {s.pillLabel}
               </span>
@@ -123,6 +176,71 @@ export default function DashboardPage() {
           );
         })}
       </div>
+
+      {/* QUICK ACTIONS */}
+      <div>
+        <div className={styles.sectionHead}>
+          <span className={styles.sectionTitle}>Apply for a programme</span>
+          <button
+            className={styles.sectionLink}
+            onClick={() => router.push("/dashboard/programmes")}
+          >
+            View all <ChevronRight size={13} strokeWidth={2} />
+          </button>
+        </div>
+        <div className={styles.qaGrid}>
+          {quickActions.map((q) => {
+            const Icon = q.icon;
+            return (
+              <button
+                key={q.label}
+                className={styles.qaCard}
+                onClick={() => router.push(q.href)}
+              >
+                <div className={`${styles.qaIcon} ${styles[q.iconClass]}`}>
+                  <Icon size={18} strokeWidth={1.8} />
+                </div>
+                <div className={styles.qaText}>
+                  <span className={styles.qaLabel}>{q.label}</span>
+                  <span className={styles.qaDesc}>{q.desc}</span>
+                </div>
+                <ArrowRight size={14} strokeWidth={2} className={styles.qaArrow} />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* RECENT ACTIVITY */}
+      <div>
+        <div className={styles.sectionHead}>
+          <span className={styles.sectionTitle}>Recent activity</span>
+          <button
+            className={styles.sectionLink}
+            onClick={() => router.push("/dashboard/applications")}
+          >
+            All applications <ChevronRight size={13} strokeWidth={2} />
+          </button>
+        </div>
+        <div className={styles.activityList}>
+          {recentActivity.map((a, i) => {
+            const Icon = a.icon;
+            return (
+              <div key={i} className={styles.activityItem}>
+                <div className={`${styles.activityIcon} ${styles[a.iconClass]}`}>
+                  <Icon size={14} strokeWidth={2} />
+                </div>
+                <div className={styles.activityBody}>
+                  <span className={styles.activityTitle}>{a.title}</span>
+                  <span className={styles.activityDesc}>{a.desc}</span>
+                </div>
+                <span className={styles.activityTime}>{a.time}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
     </div>
   );
 }

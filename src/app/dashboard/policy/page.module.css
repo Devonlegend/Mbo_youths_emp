@@ -1,6 +1,5 @@
 /* ══════════════════════════════════════════
    POLICY PAGE — RMHCDT Youth Portal
-   Matches Help page visual language exactly
 ══════════════════════════════════════════ */
 
 .page {
@@ -86,6 +85,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 4px;
+  flex-shrink: 0;
 }
 
 .summaryCardLabel {
@@ -253,9 +253,7 @@
   transition: background 0.15s;
 }
 
-.policyGroupBtn:hover {
-  background: #f8fafc;
-}
+.policyGroupBtn:hover { background: #f8fafc; }
 
 .policyGroupLeft {
   display: flex;
@@ -290,9 +288,7 @@
   transition: color 0.15s;
 }
 
-.policyGroupBtn:hover .policyChevron {
-  color: #15803d;
-}
+.policyGroupBtn:hover .policyChevron { color: #15803d; }
 
 /* ── POLICY BODY ── */
 .policyGroupBody {
@@ -311,9 +307,7 @@
   gap: 10px;
 }
 
-.policyText p {
-  margin: 0;
-}
+.policyText p { margin: 0; }
 
 .policyText strong {
   font-weight: 600;
@@ -351,29 +345,10 @@
 }
 
 /* ── ICON COLOUR CLASSES ── */
-.si_green {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #15803d;
-}
-
-.si_blue {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
-}
-
-.si_amber {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  color: #b45309;
-}
-
-.si_red {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-}
+.si_green { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+.si_blue  { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+.si_amber { background: #fffbeb; border: 1px solid #fde68a; color: #b45309; }
+.si_red   { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
 
 /* ── BOTTOM BADGE ── */
 .bottomBadge {
@@ -392,21 +367,102 @@
   to   { opacity: 1; transform: none; }
 }
 
-/* ── RESPONSIVE ── */
+/* ════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════ */
+
+/* Tablet ≤ 1024px — 2 columns */
 @media (max-width: 1024px) {
   .summaryGrid { grid-template-columns: repeat(2, 1fr); }
   .catGrid     { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* Mobile ≤ 768px — single column, vertical cards */
 @media (max-width: 768px) {
-  .body        { padding: 24px 5% 48px; gap: 36px; }
-  .pageHeader  { padding: 24px 5% 20px; }
-  .summaryGrid { grid-template-columns: repeat(2, 1fr); }
-  .catGrid     { grid-template-columns: 1fr 1fr; }
+  .pageHeader {
+    padding: 22px 20px 18px;
+    gap: 3px;
+  }
+  .pageHeaderIcon { width: 40px; height: 40px; margin-bottom: 6px; }
+  .pageTitle      { font-size: 21px; }
+  .pageTagline    { font-size: 13.5px; }
+  .pageSub        { font-size: 12px; }
+
+  .body { padding: 24px 20px 52px; gap: 36px; }
+
+  /* ── Summary: single column, vertical card ── */
+  .summaryGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .summaryCard {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px 20px;
+    gap: 4px;
+    border-radius: 14px;
+  }
+  .summaryCardIcon  { margin-bottom: 6px; }
+  .summaryCardLabel { font-size: 10.5px; }
+  .summaryCardValue { font-size: 26px; }
+  .summaryCardDesc  { font-size: 12.5px; margin-top: 2px; }
+
+  /* ── Categories: single column, vertical card ── */
+  .catGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .catCard {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px 20px;
+    border-radius: 14px;
+    gap: 10px;
+  }
+  .catCardTop  { gap: 10px; }
+  .catCardIcon { width: 36px; height: 36px; }
+  .catCardName { font-size: 14px; }
+  .catCardDesc { font-size: 13px; }
+
+  /* ── Section head ── */
+  .sectionHead  { gap: 12px; margin-bottom: 16px; }
+  .sectionIcon  { width: 36px; height: 36px; }
+  .sectionTitle { font-size: 16px; }
+  .sectionSub   { font-size: 12.5px; }
+
+  /* ── Accordion ── */
+  .policyGroupBtn   { padding: 16px 18px; }
+  .policyGroupTitle { font-size: 13.5px; }
+  .policyGroupBody  { padding: 0 18px 18px; }
+  .policyText       { font-size: 13px; gap: 9px; }
+  .policyText li    { font-size: 13px; }
+  .ruleBox          { font-size: 12.5px; padding: 12px 14px; }
+
+  .dividerText { font-size: 11px; }
+  .bottomBadge { font-size: 11px; flex-wrap: wrap; text-align: center; }
 }
 
+/* Small mobile ≤ 480px */
 @media (max-width: 480px) {
-  .summaryGrid { grid-template-columns: 1fr 1fr; }
-  .catGrid     { grid-template-columns: 1fr; }
-  .policyGroupBtn { padding: 14px 16px; }
+  .pageHeader { padding: 18px 16px; }
+  .pageTitle  { font-size: 19px; }
+
+  .body { padding: 20px 16px 44px; gap: 28px; }
+
+  .summaryCard  { padding: 16px; }
+  .summaryCardValue { font-size: 24px; }
+  .summaryCardDesc  { font-size: 12px; }
+
+  .catCard { padding: 16px; }
+  .catCardDesc { font-size: 12.5px; }
+
+  .policyGroupBtn   { padding: 14px 16px; }
+  .policyGroupNum   { width: 24px; height: 24px; font-size: 10.5px; }
+  .policyGroupTitle { font-size: 13px; }
+  .policyGroupBody  { padding: 0 16px 16px; }
+  .policyText       { font-size: 12.5px; }
+  .ruleBox          { font-size: 12px; padding: 11px 13px; }
+
+  .sectionIcon  { width: 34px; height: 34px; }
+  .sectionTitle { font-size: 15px; }
 }
