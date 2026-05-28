@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import styles from "./page.module.css";
 import PassportCapture from "@/components/PassportCapture";
-import { register, otpSend, otpVerify, otpResend } from "@/services/api"; // ← fixed imports
+import { register, otpSend, otpVerify, otpResend } from "@/services/auth"; // ← fixed imports
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 

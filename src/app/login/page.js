@@ -6,7 +6,7 @@ import {
   ShieldCheck, AlertCircle, RotateCcw
 } from "lucide-react";
 import styles from "./page.module.css";
-import { login, otpVerify, otpResend } from "@/services/api";
+import { login, otpVerify, otpResend } from "@/services/auth";
 
 export default function LoginPage() {
   const [step, setStep] = useState("login");
