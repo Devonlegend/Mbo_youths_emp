@@ -24,6 +24,7 @@ class UserManager(BaseUserManager):
             'nin_hash': nin_hash,
             'ward': ward or '',
             'date_of_birth': date_of_birth,
+            
         }
         if gender:
             fields['gender'] = gender

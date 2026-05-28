@@ -116,7 +116,8 @@ def register(request):
         nin_hash=nin_hash,
         date_of_birth=date_of_birth,
         gender=gender,
-        lga=lga
+        lga=lga,
+        
     )
 
     if passport:
