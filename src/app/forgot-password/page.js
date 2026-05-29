@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import {
   Mail, ArrowRight, ShieldCheck, AlertCircle,
-  RotateCcw, Eye, EyeOff, CheckCircle2, Lock
+  RotateCcw, Eye, EyeOff, CheckCircle2, Lock, KeyRound
 } from "lucide-react";
 import styles from "./page.module.css";
 import {
@@ -12,7 +12,7 @@ import {
   forgotPasswordReset,
 } from "@/services/auth";
 
-// ─── Password strength helper (same as register page) ─────────────────────
+
 function getStrength(pw) {
   let score = 0;
   const checks = {
@@ -29,14 +29,11 @@ function getStrength(pw) {
 }
 
 export default function ForgotPasswordPage() {
-  // Steps: "email" → "otp" → "reset" → "done"
   const [step, setStep] = useState("email");
 
-  // email step
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
 
-  // otp step
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState("");
   const [countdown, setCountdown] = useState(60);
@@ -44,18 +41,15 @@ export default function ForgotPasswordPage() {
   const countdownRef = useRef(null);
   const otpInputs = useRef([]);
 
-  // reset step
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [resetErrors, setResetErrors] = useState({});
 
-  // shared
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
-  // ── Countdown timer ─────────────────────────────────────────────────────
   function startCountdown() {
     if (countdownRef.current) clearInterval(countdownRef.current);
     setCountdown(60);
@@ -72,7 +66,6 @@ export default function ForgotPasswordPage() {
     }, 1000);
   }
 
-  // ── STEP 1: Request reset email ─────────────────────────────────────────
   async function handleEmailSubmit(e) {
     e.preventDefault();
     if (!email.trim()) { setEmailError("Required"); return; }
@@ -85,7 +78,6 @@ export default function ForgotPasswordPage() {
       setStep("otp");
       startCountdown();
     } catch (err) {
-      // Always show a neutral message — don't reveal if email exists
       setApiError(
         err?.response?.data?.error ||
         err?.response?.data?.detail ||
@@ -96,7 +88,6 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  // ── STEP 2: OTP input ───────────────────────────────────────────────────
   function handleOtpChange(index, value) {
     if (!/^\d*$/.test(value)) return;
     const newOtp = [...otp];
@@ -153,7 +144,6 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  // ── STEP 3: Set new password ────────────────────────────────────────────
   const strength = getStrength(password);
 
   function validateReset() {
@@ -186,7 +176,6 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  // ── Shared card shell ───────────────────────────────────────────────────
   function Shell({ children }) {
     return (
       <div className={styles.page}>
@@ -212,9 +201,7 @@ export default function ForgotPasswordPage() {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 1 — Enter email
-  // ═══════════════════════════════════════════════════════════════════════
+  // ── STEP 1: Enter email ────────────────────────────────────────────────
   if (step === "email") return (
     <Shell>
       <div className={styles.cardHeader}>
@@ -232,7 +219,10 @@ export default function ForgotPasswordPage() {
       )}
 
       <form className={styles.form} onSubmit={handleEmailSubmit}>
-        <div className={styles.sectionLabel}>Account Email</div>
+        <div className={styles.sectionLabel}>
+          <Mail size={13} color="#15803d" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+          Account Email
+        </div>
 
         <div className={styles.field}>
           <label className={styles.label}>Email Address</label>
@@ -267,28 +257,28 @@ export default function ForgotPasswordPage() {
         <span className={styles.dividerText}>Remember your password?</span>
         <span className={styles.dividerLine} />
       </div>
-      <Link href="/login" className={styles.registerBtn}>Back to Sign In</Link>
+      <Link href="/login" className={styles.signinBtn}>Back to Sign In</Link>
     </Shell>
   );
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 2 — OTP verification
-  // ═══════════════════════════════════════════════════════════════════════
+  // ── STEP 2: OTP — modern email layout ─────────────────────────────────
   if (step === "otp") return (
     <Shell>
-      <div className={styles.cardHeader}>
-        <div className={styles.stepIcon}>
-          <ShieldCheck size={22} color="#15803d" strokeWidth={2} />
+      <div className={styles.otpScreen}>
+        <div className={styles.otpIconRing}>
+          <Mail size={26} color="#15803d" strokeWidth={1.8} />
         </div>
-        <h1 className={styles.cardTitle}>Check Your Email</h1>
-        <p className={styles.cardSubtitle}>
-          We sent a 6-digit code to <strong style={{ color: "#0f172a" }}>{email}</strong>
+        <h1 className={styles.otpTitle}>Check your email</h1>
+        <p className={styles.otpSubtitle}>
+          We sent a 6-digit reset code to
         </p>
+        <div className={styles.otpEmailBadge}>
+          <Mail size={13} color="#15803d" />
+          {email}
+        </div>
       </div>
 
       <form className={styles.form} onSubmit={handleOtpSubmit}>
-        <div className={styles.sectionLabel}>Enter Code</div>
-
         <div className={styles.otpWrap}>
           {otp.map((digit, i) => (
             <input
@@ -298,7 +288,7 @@ export default function ForgotPasswordPage() {
               inputMode="numeric"
               maxLength={1}
               value={digit}
-              autoFocus={i === 0}
+              autoFocus={i === 1}
               onChange={(e) => handleOtpChange(i, e.target.value)}
               onKeyDown={(e) => handleOtpKeyDown(i, e)}
               onPaste={handlePaste}
@@ -311,15 +301,18 @@ export default function ForgotPasswordPage() {
           <span className={styles.error} style={{ textAlign: "center" }}>{otpError}</span>
         )}
 
-        <span className={styles.hint} style={{ textAlign: "center" }}>
+        <div className={styles.otpResendRow}>
           {canResend ? (
-            <button type="button" onClick={handleResend} className={styles.resendBtn}>
-              <RotateCcw size={13} /> Resend Code
-            </button>
+            <>
+              Didn't receive it?&nbsp;
+              <button type="button" onClick={handleResend} className={styles.resendBtn}>
+                <RotateCcw size={12} /> Resend code
+              </button>
+            </>
           ) : (
-            <>Resend code in <strong style={{ color: "#0f172a" }}>{countdown}s</strong></>
+            <>Resend code in <strong style={{ color: "#0f172a", marginLeft: 4 }}>{countdown}s</strong></>
           )}
-        </span>
+        </div>
 
         <button type="submit" className={styles.submitBtn} disabled={loading}>
           {loading
@@ -331,7 +324,7 @@ export default function ForgotPasswordPage() {
         <button
           type="button"
           onClick={() => { setStep("email"); setOtp(["","","","","",""]); setOtpError(""); }}
-          className={styles.registerBtn}
+          className={styles.signinBtn}
           style={{ width: "100%" }}
         >
           Use a Different Email
@@ -340,9 +333,7 @@ export default function ForgotPasswordPage() {
     </Shell>
   );
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 3 — Set new password
-  // ═══════════════════════════════════════════════════════════════════════
+  // ── STEP 3: Set new password ───────────────────────────────────────────
   if (step === "reset") return (
     <Shell>
       <div className={styles.cardHeader}>
@@ -363,7 +354,10 @@ export default function ForgotPasswordPage() {
       )}
 
       <form className={styles.form} onSubmit={handleResetSubmit}>
-        <div className={styles.sectionLabel}>Set Password</div>
+        <div className={styles.sectionLabel}>
+          <KeyRound size={13} color="#15803d" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+          Set Password
+        </div>
 
         <div className={styles.field}>
           <label className={styles.label}>New Password</label>
@@ -383,7 +377,6 @@ export default function ForgotPasswordPage() {
           </div>
           {resetErrors.password && <span className={styles.error}>{resetErrors.password}</span>}
 
-          {/* Password strength */}
           {password && (
             <div className={styles.strengthWrap}>
               <div className={styles.strengthRow}>
@@ -458,9 +451,7 @@ export default function ForgotPasswordPage() {
     </Shell>
   );
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 4 — Done
-  // ═══════════════════════════════════════════════════════════════════════
+  // ── STEP 4: Done ───────────────────────────────────────────────────────
   return (
     <Shell>
       <div className={styles.success}>

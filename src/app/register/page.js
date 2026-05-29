@@ -4,14 +4,15 @@ import Link from "next/link";
 import {
   Eye, EyeOff, User, Mail, Phone, CreditCard,
   MapPin, ChevronDown, ArrowRight,
-  ShieldCheck, Check, X, UploadCloud, FileText, AlertCircle, Trash2, RotateCcw
+  ShieldCheck, Check, X, UploadCloud, FileText, AlertCircle, Trash2, RotateCcw, UserCheck, Fingerprint, FolderOpen
 } from "lucide-react";
 import styles from "./page.module.css";
 import PassportCapture from "@/components/PassportCapture";
-import { register, otpSend, otpVerify, otpResend } from "@/services/auth"; // ← fixed imports
+import { register, otpSend, otpVerify, otpResend } from "@/services/auth";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+/* ─── Password Strength — logic unchanged, styling via CSS vars ─────────── */
 function PasswordStrength({ password }) {
   const checks = [
     { label: "At least 8 characters", pass: password.length >= 8 },
@@ -49,6 +50,12 @@ function PasswordStrength({ password }) {
   );
 }
 
+/* ─── Modern spinner used in buttons ────────────────────────────────────── */
+function Spinner() {
+  return <span className={styles.spinner} aria-hidden="true" />;
+}
+
+/* ─── Main component ─────────────────────────────────────────────────────── */
 export default function RegisterPage() {
   const [step, setStep] = useState("register");
   const [verifyMethod, setVerifyMethod] = useState("email");
@@ -151,7 +158,7 @@ export default function RegisterPage() {
     return e;
   }
 
-  // ── FIXED: handleSubmit ──────────────────────────────────────────────────
+  /* API logic — untouched */
   async function handleSubmit(e) {
     e.preventDefault();
     const errs = validate();
@@ -161,26 +168,20 @@ export default function RegisterPage() {
     setApiError("");
 
     try {
-      // Build FormData with correct backend field names
       const formData = new FormData();
-      formData.append("firstname", form.firstName);       // ← not firstName
-      formData.append("lastname", form.lastName);         // ← not lastName
+      formData.append("firstname", form.firstName);
+      formData.append("lastname", form.lastName);
       formData.append("email", form.email);
-      formData.append("phone_number", form.phone);        // ← not phone
-      formData.append("nin_hash", form.nin);              // ← not nin
-      formData.append("date_of_birth", form.dob);        // ← not dob
+      formData.append("phone_number", form.phone);
+      formData.append("nin_hash", form.nin);
+      formData.append("date_of_birth", form.dob);
       formData.append("gender", form.gender);
-      // formData.append("lga", form.lga);
       formData.append("ward", form.ward);
       formData.append("password", form.password);
       if (passport) formData.append("passport", passport);
       if (certificate) formData.append("certificate", certificate);
 
-      // POST /auth/register/ → { message, email }
-      // Backend does NOT auto-send OTP — we must call otpSend separately
       await register(formData);
-
-      // POST /auth/otp/send/ → { message: "OTP sent" }
       await otpSend({ email: form.email });
 
       setStep("verify");
@@ -218,7 +219,6 @@ export default function RegisterPage() {
     inputs.current[Math.min(pasted.length, 5)]?.focus();
   }
 
-  // ── FIXED: handleOtpSubmit ───────────────────────────────────────────────
   async function handleOtpSubmit(e) {
     e.preventDefault();
     const code = otp.join("");
@@ -228,7 +228,6 @@ export default function RegisterPage() {
     setOtpError("");
 
     try {
-      // POST /auth/otp/verify/ → { message: "Verified" } + sets httpOnly cookies
       await otpVerify({ email: form.email, code });
       setStep("success");
     } catch (err) {
@@ -242,7 +241,6 @@ export default function RegisterPage() {
     }
   }
 
-  // ── FIXED: handleResend ──────────────────────────────────────────────────
   async function handleResend() {
     if (!canResend) return;
     setOtp(["", "", "", "", "", ""]);
@@ -251,7 +249,6 @@ export default function RegisterPage() {
     inputs.current[0]?.focus();
 
     try {
-      // POST /auth/otp/resend/ → { message: "OTP resent" }
       await otpResend({ email: form.email });
     } catch (err) {
       setOtpError(
@@ -262,28 +259,34 @@ export default function RegisterPage() {
     }
   }
 
-  // SUCCESS STEP — unchanged
+  /* ── Logo block (reused across steps) ──────────────────────────────────── */
+  const Logo = () => (
+    <div className={styles.logoWrap}>
+      <Link href="/" className={styles.logo}>
+        <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
+        <div className={styles.logoText}>
+          <span className={styles.logoName}>RMHCDT</span>
+          <span className={styles.logoSub}>Youth Portal</span>
+        </div>
+      </Link>
+    </div>
+  );
+
+  /* ── SUCCESS ────────────────────────────────────────────────────────────── */
   if (step === "success") {
     return (
       <div className={styles.page}>
         <div className={styles.main}>
           <div className={styles.card}>
-            <div className={styles.logoWrap}>
-              <Link href="/" className={styles.logo}>
-                <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
-                <div className={styles.logoText}>
-                  <span className={styles.logoName}>RMHCDT</span>
-                  <span className={styles.logoSub}>Youth Portal</span>
-                </div>
-              </Link>
-            </div>
+            <Logo />
             <div className={styles.success}>
               <div className={styles.successIconWrap}>
                 <Check size={32} color="#15803d" strokeWidth={2.5} />
               </div>
               <h1 className={styles.successTitle}>Account Created!</h1>
               <p className={styles.successDesc}>
-                Your account has been verified and is ready to use. You can now access scholarships, grants, training, and funding opportunities.
+                Your account has been verified and is ready to use. You can now access scholarships,
+                grants, training, and funding opportunities.
               </p>
               <Link href="/login" className={styles.successBtn}>
                 Sign In to Your Account <ArrowRight size={15} strokeWidth={2} />
@@ -300,51 +303,31 @@ export default function RegisterPage() {
     );
   }
 
-  // VERIFY STEP — unchanged
+  /* ── VERIFY (OTP) — email only, modern layout ───────────────────────────── */
   if (step === "verify") {
     return (
       <div className={styles.page}>
         <div className={styles.main}>
           <div className={styles.card}>
-            <div className={styles.logoWrap}>
-              <Link href="/" className={styles.logo}>
-                <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
-                <div className={styles.logoText}>
-                  <span className={styles.logoName}>RMHCDT</span>
-                  <span className={styles.logoSub}>Youth Portal</span>
-                </div>
-              </Link>
-            </div>
-            <div className={styles.cardHeader}>
-              <h1 className={styles.cardTitle}>Verify Account</h1>
-              <p className={styles.cardSubtitle}>
-                Choose how you want to receive your verification code.
-              </p>
-            </div>
-            <form className={styles.form} onSubmit={handleOtpSubmit}>
-              <div className={styles.sectionLabel}>Verification Method</div>
-              <div className={styles.verifyToggle}>
-                <button
-                  type="button"
-                  onClick={() => { setVerifyMethod("email"); setOtp(["","","","","",""]); setOtpError(""); startCountdown(); }}
-                  className={styles.verifyToggleBtn + (verifyMethod === "email" ? " " + styles.verifyToggleActive : "")}
-                >
-                  <Mail size={15} /> Email
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  className={styles.verifyToggleBtn}
-                  style={{ opacity: 0.4, cursor: "not-allowed" }}
-                >
-                  <Phone size={15} /> Phone
-                  <span style={{ fontSize: "10px", color: "#94a3b8", fontWeight: 500 }}>(Soon)</span>
-                </button>
+            <Logo />
+
+            {/* Clean OTP header — icon + title + subtitle */}
+            <div className={styles.otpScreen}>
+              <div className={styles.otpIconRing}>
+                <Mail size={26} color="#15803d" strokeWidth={1.8} />
               </div>
-              <span className={styles.hint} style={{ textAlign: "center" }}>
-                Code sent to <strong style={{ color: "#0f172a" }}>{form.email}</strong>
-              </span>
-              <div className={styles.sectionLabel}>Enter Code</div>
+              <h1 className={styles.otpTitle}>Check your email</h1>
+              <p className={styles.otpSubtitle}>
+                We sent a 6-digit verification code to
+              </p>
+              <div className={styles.otpEmailBadge}>
+                <Mail size={13} color="#15803d" />
+                {form.email}
+              </div>
+            </div>
+
+            <form className={styles.form} onSubmit={handleOtpSubmit}>
+              {/* OTP inputs */}
               <div className={styles.otpWrap}>
                 {otp.map((digit, i) => (
                   <input
@@ -357,34 +340,49 @@ export default function RegisterPage() {
                     onChange={(e) => handleOtpChange(i, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(i, e)}
                     onPaste={handlePaste}
-                    className={styles.otpInput + (otpError ? " " + styles.inputError : "")}
+                    className={
+                      styles.otpInput + (otpError ? " " + styles.inputError : "")
+                    }
                   />
                 ))}
               </div>
+
               {otpError && (
                 <span className={styles.error} style={{ textAlign: "center" }}>{otpError}</span>
               )}
-              <span className={styles.hint} style={{ textAlign: "center" }}>
+
+              {/* Resend row */}
+              <div className={styles.otpResendRow}>
                 {canResend ? (
-                  <button type="button" onClick={handleResend} className={styles.resendBtn}>
-                    <RotateCcw size={13} /> Resend Code
-                  </button>
+                  <>
+                    Didn't receive it?&nbsp;
+                    <button type="button" onClick={handleResend} className={styles.resendBtn}>
+                      <RotateCcw size={12} /> Resend code
+                    </button>
+                  </>
                 ) : (
-                  <>Resend code in <strong style={{ color: "#0f172a" }}>{countdown}s</strong></>
+                  <>Resend code in <strong style={{ color: "#0f172a", marginLeft: 4 }}>{countdown}s</strong></>
                 )}
-              </span>
+              </div>
+
+              {/* Verify button */}
               <button type="submit" className={styles.submitBtn} disabled={loading}>
-                {loading ? "Verifying..." : <>Verify Account <ArrowRight size={15} strokeWidth={2} /></>}
+                {loading ? (
+                  <><Spinner /> Verifying…</>
+                ) : (
+                  <><ShieldCheck size={15} strokeWidth={2} /> Verify Account</>
+                )}
               </button>
+
               <button
                 type="button"
                 onClick={() => setStep("register")}
                 className={styles.signinBtn}
-                style={{ width: "100%" }}
               >
                 Back to Registration
               </button>
             </form>
+
             <div className={styles.bottomBadge}>
               <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
               <span>Secured under the Petroleum Industry Act, 2021</span>
@@ -395,28 +393,20 @@ export default function RegisterPage() {
     );
   }
 
-  // REGISTER STEP — unchanged except handleSubmit is now wired
+  /* ── REGISTER ───────────────────────────────────────────────────────────── */
   return (
     <div className={styles.page} onTouchStart={dismissKeyboard}>
       <div className={styles.main}>
         <div className={styles.card}>
-          <div className={styles.logoWrap}>
-            <Link href="/" className={styles.logo}>
-              <div className={styles.logoBox}>
-                <span className={styles.logoLetter}>R</span>
-              </div>
-              <div className={styles.logoText}>
-                <span className={styles.logoName}>RMHCDT</span>
-                <span className={styles.logoSub}>Youth Portal</span>
-              </div>
-            </Link>
-          </div>
+          <Logo />
+
           <div className={styles.cardHeader}>
             <h1 className={styles.cardTitle}>Create Account</h1>
             <p className={styles.cardSubtitle}>
               Join the portal to access scholarships, grants, training and funding.
             </p>
           </div>
+
           <form className={styles.form} onSubmit={handleSubmit}>
 
             {apiError && (
@@ -426,8 +416,10 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {/* PERSONAL */}
-            <div className={styles.sectionLabel}>Personal Information</div>
+            {/* ── PERSONAL INFORMATION ───────────────────────────────────── */}
+            {/* Section label: no green background — just a small line + text */}
+            <div className={styles.sectionLabel}><UserCheck size={13} color="#15803d" strokeWidth={2.5} />Personal Information</div>
+
             <div className={styles.row}>
               <div className={styles.field}>
                 <label className={styles.label}>First Name</label>
@@ -477,7 +469,7 @@ export default function RegisterPage() {
                     placeholder="08012345678"
                     maxLength={11}
                     inputMode="numeric"
-                    style={{ paddingLeft: "34px", paddingRight: "40px" }}
+                    style={{ paddingLeft: "36px", paddingRight: "40px" }}
                     className={styles.input + (errors.phone ? " " + styles.inputError : "")}
                   />
                   <span className={styles.ninCount}>{form.phone.length}/11</span>
@@ -486,8 +478,9 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* IDENTITY */}
-            <div className={styles.sectionLabel}>Identity Verification</div>
+            {/* ── IDENTITY VERIFICATION ──────────────────────────────────── */}
+            <div className={styles.sectionLabel}><Fingerprint size={13} color="#15803d" strokeWidth={2.5} />Identity Verification</div>
+
             <div className={styles.field}>
               <label className={styles.label}>National Identification Number (NIN)</label>
               <div className={styles.inputWrap}>
@@ -580,10 +573,10 @@ export default function RegisterPage() {
               {errors.ward && <span className={styles.error}>{errors.ward}</span>}
             </div>
 
-            {/* DOCUMENTS */}
-            <div className={styles.sectionLabel}>Documents</div>
+            {/* ── DOCUMENTS ──────────────────────────────────────────────── */}
+            <div className={styles.sectionLabel}><FolderOpen size={13} color="#15803d" strokeWidth={2.5} />Documents</div>
 
-            {/* Passport Photo */}
+            {/* Passport Photo — PassportCapture component kept as-is */}
             <div className={styles.field}>
               <label className={styles.label}>Passport Photo</label>
               <PassportCapture
@@ -632,8 +625,9 @@ export default function RegisterPage() {
               {errors.certificate && !certError && <span className={styles.error}>{errors.certificate}</span>}
             </div>
 
-            {/* SECURITY */}
-            <div className={styles.sectionLabel}>Account Security</div>
+            {/* ── ACCOUNT SECURITY ───────────────────────────────────────── */}
+            <div className={styles.sectionLabel}><ShieldCheck size={13} color="#15803d" strokeWidth={2.5} />Account Security</div>
+
             <div className={styles.field}>
               <label className={styles.label}>Password</label>
               <div className={styles.inputWrap}>
@@ -668,7 +662,7 @@ export default function RegisterPage() {
               )}
             </div>
 
-            {/* TERMS */}
+            {/* TERMS — neutral background, no green tint */}
             <div className={styles.terms}>
               <p className={styles.termsText}>
                 By creating an account you agree to our{" "}
@@ -678,8 +672,13 @@ export default function RegisterPage() {
               </p>
             </div>
 
+            {/* Submit — modern spinner when loading */}
             <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? "Creating Account..." : <>Create Account <ArrowRight size={15} strokeWidth={2} /></>}
+              {loading ? (
+                <><Spinner /> Creating Account…</>
+              ) : (
+                <>Create Account <ArrowRight size={15} strokeWidth={2} /></>
+              )}
             </button>
 
           </form>
