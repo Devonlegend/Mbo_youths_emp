@@ -16,13 +16,20 @@ WARD_CHOICES = [
     ('udesi','Udesi'),
 ]
 
-class Student(User):
+class Student(models.Model):
+    # primary_key=True so the Student row reuses the User's UUID as its PK —
+    # student.pk == user.id, matching the contract the register view relies on.
+    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='student')
+    firstname    = models.CharField(max_length=50, blank=True, default='')
+    lastname     = models.CharField(max_length=50, blank=True, default='')
     cgpa = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     level = models.IntegerField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     active_award = models.CharField(max_length=300, blank=True)
     lga = models.CharField(max_length=80, blank=True)
     passport = models.FileField(null=True, blank=True)
+    ward        = models.CharField(max_length=40, blank=True)
+    date_of_birth = models.DateField(null=True)
     state_of_origin = models.FileField(null=True, blank=True)
 
     def __str__(self):
