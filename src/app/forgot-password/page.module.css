@@ -747,8 +747,6 @@
 .resendBtn:hover { color: #166534; }
 .resendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-
-
 /* ─── VERIFY TOGGLE — kept for completeness but phone hidden ─────────────── */
 .verifyToggle {
   display: grid;

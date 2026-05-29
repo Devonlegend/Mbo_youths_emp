@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   Mail, ArrowRight, ShieldCheck, AlertCircle,
@@ -12,9 +12,7 @@ import {
   forgotPasswordReset,
 } from "@/services/auth";
 
-
 function getStrength(pw) {
-  let score = 0;
   const checks = {
     length: pw.length >= 8,
     upper: /[A-Z]/.test(pw),
@@ -22,7 +20,7 @@ function getStrength(pw) {
     number: /[0-9]/.test(pw),
     special: /[^A-Za-z0-9]/.test(pw),
   };
-  score = Object.values(checks).filter(Boolean).length;
+  const score = Object.values(checks).filter(Boolean).length;
   const labels = ["", "Weak", "Fair", "Good", "Strong", "Very Strong"];
   const colors = ["", "#ef4444", "#f97316", "#eab308", "#22c55e", "#15803d"];
   return { score, checks, label: labels[score] || "", color: colors[score] || "" };
@@ -49,6 +47,16 @@ export default function ForgotPasswordPage() {
 
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
+
+  // Focus first OTP box after step transitions — no autoFocus prop needed
+  useEffect(() => {
+    if (step === "otp") {
+      const timer = setTimeout(() => {
+        otpInputs.current[0]?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   function startCountdown() {
     if (countdownRef.current) clearInterval(countdownRef.current);
@@ -115,7 +123,7 @@ export default function ForgotPasswordPage() {
     setOtp(["", "", "", "", "", ""]);
     setOtpError("");
     startCountdown();
-    otpInputs.current[0]?.focus();
+    setTimeout(() => otpInputs.current[0]?.focus(), 100);
     try {
       await forgotPasswordRequest({ email });
     } catch (err) {
@@ -234,7 +242,6 @@ export default function ForgotPasswordPage() {
               onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
               placeholder="your@email.com"
               autoComplete="email"
-              autoFocus
               className={styles.input + (emailError ? " " + styles.inputError : "")}
             />
           </div>
@@ -261,7 +268,7 @@ export default function ForgotPasswordPage() {
     </Shell>
   );
 
-  // ── STEP 2: OTP — modern email layout ─────────────────────────────────
+  // ── STEP 2: OTP ────────────────────────────────────────────────────────
   if (step === "otp") return (
     <Shell>
       <div className={styles.otpScreen}>
@@ -288,7 +295,6 @@ export default function ForgotPasswordPage() {
               inputMode="numeric"
               maxLength={1}
               value={digit}
-              autoFocus={i === 1}
               onChange={(e) => handleOtpChange(i, e.target.value)}
               onKeyDown={(e) => handleOtpKeyDown(i, e)}
               onPaste={handlePaste}
@@ -337,9 +343,6 @@ export default function ForgotPasswordPage() {
   if (step === "reset") return (
     <Shell>
       <div className={styles.cardHeader}>
-        <div className={styles.stepIcon}>
-          <Lock size={22} color="#15803d" strokeWidth={2} />
-        </div>
         <h1 className={styles.cardTitle}>New Password</h1>
         <p className={styles.cardSubtitle}>
           Choose a strong password for your account.
@@ -365,7 +368,6 @@ export default function ForgotPasswordPage() {
             <input
               type={showPw ? "text" : "password"}
               value={password}
-              autoFocus
               onChange={(e) => { setPassword(e.target.value); setResetErrors({ ...resetErrors, password: "" }); }}
               placeholder="Create a strong password"
               autoComplete="new-password"
