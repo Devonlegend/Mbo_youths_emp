@@ -26,6 +26,31 @@ function getStrength(pw) {
   return { score, checks, label: labels[score] || "", color: colors[score] || "" };
 }
 
+function Shell({ children }) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.main}>
+          <div className={styles.card}>
+            <div className={styles.logoWrap}>
+              <Link href="/" className={styles.logo}>
+                <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
+                <div className={styles.logoText}>
+                  <span className={styles.logoName}>RMHCDT</span>
+                  <span className={styles.logoSub}>Youth Portal</span>
+                </div>
+              </Link>
+            </div>
+            {children}
+            <div className={styles.bottomBadge}>
+              <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
+              <span>Secured under the Petroleum Industry Act, 2021</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState("email");
 
@@ -48,7 +73,6 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
-  // Focus first OTP box after step transitions — no autoFocus prop needed
   useEffect(() => {
     if (step === "otp") {
       const timer = setTimeout(() => {
@@ -97,24 +121,54 @@ export default function ForgotPasswordPage() {
   }
 
   function handleOtpChange(index, value) {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
+  const digit = value.replace(/\D/g, "");
+  if (!digit && value !== "") return;
+
+  const newOtp = [...otp];
+
+  if (digit.length > 1) {
+    digit.split("").slice(0, 6 - index).forEach((char, i) => {
+      newOtp[index + i] = char;
+    });
     setOtp(newOtp);
     setOtpError("");
-    if (value && index < 5) otpInputs.current[index + 1]?.focus();
+    const nextIndex = Math.min(index + digit.length, 5);
+    setTimeout(() => otpInputs.current[nextIndex]?.focus(), 0);
+    return;
   }
 
-  function handleOtpKeyDown(index, e) {
-    if (e.key === "Backspace" && !otp[index] && index > 0) otpInputs.current[index - 1]?.focus();
+  newOtp[index] = digit;
+  setOtp(newOtp);
+  setOtpError("");
+  if (digit && index < 5) {
+    setTimeout(() => otpInputs.current[index + 1]?.focus(), 0);
   }
+}
+
+function handleOtpKeyDown(index, e) {
+  if (e.key === "Backspace") {
+    const newOtp = [...otp];
+    if (otp[index]) {
+      newOtp[index] = "";
+      setOtp(newOtp);
+    } else if (index > 0) {
+      newOtp[index - 1] = "";
+      setOtp(newOtp);
+      setTimeout(() => otpInputs.current[index - 1]?.focus(), 0);
+    }
+  }
+  if (e.key === "ArrowLeft" && index > 0) otpInputs.current[index - 1]?.focus();
+  if (e.key === "ArrowRight" && index < 5) otpInputs.current[index + 1]?.focus();
+}
 
   function handlePaste(e) {
     e.preventDefault();
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    const newOtp = [...otp];
+    if (!pasted) return;
+    const newOtp = ["", "", "", "", "", ""];
     pasted.split("").forEach((char, i) => { newOtp[i] = char; });
     setOtp(newOtp);
+    setOtpError("");
     otpInputs.current[Math.min(pasted.length, 5)]?.focus();
   }
 
@@ -184,30 +238,6 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  function Shell({ children }) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.main}>
-          <div className={styles.card}>
-            <div className={styles.logoWrap}>
-              <Link href="/" className={styles.logo}>
-                <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
-                <div className={styles.logoText}>
-                  <span className={styles.logoName}>RMHCDT</span>
-                  <span className={styles.logoSub}>Youth Portal</span>
-                </div>
-              </Link>
-            </div>
-            {children}
-            <div className={styles.bottomBadge}>
-              <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
-              <span>Secured under the Petroleum Industry Act, 2021</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // ── STEP 1: Enter email ────────────────────────────────────────────────
   if (step === "email") return (
@@ -289,17 +319,16 @@ export default function ForgotPasswordPage() {
         <div className={styles.otpWrap}>
           {otp.map((digit, i) => (
             <input
-              key={i}
-              ref={(el) => (otpInputs.current[i] = el)}
-              type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleOtpChange(i, e.target.value)}
-              onKeyDown={(e) => handleOtpKeyDown(i, e)}
-              onPaste={handlePaste}
-              className={styles.otpInput + (otpError ? " " + styles.inputError : "")}
-            />
+  key={i}
+  ref={(el) => (otpInputs.current[i] = el)}
+  type="text"
+  inputMode="numeric"
+  value={digit}
+  onChange={(e) => handleOtpChange(i, e.target.value)}
+  onKeyDown={(e) => handleOtpKeyDown(i, e)}
+  onPaste={handlePaste}
+  className={styles.otpInput + (otpError ? " " + styles.inputError : "")}
+/>
           ))}
         </div>
 

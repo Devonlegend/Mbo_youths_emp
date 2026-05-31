@@ -7,17 +7,18 @@ import {
   HelpCircle, Settings, LogOut, X,
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
+import { logout } from "@/services";
 
 const navMain = [
   { label: "Dashboard",       href: "/dashboard",              icon: LayoutDashboard },
-  { label: "Programmes",      href: "/dashboard/programmes",   icon: FileText,      badge: 3  },
-  { label: "My Applications", href: "/dashboard/applications", icon: ClipboardList, badge: 1, badgeWarn: true },
+  { label: "Programmes",      href: "/dashboard/programmes",   icon: FileText },
+  { label: "My Applications", href: "/dashboard/applications", icon: ClipboardList },
 ];
 
 const navAccount = [
   { label: "My Documents",  href: "/dashboard/documents",     icon: Files },
   { label: "My Profile",    href: "/dashboard/profile",       icon: UserCircle },
-  { label: "Notifications", href: "/dashboard/notifications", icon: Bell, badge: 2, badgeDanger: true },
+  { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
 ];
 
 const navInfo = [
@@ -38,15 +39,6 @@ function NavItem({ item, active, onClick }) {
         <Icon size={15} strokeWidth={active ? 2.2 : 1.8} />
       </span>
       <span className={styles.navLabel}>{item.label}</span>
-      {item.badge && (
-        <span className={`${styles.badge} ${
-          item.badgeDanger ? styles.badgeDanger :
-          item.badgeWarn   ? styles.badgeWarn   :
-          styles.badgeGreen
-        }`}>
-          {item.badge}
-        </span>
-      )}
     </Link>
   );
 }
@@ -59,11 +51,15 @@ export default function Sidebar({ isOpen, onClose }) {
     return pathname.startsWith(href);
   }
 
-  function handleLogout() {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
+  async function handleLogout() {
+    try {
+      // Tell backend to blacklist the refresh token + clear httpOnly cookies
+      await logout();
+    } catch (err) {
+      // Even if the call fails, we still clear local state and redirect
+    } finally {
+      window.location.href = "/login";
+    }
   }
 
   return (

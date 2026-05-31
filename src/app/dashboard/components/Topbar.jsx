@@ -1,11 +1,12 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, Menu, Settings, LogOut, ChevronDown,
-         GraduationCap, CalendarClock, FileText, CheckCheck,  Sparkles} from "lucide-react";
+         GraduationCap, CalendarClock, FileText, CheckCheck, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import styles from "./Topbar.module.css";
+import { logout } from "@/services";
 
-/* ── preview notifications (top 3 unread) ── */
+/* ── preview notifications (top 3 unread) — stays mock until backend adds notifications ── */
 const PREVIEW_NOTIFS = [
   {
     id: 0,
@@ -42,20 +43,19 @@ const PREVIEW_NOTIFS = [
 ];
 
 export default function Topbar({ user, onMenuOpen }) {
-  const pathname  = usePathname();
-  const router    = useRouter();
-  const [dropOpen,  setDropOpen]  = useState(false);
-  const [bellOpen,  setBellOpen]  = useState(false);
-  const [unread,    setUnread]    = useState(PREVIEW_NOTIFS.length);
+  const router   = useRouter();
+  const [dropOpen, setDropOpen] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
+  const [unread,   setUnread]   = useState(PREVIEW_NOTIFS.length);
 
   const dropRef = useRef(null);
   const bellRef = useRef(null);
 
   const initials =
     (user?.first_name?.[0]?.toUpperCase() || "") +
-    (user?.last_name?.[0]?.toUpperCase() || "");
+    (user?.last_name?.[0]?.toUpperCase()  || "");
 
-  /* close on outside click */
+  /* close dropdowns on outside click */
   useEffect(() => {
     function handleClick(e) {
       if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false);
@@ -65,11 +65,15 @@ export default function Topbar({ user, onMenuOpen }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  function handleLogout() {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
+  async function handleLogout() {
+    try {
+      // Tell backend to blacklist refresh token + clear httpOnly cookies
+      await logout();
+    } catch (err) {
+      // Even if the call fails, still redirect to login
+    } finally {
+      window.location.href = "/login";
+    }
   }
 
   function handleViewAll() {
@@ -85,14 +89,14 @@ export default function Topbar({ user, onMenuOpen }) {
   return (
     <header className={styles.topbar}>
 
-      {/* LEFT */}
+      {/* LEFT — hamburger menu */}
       <div className={styles.left}>
         <button className={styles.menuBtn} onClick={onMenuOpen} aria-label="Open menu">
           <Menu size={18} strokeWidth={2} />
         </button>
       </div>
 
-      {/* CENTER */}
+      {/* CENTER — cycle pill */}
       <div className={styles.center}>
         <span className={styles.cyclePill}>
           <span className={styles.cycleDot} />
@@ -100,7 +104,7 @@ export default function Topbar({ user, onMenuOpen }) {
         </span>
       </div>
 
-      {/* RIGHT */}
+      {/* RIGHT — bell + avatar */}
       <div className={styles.right}>
 
         {/* ── BELL ── */}
@@ -118,7 +122,6 @@ export default function Topbar({ user, onMenuOpen }) {
 
           {bellOpen && (
             <div className={styles.bellDropdown}>
-              {/* header */}
               <div className={styles.bellHead}>
                 <span className={styles.bellHeadTitle}>Notifications</span>
                 {unread > 0 && (
@@ -128,7 +131,6 @@ export default function Topbar({ user, onMenuOpen }) {
                 )}
               </div>
 
-              {/* items */}
               <div className={styles.bellList}>
                 {PREVIEW_NOTIFS.map((n) => {
                   const Icon = n.icon;
@@ -150,7 +152,6 @@ export default function Topbar({ user, onMenuOpen }) {
                 })}
               </div>
 
-              {/* footer */}
               <button className={styles.bellFooter} onClick={handleViewAll}>
                 View all notifications
               </button>
@@ -167,12 +168,14 @@ export default function Topbar({ user, onMenuOpen }) {
             onClick={() => { setDropOpen((o) => !o); setBellOpen(false); }}
             aria-label="Profile menu"
           >
-            <div className={styles.avatar}>{initials || "CH"}</div>
+            <div className={styles.avatar}>{initials || "RY"}</div>
             <div className={styles.avatarInfo}>
               <span className={styles.avatarName}>
                 {user?.first_name} {user?.last_name}
               </span>
-              <span className={styles.avatarSub}>{user?.email || "Youth Portal"}</span>
+              <span className={styles.avatarSub}>
+                {user?.email || "Youth Portal"}
+              </span>
             </div>
             <ChevronDown
               size={13}
@@ -184,15 +187,26 @@ export default function Topbar({ user, onMenuOpen }) {
           {dropOpen && (
             <div className={styles.dropdown}>
               <div className={styles.dropHeader}>
-                <div className={styles.dropName}>{user?.first_name} {user?.last_name}</div>
-                <div className={styles.dropSub}>{user?.email || "Youth Portal"}</div>
+                <div className={styles.dropName}>
+                  {user?.first_name} {user?.last_name}
+                </div>
+                <div className={styles.dropSub}>
+                  {user?.email || "Youth Portal"}
+                </div>
               </div>
               <div className={styles.dropDivider} />
-              <a href="/dashboard/settings" className={styles.dropItem} onClick={() => setDropOpen(false)}>
+              <a
+                href="/dashboard/settings"
+                className={styles.dropItem}
+                onClick={() => setDropOpen(false)}
+              >
                 <Settings size={14} strokeWidth={1.8} />
                 Settings
               </a>
-              <button className={`${styles.dropItem} ${styles.dropLogout}`} onClick={handleLogout}>
+              <button
+                className={`${styles.dropItem} ${styles.dropLogout}`}
+                onClick={handleLogout}
+              >
                 <LogOut size={14} strokeWidth={1.8} />
                 Sign out
               </button>

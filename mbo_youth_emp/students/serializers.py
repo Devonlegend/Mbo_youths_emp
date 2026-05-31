@@ -16,10 +16,11 @@ class StudentSerializer(serializers.ModelSerializer):
     academic_records = AcademicRecordSerializer(many=True, read_only=True)
     has_active_award = serializers.SerializerMethodField()
 
+# removing the ID AGAIN
     class Meta:
         model  = Student
         fields = [
-            'id', 'firstname', 'lastname', 'ward', 'lga', 'level', 'cgpa',
+            'firstname', 'lastname', 'ward', 'lga', 'level', 'cgpa',
             'is_verified',
             'active_award', 'has_active_award', 'academic_records',
         ]

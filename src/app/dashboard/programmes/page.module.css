@@ -321,6 +321,10 @@
 
 /* ── EMPTY STATE ── */
 .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   text-align: center;
   padding: 60px 20px;
   color: #94a3b8;

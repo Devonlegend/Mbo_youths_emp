@@ -1,23 +1,82 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import styles from "./dashboard.module.css";
+import { useInactivityLogout } from "@/hooks/useInactivityLogout";
+import { getMe, getStudentProfile } from "@/services";
 
-const mockUser = {
-  first_name: "Chukwu",
-  last_name: "Harrison",
-  lga: "Mbo LGA",
-  email: "c.harrison@mail.com",
-  nin_masked: "****-***-4521",
-  phone: "+2348031234521",
-  passport_photo: null,
-};
+function LoadingSpinner() {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: "100vh",
+      background: "#f8fafc",
+    }}>
+      <div style={{
+        width: 28, height: 28,
+        borderRadius: "50%",
+        border: "2.5px solid #e2e8f0",
+        borderTopColor: "#15803d",
+        animation: "spin 0.7s linear infinite",
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser]               = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const router = useRouter();
+  
+  useInactivityLogout();
 
-  // Close sidebar on desktop resize
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const [authRes, studentRes] = await Promise.all([
+          getMe(),
+          getStudentProfile(),
+        ]);
+
+        const auth    = authRes.data;
+        const profile = studentRes.data;
+
+        setUser({
+          id:           auth.id,
+          email:        auth.email,
+          phone:        auth.phone_number   || "",
+          role:         auth.role           || "student",
+          first_name:   auth.firstname      || "",
+          last_name:    auth.lastname       || "",
+          lga:          profile.lga         || "",
+          ward:         profile.ward        || "",
+          level:        profile.level       || null,
+          cgpa:         profile.cgpa        || null,
+          is_verified:  profile.is_verified  || false,
+          active_award: profile.active_award || "",
+          has_active_award: profile.has_active_award || false,
+          passport_photo: null,
+          nin_masked:     "****-***-****",
+          date_of_birth:  auth.date_of_birth || "",
+          gender:         auth.gender        || "",
+        });
+
+      } catch (err) {
+        router.replace("/login");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadUser();
+  }, []);
+
   useEffect(() => {
     function onResize() {
       if (window.innerWidth > 768) setSidebarOpen(false);
@@ -25,6 +84,8 @@ export default function DashboardLayout({ children }) {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div className={styles.shell}>
@@ -34,7 +95,7 @@ export default function DashboardLayout({ children }) {
       />
       <div className={styles.mainWrap}>
         <Topbar
-          user={mockUser}
+          user={user}
           onMenuOpen={() => setSidebarOpen(true)}
         />
         <main className={styles.content}>

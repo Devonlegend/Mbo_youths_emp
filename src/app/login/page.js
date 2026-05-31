@@ -1,14 +1,17 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   Eye, EyeOff, Mail, ArrowRight,
-  ShieldCheck, AlertCircle, RotateCcw, LogIn, KeyRound
+  ShieldCheck, AlertCircle, RotateCcw, LogIn,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { login, otpVerify, otpResend } from "@/services/auth";
+import { login, otpVerify, otpResend, getMe } from "@/services/auth";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [step, setStep] = useState("login");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState("");
@@ -19,9 +22,46 @@ export default function LoginPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [apiError, setApiError] = useState("");
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
+
+  // ── IF ALREADY LOGGED IN → GO TO DASHBOARD ────────────────────────────────
+  useEffect(() => {
+    getMe()
+      .then(() => {
+        // Valid cookie exists — user is already logged in
+        router.replace("/dashboard");
+      })
+      .catch(() => {
+        // Not logged in — show the login form
+        setCheckingAuth(false);
+      });
+  }, []);
+
+  // Don't render the form until we've confirmed they're not already logged in
+  // This prevents a flash of the login form before the redirect fires
+  if (checkingAuth) {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100vh",
+      background: "#f8fafc",
+    }}>
+      <div style={{
+        width: 28, height: 28,
+        borderRadius: "50%",
+        border: "2.5px solid #e2e8f0",
+        borderTopColor: "#15803d",
+        animation: "spin 0.7s linear infinite",
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -62,13 +102,8 @@ export default function LoginPage() {
     setApiError("");
 
     try {
-      // login first
       await login({ email: form.email, password: form.password });
-
-      // send otp imediately
-      await otpResend({ email: form.email})
-
-      // move to OTP Screen
+      await otpResend({ email: form.email });
       setStep("otp");
       startCountdown();
     } catch (err) {
@@ -110,7 +145,6 @@ export default function LoginPage() {
     setOtpError("");
     startCountdown();
     inputs.current[0]?.focus();
-
     try {
       await otpResend({ email: form.email });
     } catch (err) {
@@ -152,7 +186,7 @@ export default function LoginPage() {
     </div>
   );
 
-  // OTP STEP — modern email-only layout matching register page
+  // ── OTP STEP ───────────────────────────────────────────────────────────────
   if (step === "otp") {
     return (
       <div className={styles.page}>
@@ -210,11 +244,10 @@ export default function LoginPage() {
               </div>
 
               <button type="submit" className={styles.submitBtn} disabled={loading}>
-                {loading ? (
-                  <><span className={styles.spinner} /> Verifying…</>
-                ) : (
-                  <><ShieldCheck size={15} strokeWidth={2} /> Verify & Sign In</>
-                )}
+                {loading
+                  ? <><span className={styles.spinner} /> Verifying…</>
+                  : <><ShieldCheck size={15} strokeWidth={2} /> Verify & Sign In</>
+                }
               </button>
 
               <button
@@ -237,7 +270,7 @@ export default function LoginPage() {
     );
   }
 
-  // LOGIN STEP
+  // ── LOGIN STEP ─────────────────────────────────────────────────────────────
   return (
     <div className={styles.page}>
       <div className={styles.main}>
@@ -291,14 +324,20 @@ export default function LoginPage() {
                   onChange={handleChange}
                   placeholder="Enter your password"
                   autoComplete="current-password"
-                  className={styles.input + " " + styles.inputPadRight + (errors.password ? " " + styles.inputError : "")}
+                  className={
+                    styles.input + " " + styles.inputPadRight +
+                    (errors.password ? " " + styles.inputError : "")
+                  }
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className={styles.eyeBtn}
                 >
-                  {showPassword ? <EyeOff size={15} color="#94a3b8" /> : <Eye size={15} color="#94a3b8" />}
+                  {showPassword
+                    ? <EyeOff size={15} color="#94a3b8" />
+                    : <Eye size={15} color="#94a3b8" />
+                  }
                 </button>
               </div>
               {errors.password && <span className={styles.error}>{errors.password}</span>}
@@ -311,11 +350,10 @@ export default function LoginPage() {
             </div>
 
             <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? (
-                <><span className={styles.spinner} /> Signing In…</>
-              ) : (
-                <>Sign In <ArrowRight size={15} strokeWidth={2} /></>
-              )}
+              {loading
+                ? <><span className={styles.spinner} /> Signing In…</>
+                : <>Sign In <ArrowRight size={15} strokeWidth={2} /></>
+              }
             </button>
           </form>
 
