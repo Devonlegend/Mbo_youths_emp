@@ -78,7 +78,6 @@ REST_FRAMEWORK = {
 
 # JWT cookie behaviour. In DEBUG we relax `Secure` so localhost (http) works;
 # in production set JWT_COOKIE_SECURE=True and tighten JWT_COOKIE_SAMESITE.
-# i made changes here too, i changed fro lax to none, and to false
 JWT_COOKIE_SECURE   = None 
 JWT_COOKIE_SAMESITE = 'Lax'
 

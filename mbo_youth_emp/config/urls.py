@@ -22,9 +22,6 @@ urlpatterns = [
     path('auth/', include('accounts.urls')),
     path('students/', include('students.urls')),
     path('applications/', include('applications.urls')),
-
-    # this wasnt added, so i got an error 404 on this, so i added this
-
     path('schemes/', include('schemes.urls')),
     
 ]
