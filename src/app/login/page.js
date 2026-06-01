@@ -1,16 +1,18 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
-  Eye, EyeOff, Mail, Phone, ArrowRight,
-  ShieldCheck, AlertCircle, RotateCcw
+  Eye, EyeOff, Mail, ArrowRight,
+  ShieldCheck, AlertCircle, RotateCcw, LogIn,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { login, otpVerify, otpResend } from "@/services/auth";
+import { login, otpVerify, otpResend, getMe } from "@/services/auth";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [step, setStep] = useState("login");
-  const [verifyMethod, setVerifyMethod] = useState("email");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState("");
   const [countdown, setCountdown] = useState(60);
@@ -20,9 +22,46 @@ export default function LoginPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [apiError, setApiError] = useState("");
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
+
+  // ── IF ALREADY LOGGED IN → GO TO DASHBOARD ────────────────────────────────
+  useEffect(() => {
+    getMe()
+      .then(() => {
+        // Valid cookie exists — user is already logged in
+        router.replace("/dashboard");
+      })
+      .catch(() => {
+        // Not logged in — show the login form
+        setCheckingAuth(false);
+      });
+  }, []);
+
+  // Don't render the form until we've confirmed they're not already logged in
+  // This prevents a flash of the login form before the redirect fires
+  if (checkingAuth) {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100vh",
+      background: "#f8fafc",
+    }}>
+      <div style={{
+        width: 28, height: 28,
+        borderRadius: "50%",
+        border: "2.5px solid #e2e8f0",
+        borderTopColor: "#15803d",
+        animation: "spin 0.7s linear infinite",
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -55,28 +94,28 @@ export default function LoginPage() {
   }
 
   async function handleSubmit(e) {
-  e.preventDefault();
-  const errs = validate();
-  if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
-  setLoading(true);
-  setApiError("");
+    setLoading(true);
+    setApiError("");
 
-  try {
-    await login({ email: form.email, password: form.password });
-    // Backend always requires OTP — no tokens returned here
-    setStep("otp");
-    startCountdown();
-  } catch (err) {
-    setApiError(
-      err?.response?.data?.error ||
-      err?.response?.data?.detail ||
-      "Invalid email or password. Please try again."
-    );
-  } finally {
-    setLoading(false);
+    try {
+      await login({ email: form.email, password: form.password });
+      await otpResend({ email: form.email });
+      setStep("otp");
+      startCountdown();
+    } catch (err) {
+      setApiError(
+        err?.response?.data?.error ||
+        err?.response?.data?.detail ||
+        "Invalid email or password. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   function handleOtpChange(index, value) {
     if (!/^\d*$/.test(value)) return;
@@ -101,104 +140,75 @@ export default function LoginPage() {
   }
 
   async function handleResend() {
-  if (!canResend) return;
-  setOtp(["", "", "", "", "", ""]);
-  setOtpError("");
-  startCountdown();
-  inputs.current[0]?.focus();
-  
-  try {
-    await otpResend({ email: form.email });
-  } catch (err) {
-    setOtpError(err?.response?.data?.message || "Failed to resend code. Please try again.");
-  }
-}
-
-  function switchMethod(method) {
-    setVerifyMethod(method);
+    if (!canResend) return;
     setOtp(["", "", "", "", "", ""]);
     setOtpError("");
     startCountdown();
-    // TODO: API call — POST /auth/otp/resend/ with { email: form.email, method: method }
-    // This tells the backend to send OTP to the newly selected method
+    inputs.current[0]?.focus();
+    try {
+      await otpResend({ email: form.email });
+    } catch (err) {
+      setOtpError(err?.response?.data?.message || "Failed to resend code. Please try again.");
+    }
   }
 
   async function handleOtpSubmit(e) {
-  e.preventDefault();
-  const code = otp.join("");
-  if (code.length < 6) { setOtpError("Please enter the complete 6-digit code."); return; }
+    e.preventDefault();
+    const code = otp.join("");
+    if (code.length < 6) { setOtpError("Please enter the complete 6-digit code."); return; }
 
-  setLoading(true);
-  setOtpError("");
+    setLoading(true);
+    setOtpError("");
 
-  try {
-    await otpVerify({ email: form.email, code });
-    // Cookies are set by the backend — nothing to store, just redirect
-    window.location.href = "/dashboard";
-  } catch (err) {
-    setOtpError(
-      err?.response?.data?.error ||
-      err?.response?.data?.detail ||
-      "Invalid or expired code. Please try again."
-    );
-  } finally {
-    setLoading(false);
+    try {
+      await otpVerify({ email: form.email, code });
+      window.location.href = "/dashboard";
+    } catch (err) {
+      setOtpError(
+        err?.response?.data?.error ||
+        err?.response?.data?.detail ||
+        "Invalid or expired code. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
-}
-  // OTP STEP
+
+  const Logo = () => (
+    <div className={styles.logoWrap}>
+      <Link href="/" className={styles.logo}>
+        <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
+        <div className={styles.logoText}>
+          <span className={styles.logoName}>RMHCDT</span>
+          <span className={styles.logoSub}>Youth Portal</span>
+        </div>
+      </Link>
+    </div>
+  );
+
+  // ── OTP STEP ───────────────────────────────────────────────────────────────
   if (step === "otp") {
     return (
       <div className={styles.page}>
         <div className={styles.main}>
           <div className={styles.card}>
+            <Logo />
 
-            <div className={styles.logoWrap}>
-              <Link href="/" className={styles.logo}>
-                <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
-                <div className={styles.logoText}>
-                  <span className={styles.logoName}>RMHCDT</span>
-                  <span className={styles.logoSub}>Youth Portal</span>
-                </div>
-              </Link>
-            </div>
-
-            <div className={styles.cardHeader}>
-              <h1 className={styles.cardTitle}>Verify Login</h1>
-              <p className={styles.cardSubtitle}>
-                Choose how you want to receive your verification code.
+            <div className={styles.otpScreen}>
+              <div className={styles.otpIconRing}>
+                <Mail size={26} color="#15803d" strokeWidth={1.8} />
+              </div>
+              <h1 className={styles.otpTitle}>Check your email</h1>
+              <p className={styles.otpSubtitle}>
+                We sent a 6-digit verification code to
               </p>
+              <div className={styles.otpEmailBadge}>
+                <Mail size={13} color="#15803d" />
+                {form.email}
+              </div>
             </div>
 
             <form className={styles.form} onSubmit={handleOtpSubmit}>
-
-              <div className={styles.sectionLabel}>Verification Method</div>
-              <div className={styles.verifyToggle}>
-                <button
-                  type="button"
-                  onClick={() => switchMethod("email")}
-                  className={styles.verifyToggleBtn + (verifyMethod === "email" ? " " + styles.verifyToggleActive : "")}
-                >
-                  <Mail size={15} /> Email
-                </button>
-                <button
-                  type="button"
-                  disabled
-                  className={styles.verifyToggleBtn}
-                  style={{ opacity: 0.4, cursor: "not-allowed" }}
-                >
-                  <Phone size={15} /> Phone
-                  <span style={{ fontSize: "10px", color: "#94a3b8", fontWeight: 500 }}>(Soon)</span>
-                </button>
-              </div>
-
-              <span className={styles.hint} style={{ textAlign: "center" }}>
-                {verifyMethod === "email"
-                  ? <>Code sent to <strong style={{ color: "#0f172a" }}>{form.email}</strong></>
-                  : <>Code sent to your registered phone number</>
-                }
-              </span>
-
-              <div className={styles.sectionLabel}>Enter Code</div>
               <div className={styles.otpWrap}>
                 {otp.map((digit, i) => (
                   <input
@@ -220,22 +230,24 @@ export default function LoginPage() {
                 <span className={styles.error} style={{ textAlign: "center" }}>{otpError}</span>
               )}
 
-              <span className={styles.hint} style={{ textAlign: "center" }}>
+              <div className={styles.otpResendRow}>
                 {canResend ? (
-                  <button type="button" onClick={handleResend} className={styles.resendBtn}>
-                    <RotateCcw size={13} /> Resend Code
-                  </button>
+                  <>
+                    Didn't receive it?&nbsp;
+                    <button type="button" onClick={handleResend} className={styles.resendBtn}>
+                      <RotateCcw size={12} /> Resend code
+                    </button>
+                  </>
                 ) : (
-                  <>Resend code in <strong style={{ color: "#0f172a" }}>{countdown}s</strong></>
+                  <>Resend code in <strong style={{ color: "#0f172a", marginLeft: 4 }}>{countdown}s</strong></>
                 )}
-              </span>
+              </div>
 
               <button type="submit" className={styles.submitBtn} disabled={loading}>
-                {loading ? (
-                  <><span className={styles.spinner} /> Verifying...</>
-                ) : (
-                  <>Verify & Sign In <ArrowRight size={15} strokeWidth={2} /></>
-                )}
+                {loading
+                  ? <><span className={styles.spinner} /> Verifying…</>
+                  : <><ShieldCheck size={15} strokeWidth={2} /> Verify & Sign In</>
+                }
               </button>
 
               <button
@@ -246,37 +258,24 @@ export default function LoginPage() {
               >
                 Back to Login
               </button>
-
             </form>
 
             <div className={styles.bottomBadge}>
               <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
               <span>Secured under the Petroleum Industry Act, 2021</span>
             </div>
-
           </div>
         </div>
       </div>
     );
   }
 
-  // LOGIN STEP
+  // ── LOGIN STEP ─────────────────────────────────────────────────────────────
   return (
     <div className={styles.page}>
       <div className={styles.main}>
         <div className={styles.card}>
-
-          <div className={styles.logoWrap}>
-            <Link href="/" className={styles.logo}>
-              <div className={styles.logoBox}>
-                <span className={styles.logoLetter}>R</span>
-              </div>
-              <div className={styles.logoText}>
-                <span className={styles.logoName}>RMHCDT</span>
-                <span className={styles.logoSub}>Youth Portal</span>
-              </div>
-            </Link>
-          </div>
+          <Logo />
 
           <div className={styles.cardHeader}>
             <h1 className={styles.cardTitle}>Sign In</h1>
@@ -293,7 +292,10 @@ export default function LoginPage() {
           )}
 
           <form className={styles.form} onSubmit={handleSubmit}>
-            <div className={styles.sectionLabel}>Account Details</div>
+            <div className={styles.sectionLabel}>
+              <LogIn size={13} color="#15803d" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+              Account Details
+            </div>
 
             <div className={styles.field}>
               <label className={styles.label}>Email Address</label>
@@ -322,7 +324,10 @@ export default function LoginPage() {
                   onChange={handleChange}
                   placeholder="Enter your password"
                   autoComplete="current-password"
-                  className={styles.input + " " + styles.inputPadRight + (errors.password ? " " + styles.inputError : "")}
+                  className={
+                    styles.input + " " + styles.inputPadRight +
+                    (errors.password ? " " + styles.inputError : "")
+                  }
                 />
                 <button
                   type="button"
@@ -345,11 +350,10 @@ export default function LoginPage() {
             </div>
 
             <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? (
-                <><span className={styles.spinner} /> Signing In...</>
-              ) : (
-                <>Sign In <ArrowRight size={15} strokeWidth={2} /></>
-              )}
+              {loading
+                ? <><span className={styles.spinner} /> Signing In…</>
+                : <>Sign In <ArrowRight size={15} strokeWidth={2} /></>
+              }
             </button>
           </form>
 
@@ -359,7 +363,7 @@ export default function LoginPage() {
             <span className={styles.dividerLine} />
           </div>
 
-          <Link href="/register" className={styles.registerBtn}>
+          <Link href="/register" className={styles.signinBtn}>
             Create an Account
           </Link>
 
@@ -367,7 +371,6 @@ export default function LoginPage() {
             <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
             <span>Secured under the Petroleum Industry Act, 2021</span>
           </div>
-
         </div>
       </div>
     </div>

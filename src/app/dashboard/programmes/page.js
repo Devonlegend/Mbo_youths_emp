@@ -1,76 +1,85 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   GraduationCap, Briefcase, Wrench, Banknote,
   Clock, CheckCircle2, ArrowRight, Search, Filter,
+  AlertCircle, LayoutGrid,
 } from "lucide-react";
 import styles from "./page.module.css";
+import LoadingSpinner from "../components/LoadingSpinner";
+import { getSchemes } from "@/services";
 
-const programmes = [
-  {
-    id: 1,
-    title: "2026/2027 University Scholarship Award",
-    category: "Scholarship",
-    color: "green",
-    icon: GraduationCap,
-    desc: "Financial support for secondary, tertiary, vocational, and professional studies. Covers tuition, exam fees, and educational materials.",
-    deadline: "Jun 15, 2026",
-    daysLeft: 19,
-    slots: 50,
-    status: "open",
+// ── CATEGORY MAPPING ────────────────────────────────────────────────────────
+const categoryConfig = {
+  scholarship: {
+    label:    "Scholarship",
+    color:    "green",
+    icon:     GraduationCap,
     applyPath: "/dashboard/programmes/apply/scholarship",
   },
-  {
-    id: 2,
-    title: "Youth Empowerment Starter Pack 2026",
-    category: "Empowerment",
-    color: "amber",
-    icon: Briefcase,
-    desc: "Direct support to individuals or small groups to establish or expand income-generating activities. Includes starter packs and equipment.",
-    deadline: "Jun 1, 2026",
-    daysLeft: 58,
-    slots: 30,
-    status: "open",
-    applyPath: "/dashboard/programmes/apply/empowerment",
-  },
-  {
-    id: 3,
-    title: "Digital Skills Training 2026",
-    category: "Training",
-    color: "blue",
-    icon: Wrench,
-    desc: "Structured skill development programme covering digital skills, vocational training, and capacity building for youth in the community.",
-    deadline: "Jul 5, 2026",
-    daysLeft: 39,
-    slots: 100,
-    status: "open",
+  vocational: {
+    label:    "Training",
+    color:    "blue",
+    icon:     Wrench,
     applyPath: "/dashboard/programmes/apply/training",
   },
-  {
-    id: 4,
-    title: "2026 SME Business Startup Grant",
-    category: "Grant",
-    color: "purple",
-    icon: Banknote,
-    desc: "Financial awards for business start-up capital, project funding, research support, and other targeted financial assistance.",
-    deadline: "May 31, 2026",
-    daysLeft: 58,
-    slots: 20,
-    status: "open",
+  empowerment: {
+    label:    "Empowerment",
+    color:    "amber",
+    icon:     Briefcase,
+    applyPath: "/dashboard/programmes/apply/empowerment",
+  },
+  grant: {
+    label:    "Grant",
+    color:    "purple",
+    icon:     Banknote,
     applyPath: "/dashboard/programmes/apply/grant",
   },
-];
+};
+
+const colorMap = {
+  green:  { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
+  amber:  { bg: "#fffbeb", border: "#fde68a", text: "#b45309" },
+  blue:   { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8" },
+  purple: { bg: "#faf5ff", border: "#e9d5ff", text: "#7e22ce" },
+};
 
 const categories = ["All", "Scholarship", "Empowerment", "Training", "Grant"];
 
-const colorMap = {
-  green:  { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", iconBg: "#f0fdf4" },
-  amber:  { bg: "#fffbeb", border: "#fde68a", text: "#b45309", iconBg: "#fffbeb" },
-  blue:   { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8", iconBg: "#eff6ff" },
-  purple: { bg: "#faf5ff", border: "#e9d5ff", text: "#7e22ce", iconBg: "#faf5ff" },
-};
+// ── MAP BACKEND SCHEME → UI PROGRAMME SHAPE ─────────────────────────────────
+function mapScheme(scheme) {
+  const config = categoryConfig[scheme.award_type] || categoryConfig.scholarship;
 
+  const closeDate = new Date(scheme.application_close_date);
+  const today     = new Date();
+  const daysLeft  = Math.ceil((closeDate - today) / (1000 * 60 * 60 * 24));
+
+  let status = "open";
+  if (!scheme.is_published || !scheme.is_active) status = "closed";
+  if (daysLeft < 0) status = "closed";
+
+  const deadline = closeDate.toLocaleDateString("en-GB", {
+    day: "numeric", month: "short", year: "numeric",
+  });
+
+  return {
+    id:        scheme.id,
+    title:     scheme.name,
+    category:  config.label,
+    color:     config.color,
+    icon:      config.icon,
+    desc:      scheme.description,
+    deadline,
+    daysLeft:  Math.max(daysLeft, 0),
+    slots:     scheme.remaining_slots,
+    status,
+    applyPath: config.applyPath,
+    schemeId:  scheme.id,
+  };
+}
+
+// ── STATUS BADGE ─────────────────────────────────────────────────────────────
 function StatusBadge({ status, daysLeft }) {
   if (status === "awarded") return (
     <span className={`${styles.badge} ${styles.badgeAwarded}`}>
@@ -95,14 +104,34 @@ function StatusBadge({ status, daysLeft }) {
   );
 }
 
+// ── PAGE ─────────────────────────────────────────────────────────────────────
 export default function ProgrammesPage() {
   const router = useRouter();
-  const [activeFilter, setActiveFilter] = useState("All");
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [search, setSearch] = useState("");
+
+  const [programmes,    setProgrammes]   = useState([]);
+  const [loading,       setLoading]      = useState(true);
+  const [error,         setError]        = useState(null);
+  const [activeFilter,  setActiveFilter] = useState("All");
+  const [filterOpen,    setFilterOpen]   = useState(false);
+  const [search,        setSearch]       = useState("");
+
+  useEffect(() => {
+    async function loadSchemes() {
+      try {
+        const res = await getSchemes();
+        const mapped = (res.data || []).map(mapScheme);
+        setProgrammes(mapped);
+      } catch (err) {
+        setError("Failed to load programmes. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadSchemes();
+  }, []);
 
   const filtered = programmes.filter((p) => {
-    const matchCat = activeFilter === "All" || p.category === activeFilter;
+    const matchCat    = activeFilter === "All" || p.category === activeFilter;
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) ||
                         p.category.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
@@ -110,13 +139,13 @@ export default function ProgrammesPage() {
 
   function handleApply(prog) {
     if (prog.status === "awarded" || prog.status === "applied" || prog.status === "closed") return;
-    router.push(prog.applyPath);
+    router.push(`${prog.applyPath}?scheme_id=${prog.schemeId}`);
   }
 
   return (
     <div className={styles.page}>
 
-      {/* ── HEADER ── */}
+      {/* HEADER */}
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Programmes</h1>
@@ -128,7 +157,7 @@ export default function ProgrammesPage() {
         </div>
       </div>
 
-      {/* ── SEARCH + FILTER ── */}
+      {/* SEARCH + FILTER */}
       <div className={styles.toolbar}>
         <div className={styles.searchWrap}>
           <Search size={15} className={styles.searchIcon} />
@@ -165,17 +194,52 @@ export default function ProgrammesPage() {
         </div>
       </div>
 
-      {/* ── PROGRAMME CARDS ── */}
-      {filtered.length === 0 ? (
-        <div className={styles.empty}>
-          <p>No programmes found.</p>
+      {/* LOADING */}
+      {loading && <LoadingSpinner fullPage />}
+
+      {/* ERROR */}
+      {!loading && error && (
+        <div className={styles.empty} style={{ gap: 12 }}>
+          <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
+          <p style={{ color: "#ef4444", fontWeight: 600 }}>{error}</p>
+          <button
+            onClick={() => { setError(null); setLoading(true); }}
+            style={{
+              padding: "8px 20px", borderRadius: 8, border: "1px solid #e2e8f0",
+              background: "#fff", fontSize: 13, cursor: "pointer", color: "#374151",
+            }}
+          >
+            Try again
+          </button>
         </div>
-      ) : (
+      )}
+
+      {/* EMPTY — no schemes from backend */}
+      {!loading && !error && programmes.length === 0 && (
+        <div className={styles.empty}>
+          <p style={{ color: "#94a3b8", fontWeight: 600 }}>No programmes available</p>
+          <p style={{ color: "#cbd5e1", fontSize: 13 }}>
+            Check back when the next cycle opens.
+          </p>
+        </div>
+      )}
+
+      {/* EMPTY — search/filter returned nothing */}
+      {!loading && !error && programmes.length > 0 && filtered.length === 0 && (
+        <div className={styles.empty}>
+          <p>No programmes match your search.</p>
+        </div>
+      )}
+
+      {/* PROGRAMME CARDS */}
+      {!loading && !error && filtered.length > 0 && (
         <div className={styles.grid}>
           {filtered.map((prog) => {
-            const Icon = prog.icon;
-            const c = colorMap[prog.color];
-            const disabled = prog.status === "awarded" || prog.status === "applied" || prog.status === "closed";
+            const Icon     = prog.icon;
+            const c        = colorMap[prog.color];
+            const disabled = prog.status === "awarded" ||
+                             prog.status === "applied" ||
+                             prog.status === "closed";
 
             return (
               <div
@@ -213,7 +277,7 @@ export default function ProgrammesPage() {
                     </span>
                   </div>
 
-                  {/* BUTTON */}
+                  {/* APPLY BUTTON */}
                   <button
                     className={`${styles.applyBtn} ${disabled ? styles.applyBtnDisabled : ""}`}
                     style={!disabled ? { color: c.text, borderColor: c.border, background: c.bg } : {}}

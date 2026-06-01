@@ -1,13 +1,25 @@
 "use client";
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   GraduationCap, ArrowLeft, ArrowRight, UploadCloud,
   FileText, Trash2, ShieldCheck, AlertCircle, Check,
 } from "lucide-react";
 import styles from "../apply-form.module.css";
+import { submitApplication } from "@/services";
+import { getBankDetail } from "@/services/students";
 
 const MAX_SIZE = 5 * 1024 * 1024;
+
+const NIGERIAN_BANKS = [
+  "Access Bank", "Citibank Nigeria", "EcoBank Nigeria", "Fidelity Bank",
+  "First Bank of Nigeria", "First City Monument Bank (FCMB)", "Globus Bank",
+  "Guaranty Trust Bank (GTBank)", "Heritage Bank", "Keystone Bank",
+  "Lotus Bank", "Optimus Bank", "Polaris Bank", "Providus Bank",
+  "Stanbic IBTC Bank", "Standard Chartered Bank", "Sterling Bank",
+  "SunTrust Bank", "Titan Trust Bank", "Union Bank of Nigeria",
+  "United Bank for Africa (UBA)", "Unity Bank", "Wema Bank", "Zenith Bank",
+];
 
 function FileUpload({ label, hint, value, onChange, onRemove, error }) {
   return (
@@ -40,23 +52,56 @@ function FileUpload({ label, hint, value, onChange, onRemove, error }) {
 }
 
 export default function ScholarshipForm() {
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const schemeId     = searchParams.get("scheme_id");
+
   const [form, setForm] = useState({
-    institution: "", level: "", department: "",
-    current_level: "", matric_number: "", cgpa: "",
-    declared_external: "", declaration_details: "",
-    attested: false,
+    institution:         "",
+    level:               "",
+    department:          "",
+    current_level:       "",
+    matric_number:       "",
+    cgpa:                "",
+    // Bank details
+    bank_name:           "",
+    account_number:      "",
+    account_name:        "",
+    // Declaration
+    declared_external:   "",
+    declaration_details: "",
+    attested:            false,
   });
-  const [result, setResult]     = useState(null);
+
+  const [result,    setResult]    = useState(null);
   const [admission, setAdmission] = useState(null);
-  const [errors, setErrors]     = useState({});
-  const [loading, setLoading]   = useState(false);
+  const [errors,    setErrors]    = useState({});
+  const [loading,   setLoading]   = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [apiError,  setApiError]  = useState("");
+
+  // ── Pre-fill bank details if student already saved them ──────────────────
+  useEffect(() => {
+    getBankDetail()
+      .then((res) => {
+        const b = res.data;
+        if (b) {
+          setForm((f) => ({
+            ...f,
+            bank_name:      b.bank_name      || "",
+            account_number: b.account_number || "",
+            account_name:   b.account_name   || "",
+          }));
+        }
+      })
+      .catch(() => {}); // Silently fail — fields just stay empty
+  }, []);
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
     setErrors((er) => ({ ...er, [name]: "" }));
+    setApiError("");
   }
 
   function handleFile(setter) {
@@ -70,18 +115,23 @@ export default function ScholarshipForm() {
 
   function validate() {
     const e = {};
-    if (!form.institution.trim())   e.institution   = "Required";
-    if (!form.level)                e.level         = "Required";
-    if (!form.department.trim())    e.department    = "Required";
-    if (!form.current_level)        e.current_level = "Required";
-    if (!form.matric_number.trim()) e.matric_number = "Required";
-    if (!form.cgpa.trim())          e.cgpa          = "Required";
-    if (!result)                    e.result        = "Please upload your last result";
-    if (!admission)                 e.admission     = "Please upload your admission letter";
+    if (!schemeId)                  e.scheme           = "Invalid scheme. Please go back and try again.";
+    if (!form.institution.trim())   e.institution      = "Required";
+    if (!form.level)                e.level            = "Required";
+    if (!form.department.trim())    e.department       = "Required";
+    if (!form.current_level)        e.current_level    = "Required";
+    if (!form.matric_number.trim()) e.matric_number    = "Required";
+    if (!form.cgpa.trim())          e.cgpa             = "Required";
+    if (!result)                    e.result           = "Please upload your last result";
+    if (!admission)                 e.admission        = "Please upload your admission letter";
+    if (!form.bank_name)            e.bank_name        = "Required";
+    if (!form.account_number.trim()) e.account_number  = "Required";
+    else if (!/^\d{10}$/.test(form.account_number.trim())) e.account_number = "Account number must be 10 digits";
+    if (!form.account_name.trim())  e.account_name     = "Required";
     if (!form.declared_external)    e.declared_external = "Required";
     if (form.declared_external === "yes" && !form.declaration_details.trim())
       e.declaration_details = "Please provide details of prior support received";
-    if (!form.attested)             e.attested      = "You must attest to this declaration";
+    if (!form.attested)             e.attested         = "You must attest to this declaration";
     return e;
   }
 
@@ -89,12 +139,47 @@ export default function ScholarshipForm() {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1400)); // mock
-    setLoading(false);
-    setSubmitted(true);
+    setApiError("");
+
+    try {
+      const formData = new FormData();
+
+      formData.append("scheme_id",           schemeId);
+      formData.append("institution",         form.institution);
+      formData.append("level",               form.level);
+      formData.append("department",          form.department);
+      formData.append("current_level",       form.current_level);
+      formData.append("matric_number",       form.matric_number);
+      formData.append("cgpa",                form.cgpa);
+      formData.append("bank_name",           form.bank_name);
+      formData.append("account_number",      form.account_number);
+      formData.append("account_name",        form.account_name);
+      formData.append("declared_external",   form.declared_external);
+      formData.append("declaration_details", form.declaration_details);
+      formData.append("attested",            form.attested);
+      formData.append("category",            "scholarship");
+
+      if (result)    formData.append("result_document",  result);
+      if (admission) formData.append("admission_letter", admission);
+
+      await submitApplication(formData);
+      setSubmitted(true);
+
+    } catch (err) {
+      const message =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        "Submission failed. Please try again.";
+      setApiError(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
+  // ── SUCCESS SCREEN ────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div className={styles.successPage}>
@@ -107,10 +192,12 @@ export default function ScholarshipForm() {
             Your Scholarship application has been submitted and is under verification.
             You will be notified of the outcome.
           </p>
-          <button className={styles.successBtn} onClick={() => router.push("/dashboard/applications")}>
+          <button className={styles.successBtn}
+            onClick={() => router.push("/dashboard/applications")}>
             View My Applications <ArrowRight size={14} strokeWidth={2} />
           </button>
-          <button className={styles.successBack} onClick={() => router.push("/dashboard/programmes")}>
+          <button className={styles.successBack}
+            onClick={() => router.push("/dashboard/programmes")}>
             Back to Programmes
           </button>
         </div>
@@ -118,21 +205,21 @@ export default function ScholarshipForm() {
     );
   }
 
+  // ── FORM ──────────────────────────────────────────────────────────────────
   return (
     <div className={styles.page}>
 
-      {/* BACK */}
       <button className={styles.backBtn} onClick={() => router.push("/dashboard/programmes")}>
         <ArrowLeft size={15} strokeWidth={2} /> Back to Programmes
       </button>
 
-      {/* HEADER */}
       <div className={styles.formHeader}>
         <div className={styles.formHeaderIcon} style={{ background: "#15803d" }}>
           <GraduationCap size={22} color="#fff" strokeWidth={2} />
         </div>
         <div>
-          <div className={styles.formCat} style={{ color: "#15803d", background: "#f0fdf4", borderColor: "#bbf7d0" }}>
+          <div className={styles.formCat}
+            style={{ color: "#15803d", background: "#f0fdf4", borderColor: "#bbf7d0" }}>
             Scholarship
           </div>
           <h1 className={styles.formTitle}>2026/2027 University Scholarship Award</h1>
@@ -140,9 +227,33 @@ export default function ScholarshipForm() {
         </div>
       </div>
 
+      {apiError && (
+        <div style={{
+          display: "flex", alignItems: "flex-start", gap: 10,
+          background: "#fef2f2", border: "1px solid #fecaca",
+          borderRadius: 10, padding: "12px 16px",
+          fontSize: 13, color: "#dc2626",
+        }}>
+          <AlertCircle size={16} strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>{apiError}</span>
+        </div>
+      )}
+
+      {!schemeId && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          background: "#fffbeb", border: "1px solid #fde68a",
+          borderRadius: 10, padding: "12px 16px",
+          fontSize: 13, color: "#b45309",
+        }}>
+          <AlertCircle size={16} strokeWidth={2} />
+          <span>No scheme selected. Please go back to Programmes and click Apply.</span>
+        </div>
+      )}
+
       <form className={styles.form} onSubmit={handleSubmit}>
 
-        {/* ── SECTION 1: ACADEMIC INFO ── */}
+        {/* SECTION 1: ACADEMIC INFO */}
         <div className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.sectionNum}>1</span>
@@ -217,7 +328,7 @@ export default function ScholarshipForm() {
           </div>
         </div>
 
-        {/* ── SECTION 2: DOCUMENTS ── */}
+        {/* SECTION 2: DOCUMENTS */}
         <div className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.sectionNum}>2</span>
@@ -226,7 +337,6 @@ export default function ScholarshipForm() {
               <p className={styles.sectionSub}>Upload clear, legible copies of required documents.</p>
             </div>
           </div>
-
           <div className={styles.grid2}>
             <FileUpload
               label="Last Academic Result"
@@ -247,10 +357,54 @@ export default function ScholarshipForm() {
           </div>
         </div>
 
-        {/* ── SECTION 3: SELF-DECLARATION ── */}
+        {/* SECTION 3: BANK DETAILS */}
         <div className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.sectionNum}>3</span>
+            <div>
+              <h2 className={styles.sectionTitle}>Bank Details</h2>
+              <p className={styles.sectionSub}>
+                Disbursements will be made to this account. Ensure details are accurate.
+              </p>
+            </div>
+          </div>
+
+          <div className={styles.grid2}>
+            <div className={styles.field}>
+              <label className={styles.label}>Bank Name</label>
+              <select name="bank_name" value={form.bank_name} onChange={handleChange}
+                className={`${styles.input} ${errors.bank_name ? styles.inputError : ""}`}>
+                <option value="">Select bank</option>
+                {NIGERIAN_BANKS.map((bank) => (
+                  <option key={bank} value={bank}>{bank}</option>
+                ))}
+              </select>
+              {errors.bank_name && <span className={styles.error}>{errors.bank_name}</span>}
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Account Number</label>
+              <input name="account_number" value={form.account_number} onChange={handleChange}
+                placeholder="10-digit account number"
+                maxLength={10}
+                className={`${styles.input} ${errors.account_number ? styles.inputError : ""}`} />
+              {errors.account_number && <span className={styles.error}>{errors.account_number}</span>}
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Account Name</label>
+            <input name="account_name" value={form.account_name} onChange={handleChange}
+              placeholder="Name as it appears on your bank account"
+              className={`${styles.input} ${errors.account_name ? styles.inputError : ""}`} />
+            {errors.account_name && <span className={styles.error}>{errors.account_name}</span>}
+            <span className={styles.hint}>Must match your BVN-linked account name exactly.</span>
+          </div>
+        </div>
+
+        {/* SECTION 4: SELF-DECLARATION */}
+        <div className={styles.section}>
+          <div className={styles.sectionHead}>
+            <span className={styles.sectionNum}>4</span>
             <div>
               <h2 className={styles.sectionTitle}>Self-Declaration</h2>
               <p className={styles.sectionSub}>
@@ -258,7 +412,6 @@ export default function ScholarshipForm() {
               </p>
             </div>
           </div>
-
           <div className={styles.radioGroup}>
             <label className={`${styles.radioCard} ${form.declared_external === "no" ? styles.radioCardActive : ""}`}>
               <input type="radio" name="declared_external" value="no" onChange={handleChange} />
@@ -270,7 +423,6 @@ export default function ScholarshipForm() {
             </label>
           </div>
           {errors.declared_external && <span className={styles.error}>{errors.declared_external}</span>}
-
           {form.declared_external === "yes" && (
             <div className={styles.field} style={{ marginTop: 12 }}>
               <label className={styles.label}>Provide details (organisation, category, year)</label>
@@ -282,7 +434,7 @@ export default function ScholarshipForm() {
           )}
         </div>
 
-        {/* ── SECTION 4: ATTESTATION ── */}
+        {/* SECTION 5: ATTESTATION */}
         <div className={styles.section}>
           <div className={styles.attestBox}>
             <AlertCircle size={16} color="#b45309" />
@@ -294,15 +446,16 @@ export default function ScholarshipForm() {
             </p>
           </div>
           <label className={styles.checkRow}>
-            <input type="checkbox" name="attested" checked={form.attested} onChange={handleChange} className={styles.checkbox} />
+            <input type="checkbox" name="attested" checked={form.attested}
+              onChange={handleChange} className={styles.checkbox} />
             <span className={styles.checkLabel}>I have read and I agree to the above declaration</span>
           </label>
           {errors.attested && <span className={styles.error}>{errors.attested}</span>}
         </div>
 
-        {/* ── SUBMIT ── */}
+        {/* SUBMIT */}
         <div className={styles.formFooter}>
-          <button type="submit" className={styles.submitBtn} disabled={loading}>
+          <button type="submit" className={styles.submitBtn} disabled={loading || !schemeId}>
             {loading ? "Submitting..." : <>Submit Application <ArrowRight size={15} strokeWidth={2} /></>}
           </button>
         </div>

@@ -1,31 +1,71 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Banknote, ArrowLeft, ArrowRight, ShieldCheck,
   AlertCircle, Check, UploadCloud, FileText, Trash2,
 } from "lucide-react";
 import styles from "../apply-form.module.css";
+import { submitApplication } from "@/services";
+import { getBankDetail } from "@/services/students";
 
 const MAX_SIZE = 5 * 1024 * 1024;
 
+const NIGERIAN_BANKS = [
+  "Access Bank", "Citibank Nigeria", "EcoBank Nigeria", "Fidelity Bank",
+  "First Bank of Nigeria", "First City Monument Bank (FCMB)", "Globus Bank",
+  "Guaranty Trust Bank (GTBank)", "Heritage Bank", "Keystone Bank",
+  "Lotus Bank", "Optimus Bank", "Polaris Bank", "Providus Bank",
+  "Stanbic IBTC Bank", "Standard Chartered Bank", "Sterling Bank",
+  "SunTrust Bank", "Titan Trust Bank", "Union Bank of Nigeria",
+  "United Bank for Africa (UBA)", "Unity Bank", "Wema Bank", "Zenith Bank",
+];
+
 export default function GrantForm() {
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const schemeId     = searchParams.get("scheme_id");
+
   const [form, setForm] = useState({
-    grant_purpose: "", business_plan_desc: "",
-    amount_requested: "", expected_beneficiaries: "",
-    declared_external: "", declaration_details: "",
-    attested: false,
+    grant_purpose:           "",
+    business_plan_desc:      "",
+    amount_requested:        "",
+    expected_beneficiaries:  "",
+    bank_name:               "",
+    account_number:          "",
+    account_name:            "",
+    declared_external:       "",
+    declaration_details:     "",
+    attested:                false,
   });
+
   const [businessPlan, setBusinessPlan] = useState(null);
-  const [errors, setErrors]   = useState({});
-  const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [errors,       setErrors]       = useState({});
+  const [loading,      setLoading]      = useState(false);
+  const [submitted,    setSubmitted]    = useState(false);
+  const [apiError,     setApiError]     = useState("");
+
+  useEffect(() => {
+    getBankDetail()
+      .then((res) => {
+        const b = res.data;
+        if (b) {
+          setForm((f) => ({
+            ...f,
+            bank_name:      b.bank_name      || "",
+            account_number: b.account_number || "",
+            account_name:   b.account_name   || "",
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
     setErrors((er) => ({ ...er, [name]: "" }));
+    setApiError("");
   }
 
   function handleFile(e) {
@@ -38,12 +78,17 @@ export default function GrantForm() {
 
   function validate() {
     const e = {};
-    if (!form.grant_purpose.trim())         e.grant_purpose         = "Required";
-    if (!form.business_plan_desc.trim())    e.business_plan_desc    = "Required";
-    if (!form.amount_requested.trim())      e.amount_requested      = "Required";
-    if (!form.expected_beneficiaries.trim())e.expected_beneficiaries= "Required";
-    if (!businessPlan)                      e.business_plan         = "Please upload your business plan";
-    if (!form.declared_external)            e.declared_external     = "Required";
+    if (!schemeId)                           e.scheme                 = "Invalid scheme. Please go back and try again.";
+    if (!form.grant_purpose.trim())          e.grant_purpose          = "Required";
+    if (!form.business_plan_desc.trim())     e.business_plan_desc     = "Required";
+    if (!form.amount_requested.trim())       e.amount_requested       = "Required";
+    if (!form.expected_beneficiaries.trim()) e.expected_beneficiaries = "Required";
+    if (!businessPlan)                       e.business_plan          = "Please upload your business plan";
+    if (!form.bank_name)                     e.bank_name              = "Required";
+    if (!form.account_number.trim())         e.account_number         = "Required";
+    else if (!/^\d{10}$/.test(form.account_number.trim())) e.account_number = "Account number must be 10 digits";
+    if (!form.account_name.trim())           e.account_name           = "Required";
+    if (!form.declared_external)             e.declared_external      = "Required";
     if (form.declared_external === "yes" && !form.declaration_details.trim())
       e.declaration_details = "Please provide details";
     if (!form.attested) e.attested = "You must attest to this declaration";
@@ -54,23 +99,59 @@ export default function GrantForm() {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    setLoading(false);
-    setSubmitted(true);
+    setApiError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("scheme_id",              schemeId);
+      formData.append("grant_purpose",          form.grant_purpose);
+      formData.append("business_plan_desc",     form.business_plan_desc);
+      formData.append("amount_requested",       form.amount_requested);
+      formData.append("expected_beneficiaries", form.expected_beneficiaries);
+      formData.append("bank_name",              form.bank_name);
+      formData.append("account_number",         form.account_number);
+      formData.append("account_name",           form.account_name);
+      formData.append("declared_external",      form.declared_external);
+      formData.append("declaration_details",    form.declaration_details);
+      formData.append("attested",               form.attested);
+      formData.append("category",               "grant");
+      if (businessPlan) formData.append("business_plan", businessPlan);
+
+      await submitApplication(formData);
+      setSubmitted(true);
+
+    } catch (err) {
+      const message =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        "Submission failed. Please try again.";
+      setApiError(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (submitted) {
     return (
       <div className={styles.successPage}>
         <div className={styles.successCard}>
-          <div className={styles.successIcon}><Check size={28} strokeWidth={2.5} color="#15803d" /></div>
+          <div className={styles.successIcon}>
+            <Check size={28} strokeWidth={2.5} color="#15803d" />
+          </div>
           <h1 className={styles.successTitle}>Application Submitted</h1>
-          <p className={styles.successDesc}>Your Grant application has been submitted and is under verification.</p>
+          <p className={styles.successDesc}>
+            Your Grant application has been submitted and is under verification.
+            You will be notified of the outcome.
+          </p>
           <button className={styles.successBtn} onClick={() => router.push("/dashboard/applications")}>
             View My Applications <ArrowRight size={14} strokeWidth={2} />
           </button>
-          <button className={styles.successBack} onClick={() => router.push("/dashboard/programmes")}>Back to Programmes</button>
+          <button className={styles.successBack} onClick={() => router.push("/dashboard/programmes")}>
+            Back to Programmes
+          </button>
         </div>
       </div>
     );
@@ -78,6 +159,7 @@ export default function GrantForm() {
 
   return (
     <div className={styles.page}>
+
       <button className={styles.backBtn} onClick={() => router.push("/dashboard/programmes")}>
         <ArrowLeft size={15} strokeWidth={2} /> Back to Programmes
       </button>
@@ -87,14 +169,31 @@ export default function GrantForm() {
           <Banknote size={22} color="#fff" strokeWidth={2} />
         </div>
         <div>
-          <div className={styles.formCat} style={{ color: "#7e22ce", background: "#faf5ff", borderColor: "#e9d5ff" }}>Grant</div>
+          <div className={styles.formCat} style={{ color: "#7e22ce", background: "#faf5ff", borderColor: "#e9d5ff" }}>
+            Grant
+          </div>
           <h1 className={styles.formTitle}>2026 SME Business Startup Grant</h1>
           <p className={styles.formSub}>Complete all fields accurately. Submission is final.</p>
         </div>
       </div>
 
+      {apiError && (
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: "#dc2626" }}>
+          <AlertCircle size={16} strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>{apiError}</span>
+        </div>
+      )}
+
+      {!schemeId && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: "#b45309" }}>
+          <AlertCircle size={16} strokeWidth={2} />
+          <span>No scheme selected. Please go back to Programmes and click Apply.</span>
+        </div>
+      )}
+
       <form className={styles.form} onSubmit={handleSubmit}>
 
+        {/* SECTION 1: GRANT DETAILS */}
         <div className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.sectionNum}>1</span>
@@ -138,6 +237,7 @@ export default function GrantForm() {
           </div>
         </div>
 
+        {/* SECTION 2: BUSINESS PLAN DOCUMENT */}
         <div className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.sectionNum}>2</span>
@@ -146,13 +246,11 @@ export default function GrantForm() {
               <p className={styles.sectionSub}>Upload your full business plan document.</p>
             </div>
           </div>
-
           <div className={styles.field}>
             <label className={styles.label}>Business Plan</label>
             {!businessPlan ? (
               <label className={`${styles.uploadArea} ${errors.business_plan ? styles.uploadError : ""}`}>
-                <input type="file" accept="application/pdf,image/jpeg,image/png"
-                  onChange={handleFile} style={{ display: "none" }} />
+                <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={handleFile} style={{ display: "none" }} />
                 <UploadCloud size={22} color="#94a3b8" />
                 <span className={styles.uploadTitle}>Click to upload business plan</span>
                 <span className={styles.uploadHint}>PDF, JPG or PNG · Max 5MB</span>
@@ -173,9 +271,51 @@ export default function GrantForm() {
           </div>
         </div>
 
+        {/* SECTION 3: BANK DETAILS */}
         <div className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.sectionNum}>3</span>
+            <div>
+              <h2 className={styles.sectionTitle}>Bank Details</h2>
+              <p className={styles.sectionSub}>Grant disbursements will be made to this account. Ensure details are accurate.</p>
+            </div>
+          </div>
+
+          <div className={styles.grid2}>
+            <div className={styles.field}>
+              <label className={styles.label}>Bank Name</label>
+              <select name="bank_name" value={form.bank_name} onChange={handleChange}
+                className={`${styles.input} ${errors.bank_name ? styles.inputError : ""}`}>
+                <option value="">Select bank</option>
+                {NIGERIAN_BANKS.map((bank) => (
+                  <option key={bank} value={bank}>{bank}</option>
+                ))}
+              </select>
+              {errors.bank_name && <span className={styles.error}>{errors.bank_name}</span>}
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Account Number</label>
+              <input name="account_number" value={form.account_number} onChange={handleChange}
+                placeholder="10-digit account number" maxLength={10}
+                className={`${styles.input} ${errors.account_number ? styles.inputError : ""}`} />
+              {errors.account_number && <span className={styles.error}>{errors.account_number}</span>}
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Account Name</label>
+            <input name="account_name" value={form.account_name} onChange={handleChange}
+              placeholder="Name as it appears on your bank account"
+              className={`${styles.input} ${errors.account_name ? styles.inputError : ""}`} />
+            {errors.account_name && <span className={styles.error}>{errors.account_name}</span>}
+            <span className={styles.hint}>Must match your BVN-linked account name exactly.</span>
+          </div>
+        </div>
+
+        {/* SECTION 4: SELF-DECLARATION */}
+        <div className={styles.section}>
+          <div className={styles.sectionHead}>
+            <span className={styles.sectionNum}>4</span>
             <div>
               <h2 className={styles.sectionTitle}>Self-Declaration</h2>
               <p className={styles.sectionSub}>Have you received support from any HCDT, NGO, or government programme in the past 1 year?</p>
@@ -203,11 +343,15 @@ export default function GrantForm() {
           )}
         </div>
 
+        {/* SECTION 5: ATTESTATION */}
         <div className={styles.section}>
           <div className={styles.attestBox}>
             <AlertCircle size={16} color="#b45309" />
             <p className={styles.attestText}>
-              I confirm that all information provided in this application is true, accurate, and complete to the best of my knowledge. I understand that providing false or misleading information will result in the rejection of this application and may result in my disqualification from programmes administered by RMHCDT.
+              I confirm that all information provided in this application is true, accurate,
+              and complete to the best of my knowledge. I understand that providing false or
+              misleading information will result in the rejection of this application and may
+              result in my disqualification from programmes administered by RMHCDT.
             </p>
           </div>
           <label className={styles.checkRow}>
@@ -217,8 +361,9 @@ export default function GrantForm() {
           {errors.attested && <span className={styles.error}>{errors.attested}</span>}
         </div>
 
+        {/* SUBMIT */}
         <div className={styles.formFooter}>
-          <button type="submit" className={styles.submitBtn} disabled={loading}>
+          <button type="submit" className={styles.submitBtn} disabled={loading || !schemeId}>
             {loading ? "Submitting..." : <>Submit Application <ArrowRight size={15} strokeWidth={2} /></>}
           </button>
         </div>

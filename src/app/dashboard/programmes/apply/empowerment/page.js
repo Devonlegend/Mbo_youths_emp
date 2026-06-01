@@ -1,34 +1,46 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Briefcase, ArrowLeft, ArrowRight, ShieldCheck, AlertCircle, Check } from "lucide-react";
 import styles from "../apply-form.module.css";
+import { submitApplication } from "@/services";
 
 export default function EmpowermentForm() {
-  const router = useRouter();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const schemeId     = searchParams.get("scheme_id");
+
   const [form, setForm] = useState({
-    trade: "", current_status: "", support_needed: "",
-    equipment: "", business_location: "",
-    declared_external: "", declaration_details: "",
-    attested: false,
+    trade:               "",
+    current_status:      "",
+    support_needed:      "",
+    equipment:           "",
+    business_location:   "",
+    declared_external:   "",
+    declaration_details: "",
+    attested:            false,
   });
-  const [errors, setErrors]   = useState({});
-  const [loading, setLoading] = useState(false);
+
+  const [errors,    setErrors]    = useState({});
+  const [loading,   setLoading]   = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [apiError,  setApiError]  = useState("");
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
     setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
     setErrors((er) => ({ ...er, [name]: "" }));
+    setApiError("");
   }
 
   function validate() {
     const e = {};
-    if (!form.trade.trim())            e.trade            = "Required";
-    if (!form.current_status)          e.current_status   = "Required";
-    if (!form.support_needed.trim())   e.support_needed   = "Required";
-    if (!form.business_location.trim())e.business_location= "Required";
-    if (!form.declared_external)       e.declared_external= "Required";
+    if (!schemeId)                     e.scheme            = "Invalid scheme. Please go back and try again.";
+    if (!form.trade.trim())            e.trade             = "Required";
+    if (!form.current_status)          e.current_status    = "Required";
+    if (!form.support_needed.trim())   e.support_needed    = "Required";
+    if (!form.business_location.trim())e.business_location = "Required";
+    if (!form.declared_external)       e.declared_external = "Required";
     if (form.declared_external === "yes" && !form.declaration_details.trim())
       e.declaration_details = "Please provide details";
     if (!form.attested) e.attested = "You must attest to this declaration";
@@ -39,30 +51,70 @@ export default function EmpowermentForm() {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1400));
-    setLoading(false);
-    setSubmitted(true);
+    setApiError("");
+
+    try {
+      const formData = new FormData();
+
+      formData.append("scheme_id",           schemeId);
+      formData.append("trade",               form.trade);
+      formData.append("current_status",      form.current_status);
+      formData.append("support_needed",      form.support_needed);
+      formData.append("equipment",           form.equipment);
+      formData.append("business_location",   form.business_location);
+      formData.append("declared_external",   form.declared_external);
+      formData.append("declaration_details", form.declaration_details);
+      formData.append("attested",            form.attested);
+      formData.append("category",            "empowerment");
+
+      await submitApplication(formData);
+
+      setSubmitted(true);
+
+    } catch (err) {
+      const message =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.response?.data?.detail ||
+        "Submission failed. Please try again.";
+      setApiError(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
+  // ── SUCCESS SCREEN ────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div className={styles.successPage}>
         <div className={styles.successCard}>
-          <div className={styles.successIcon}><Check size={28} strokeWidth={2.5} color="#15803d" /></div>
+          <div className={styles.successIcon}>
+            <Check size={28} strokeWidth={2.5} color="#15803d" />
+          </div>
           <h1 className={styles.successTitle}>Application Submitted</h1>
-          <p className={styles.successDesc}>Your Empowerment application has been submitted and is under verification.</p>
-          <button className={styles.successBtn} onClick={() => router.push("/dashboard/applications")}>
+          <p className={styles.successDesc}>
+            Your Empowerment application has been submitted and is under verification.
+            You will be notified of the outcome.
+          </p>
+          <button className={styles.successBtn}
+            onClick={() => router.push("/dashboard/applications")}>
             View My Applications <ArrowRight size={14} strokeWidth={2} />
           </button>
-          <button className={styles.successBack} onClick={() => router.push("/dashboard/programmes")}>Back to Programmes</button>
+          <button className={styles.successBack}
+            onClick={() => router.push("/dashboard/programmes")}>
+            Back to Programmes
+          </button>
         </div>
       </div>
     );
   }
 
+  // ── FORM ──────────────────────────────────────────────────────────────────
   return (
     <div className={styles.page}>
+
       <button className={styles.backBtn} onClick={() => router.push("/dashboard/programmes")}>
         <ArrowLeft size={15} strokeWidth={2} /> Back to Programmes
       </button>
@@ -72,15 +124,44 @@ export default function EmpowermentForm() {
           <Briefcase size={22} color="#fff" strokeWidth={2} />
         </div>
         <div>
-          <div className={styles.formCat} style={{ color: "#b45309", background: "#fffbeb", borderColor: "#fde68a" }}>Empowerment</div>
+          <div className={styles.formCat}
+            style={{ color: "#b45309", background: "#fffbeb", borderColor: "#fde68a" }}>
+            Empowerment
+          </div>
           <h1 className={styles.formTitle}>Youth Empowerment Starter Pack 2026</h1>
           <p className={styles.formSub}>Complete all fields accurately. Submission is final.</p>
         </div>
       </div>
 
+      {/* API error banner */}
+      {apiError && (
+        <div style={{
+          display: "flex", alignItems: "flex-start", gap: 10,
+          background: "#fef2f2", border: "1px solid #fecaca",
+          borderRadius: 10, padding: "12px 16px",
+          fontSize: 13, color: "#dc2626",
+        }}>
+          <AlertCircle size={16} strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>{apiError}</span>
+        </div>
+      )}
+
+      {/* Missing scheme_id warning */}
+      {!schemeId && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          background: "#fffbeb", border: "1px solid #fde68a",
+          borderRadius: 10, padding: "12px 16px",
+          fontSize: 13, color: "#b45309",
+        }}>
+          <AlertCircle size={16} strokeWidth={2} />
+          <span>No scheme selected. Please go back to Programmes and click Apply.</span>
+        </div>
+      )}
+
       <form className={styles.form} onSubmit={handleSubmit}>
 
-        {/* SECTION 1 */}
+        {/* SECTION 1: BUSINESS / TRADE INFO */}
         <div className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.sectionNum}>1</span>
@@ -136,13 +217,15 @@ export default function EmpowermentForm() {
           </div>
         </div>
 
-        {/* SECTION 2: DECLARATION */}
+        {/* SECTION 2: SELF-DECLARATION */}
         <div className={styles.section}>
           <div className={styles.sectionHead}>
             <span className={styles.sectionNum}>2</span>
             <div>
               <h2 className={styles.sectionTitle}>Self-Declaration</h2>
-              <p className={styles.sectionSub}>Have you received support from any HCDT, NGO, or government programme in the past 1 year?</p>
+              <p className={styles.sectionSub}>
+                Have you received support from any HCDT, NGO, or government programme in the past 1 year?
+              </p>
             </div>
           </div>
           <div className={styles.radioGroup}>
@@ -159,8 +242,8 @@ export default function EmpowermentForm() {
           {form.declared_external === "yes" && (
             <div className={styles.field} style={{ marginTop: 12 }}>
               <label className={styles.label}>Provide details (organisation, category, year)</label>
-              <textarea name="declaration_details" value={form.declaration_details} onChange={handleChange}
-                rows={3} placeholder="e.g. NDDC Grant, 2025"
+              <textarea name="declaration_details" value={form.declaration_details}
+                onChange={handleChange} rows={3} placeholder="e.g. NDDC Grant, 2025"
                 className={`${styles.textarea} ${errors.declaration_details ? styles.inputError : ""}`} />
               {errors.declaration_details && <span className={styles.error}>{errors.declaration_details}</span>}
             </div>
@@ -172,18 +255,23 @@ export default function EmpowermentForm() {
           <div className={styles.attestBox}>
             <AlertCircle size={16} color="#b45309" />
             <p className={styles.attestText}>
-              I confirm that all information provided in this application is true, accurate, and complete to the best of my knowledge. I understand that providing false or misleading information will result in the rejection of this application and may result in my disqualification from programmes administered by RMHCDT.
+              I confirm that all information provided in this application is true, accurate,
+              and complete to the best of my knowledge. I understand that providing false or
+              misleading information will result in the rejection of this application and may
+              result in my disqualification from programmes administered by RMHCDT.
             </p>
           </div>
           <label className={styles.checkRow}>
-            <input type="checkbox" name="attested" checked={form.attested} onChange={handleChange} className={styles.checkbox} />
+            <input type="checkbox" name="attested" checked={form.attested}
+              onChange={handleChange} className={styles.checkbox} />
             <span className={styles.checkLabel}>I have read and I agree to the above declaration</span>
           </label>
           {errors.attested && <span className={styles.error}>{errors.attested}</span>}
         </div>
 
+        {/* SUBMIT */}
         <div className={styles.formFooter}>
-          <button type="submit" className={styles.submitBtn} disabled={loading}>
+          <button type="submit" className={styles.submitBtn} disabled={loading || !schemeId}>
             {loading ? "Submitting..." : <>Submit Application <ArrowRight size={15} strokeWidth={2} /></>}
           </button>
         </div>

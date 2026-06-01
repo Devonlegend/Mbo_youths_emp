@@ -1,9 +1,9 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   Mail, ArrowRight, ShieldCheck, AlertCircle,
-  RotateCcw, Eye, EyeOff, CheckCircle2, Lock
+  RotateCcw, Eye, EyeOff, CheckCircle2, Lock, KeyRound
 } from "lucide-react";
 import styles from "./page.module.css";
 import {
@@ -12,9 +12,7 @@ import {
   forgotPasswordReset,
 } from "@/services/auth";
 
-// ─── Password strength helper (same as register page) ─────────────────────
 function getStrength(pw) {
-  let score = 0;
   const checks = {
     length: pw.length >= 8,
     upper: /[A-Z]/.test(pw),
@@ -22,21 +20,43 @@ function getStrength(pw) {
     number: /[0-9]/.test(pw),
     special: /[^A-Za-z0-9]/.test(pw),
   };
-  score = Object.values(checks).filter(Boolean).length;
+  const score = Object.values(checks).filter(Boolean).length;
   const labels = ["", "Weak", "Fair", "Good", "Strong", "Very Strong"];
   const colors = ["", "#ef4444", "#f97316", "#eab308", "#22c55e", "#15803d"];
   return { score, checks, label: labels[score] || "", color: colors[score] || "" };
 }
 
+function Shell({ children }) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.main}>
+          <div className={styles.card}>
+            <div className={styles.logoWrap}>
+              <Link href="/" className={styles.logo}>
+                <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
+                <div className={styles.logoText}>
+                  <span className={styles.logoName}>RMHCDT</span>
+                  <span className={styles.logoSub}>Youth Portal</span>
+                </div>
+              </Link>
+            </div>
+            {children}
+            <div className={styles.bottomBadge}>
+              <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
+              <span>Secured under the Petroleum Industry Act, 2021</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 export default function ForgotPasswordPage() {
-  // Steps: "email" → "otp" → "reset" → "done"
   const [step, setStep] = useState("email");
 
-  // email step
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
 
-  // otp step
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState("");
   const [countdown, setCountdown] = useState(60);
@@ -44,18 +64,24 @@ export default function ForgotPasswordPage() {
   const countdownRef = useRef(null);
   const otpInputs = useRef([]);
 
-  // reset step
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [resetErrors, setResetErrors] = useState({});
 
-  // shared
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
-  // ── Countdown timer ─────────────────────────────────────────────────────
+  useEffect(() => {
+    if (step === "otp") {
+      const timer = setTimeout(() => {
+        otpInputs.current[0]?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
   function startCountdown() {
     if (countdownRef.current) clearInterval(countdownRef.current);
     setCountdown(60);
@@ -72,7 +98,6 @@ export default function ForgotPasswordPage() {
     }, 1000);
   }
 
-  // ── STEP 1: Request reset email ─────────────────────────────────────────
   async function handleEmailSubmit(e) {
     e.preventDefault();
     if (!email.trim()) { setEmailError("Required"); return; }
@@ -85,7 +110,6 @@ export default function ForgotPasswordPage() {
       setStep("otp");
       startCountdown();
     } catch (err) {
-      // Always show a neutral message — don't reveal if email exists
       setApiError(
         err?.response?.data?.error ||
         err?.response?.data?.detail ||
@@ -96,26 +120,55 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  // ── STEP 2: OTP input ───────────────────────────────────────────────────
   function handleOtpChange(index, value) {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
+  const digit = value.replace(/\D/g, "");
+  if (!digit && value !== "") return;
+
+  const newOtp = [...otp];
+
+  if (digit.length > 1) {
+    digit.split("").slice(0, 6 - index).forEach((char, i) => {
+      newOtp[index + i] = char;
+    });
     setOtp(newOtp);
     setOtpError("");
-    if (value && index < 5) otpInputs.current[index + 1]?.focus();
+    const nextIndex = Math.min(index + digit.length, 5);
+    setTimeout(() => otpInputs.current[nextIndex]?.focus(), 0);
+    return;
   }
 
-  function handleOtpKeyDown(index, e) {
-    if (e.key === "Backspace" && !otp[index] && index > 0) otpInputs.current[index - 1]?.focus();
+  newOtp[index] = digit;
+  setOtp(newOtp);
+  setOtpError("");
+  if (digit && index < 5) {
+    setTimeout(() => otpInputs.current[index + 1]?.focus(), 0);
   }
+}
+
+function handleOtpKeyDown(index, e) {
+  if (e.key === "Backspace") {
+    const newOtp = [...otp];
+    if (otp[index]) {
+      newOtp[index] = "";
+      setOtp(newOtp);
+    } else if (index > 0) {
+      newOtp[index - 1] = "";
+      setOtp(newOtp);
+      setTimeout(() => otpInputs.current[index - 1]?.focus(), 0);
+    }
+  }
+  if (e.key === "ArrowLeft" && index > 0) otpInputs.current[index - 1]?.focus();
+  if (e.key === "ArrowRight" && index < 5) otpInputs.current[index + 1]?.focus();
+}
 
   function handlePaste(e) {
     e.preventDefault();
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    const newOtp = [...otp];
+    if (!pasted) return;
+    const newOtp = ["", "", "", "", "", ""];
     pasted.split("").forEach((char, i) => { newOtp[i] = char; });
     setOtp(newOtp);
+    setOtpError("");
     otpInputs.current[Math.min(pasted.length, 5)]?.focus();
   }
 
@@ -124,7 +177,7 @@ export default function ForgotPasswordPage() {
     setOtp(["", "", "", "", "", ""]);
     setOtpError("");
     startCountdown();
-    otpInputs.current[0]?.focus();
+    setTimeout(() => otpInputs.current[0]?.focus(), 100);
     try {
       await forgotPasswordRequest({ email });
     } catch (err) {
@@ -153,7 +206,6 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  // ── STEP 3: Set new password ────────────────────────────────────────────
   const strength = getStrength(password);
 
   function validateReset() {
@@ -186,35 +238,8 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  // ── Shared card shell ───────────────────────────────────────────────────
-  function Shell({ children }) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.main}>
-          <div className={styles.card}>
-            <div className={styles.logoWrap}>
-              <Link href="/" className={styles.logo}>
-                <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
-                <div className={styles.logoText}>
-                  <span className={styles.logoName}>RMHCDT</span>
-                  <span className={styles.logoSub}>Youth Portal</span>
-                </div>
-              </Link>
-            </div>
-            {children}
-            <div className={styles.bottomBadge}>
-              <ShieldCheck size={13} color="#15803d" strokeWidth={2} />
-              <span>Secured under the Petroleum Industry Act, 2021</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 1 — Enter email
-  // ═══════════════════════════════════════════════════════════════════════
+  // ── STEP 1: Enter email ────────────────────────────────────────────────
   if (step === "email") return (
     <Shell>
       <div className={styles.cardHeader}>
@@ -232,7 +257,10 @@ export default function ForgotPasswordPage() {
       )}
 
       <form className={styles.form} onSubmit={handleEmailSubmit}>
-        <div className={styles.sectionLabel}>Account Email</div>
+        <div className={styles.sectionLabel}>
+          <Mail size={13} color="#15803d" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+          Account Email
+        </div>
 
         <div className={styles.field}>
           <label className={styles.label}>Email Address</label>
@@ -244,7 +272,6 @@ export default function ForgotPasswordPage() {
               onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
               placeholder="your@email.com"
               autoComplete="email"
-              autoFocus
               className={styles.input + (emailError ? " " + styles.inputError : "")}
             />
           </div>
@@ -267,43 +294,41 @@ export default function ForgotPasswordPage() {
         <span className={styles.dividerText}>Remember your password?</span>
         <span className={styles.dividerLine} />
       </div>
-      <Link href="/login" className={styles.registerBtn}>Back to Sign In</Link>
+      <Link href="/login" className={styles.signinBtn}>Back to Sign In</Link>
     </Shell>
   );
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 2 — OTP verification
-  // ═══════════════════════════════════════════════════════════════════════
+  // ── STEP 2: OTP ────────────────────────────────────────────────────────
   if (step === "otp") return (
     <Shell>
-      <div className={styles.cardHeader}>
-        <div className={styles.stepIcon}>
-          <ShieldCheck size={22} color="#15803d" strokeWidth={2} />
+      <div className={styles.otpScreen}>
+        <div className={styles.otpIconRing}>
+          <Mail size={26} color="#15803d" strokeWidth={1.8} />
         </div>
-        <h1 className={styles.cardTitle}>Check Your Email</h1>
-        <p className={styles.cardSubtitle}>
-          We sent a 6-digit code to <strong style={{ color: "#0f172a" }}>{email}</strong>
+        <h1 className={styles.otpTitle}>Check your email</h1>
+        <p className={styles.otpSubtitle}>
+          We sent a 6-digit reset code to
         </p>
+        <div className={styles.otpEmailBadge}>
+          <Mail size={13} color="#15803d" />
+          {email}
+        </div>
       </div>
 
       <form className={styles.form} onSubmit={handleOtpSubmit}>
-        <div className={styles.sectionLabel}>Enter Code</div>
-
         <div className={styles.otpWrap}>
           {otp.map((digit, i) => (
             <input
-              key={i}
-              ref={(el) => (otpInputs.current[i] = el)}
-              type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={digit}
-              autoFocus={i === 0}
-              onChange={(e) => handleOtpChange(i, e.target.value)}
-              onKeyDown={(e) => handleOtpKeyDown(i, e)}
-              onPaste={handlePaste}
-              className={styles.otpInput + (otpError ? " " + styles.inputError : "")}
-            />
+  key={i}
+  ref={(el) => (otpInputs.current[i] = el)}
+  type="text"
+  inputMode="numeric"
+  value={digit}
+  onChange={(e) => handleOtpChange(i, e.target.value)}
+  onKeyDown={(e) => handleOtpKeyDown(i, e)}
+  onPaste={handlePaste}
+  className={styles.otpInput + (otpError ? " " + styles.inputError : "")}
+/>
           ))}
         </div>
 
@@ -311,15 +336,18 @@ export default function ForgotPasswordPage() {
           <span className={styles.error} style={{ textAlign: "center" }}>{otpError}</span>
         )}
 
-        <span className={styles.hint} style={{ textAlign: "center" }}>
+        <div className={styles.otpResendRow}>
           {canResend ? (
-            <button type="button" onClick={handleResend} className={styles.resendBtn}>
-              <RotateCcw size={13} /> Resend Code
-            </button>
+            <>
+              Didn't receive it?&nbsp;
+              <button type="button" onClick={handleResend} className={styles.resendBtn}>
+                <RotateCcw size={12} /> Resend code
+              </button>
+            </>
           ) : (
-            <>Resend code in <strong style={{ color: "#0f172a" }}>{countdown}s</strong></>
+            <>Resend code in <strong style={{ color: "#0f172a", marginLeft: 4 }}>{countdown}s</strong></>
           )}
-        </span>
+        </div>
 
         <button type="submit" className={styles.submitBtn} disabled={loading}>
           {loading
@@ -331,7 +359,7 @@ export default function ForgotPasswordPage() {
         <button
           type="button"
           onClick={() => { setStep("email"); setOtp(["","","","","",""]); setOtpError(""); }}
-          className={styles.registerBtn}
+          className={styles.signinBtn}
           style={{ width: "100%" }}
         >
           Use a Different Email
@@ -340,15 +368,10 @@ export default function ForgotPasswordPage() {
     </Shell>
   );
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 3 — Set new password
-  // ═══════════════════════════════════════════════════════════════════════
+  // ── STEP 3: Set new password ───────────────────────────────────────────
   if (step === "reset") return (
     <Shell>
       <div className={styles.cardHeader}>
-        <div className={styles.stepIcon}>
-          <Lock size={22} color="#15803d" strokeWidth={2} />
-        </div>
         <h1 className={styles.cardTitle}>New Password</h1>
         <p className={styles.cardSubtitle}>
           Choose a strong password for your account.
@@ -363,7 +386,10 @@ export default function ForgotPasswordPage() {
       )}
 
       <form className={styles.form} onSubmit={handleResetSubmit}>
-        <div className={styles.sectionLabel}>Set Password</div>
+        <div className={styles.sectionLabel}>
+          <KeyRound size={13} color="#15803d" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+          Set Password
+        </div>
 
         <div className={styles.field}>
           <label className={styles.label}>New Password</label>
@@ -371,7 +397,6 @@ export default function ForgotPasswordPage() {
             <input
               type={showPw ? "text" : "password"}
               value={password}
-              autoFocus
               onChange={(e) => { setPassword(e.target.value); setResetErrors({ ...resetErrors, password: "" }); }}
               placeholder="Create a strong password"
               autoComplete="new-password"
@@ -383,7 +408,6 @@ export default function ForgotPasswordPage() {
           </div>
           {resetErrors.password && <span className={styles.error}>{resetErrors.password}</span>}
 
-          {/* Password strength */}
           {password && (
             <div className={styles.strengthWrap}>
               <div className={styles.strengthRow}>
@@ -458,9 +482,7 @@ export default function ForgotPasswordPage() {
     </Shell>
   );
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STEP 4 — Done
-  // ═══════════════════════════════════════════════════════════════════════
+  // ── STEP 4: Done ───────────────────────────────────────────────────────
   return (
     <Shell>
       <div className={styles.success}>

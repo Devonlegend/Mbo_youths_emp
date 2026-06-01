@@ -1,10 +1,12 @@
+/* ─── BASE ─────────────────────────────────────────────────────────────── */
 .page {
   min-height: 100vh;
-  background: #f8fafc;
+  background: #f4f6f9;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .main {
@@ -14,16 +16,19 @@
 
 .card {
   background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 36px 36px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e8ecf0;
+  border-radius: 24px;
+  padding: 40px 40px;
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.04),
+    0 8px 32px rgba(0,0,0,0.06),
+    0 24px 64px rgba(0,0,0,0.04);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 20px;
 }
 
-/* LOGO — CENTERED */
+/* ─── LOGO ──────────────────────────────────────────────────────────────── */
 .logoWrap {
   display: flex;
   justify-content: center;
@@ -37,20 +42,20 @@
 }
 
 .logoBox {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   background: #15803d;
-  border-radius: 9px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4px 12px rgba(21,128,61,0.25);
 }
 
 .logoLetter {
   color: #fbbf24;
-  font-family: var(--font-jakarta), sans-serif;
   font-weight: 800;
-  font-size: 16px;
+  font-size: 17px;
 }
 
 .logoText {
@@ -59,15 +64,14 @@
 }
 
 .logoName {
-  font-family: var(--font-jakarta), sans-serif;
   font-size: 14px;
   font-weight: 800;
   color: #0f172a;
   line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 
 .logoSub {
-  font-family: var(--font-inter), sans-serif;
   font-size: 9px;
   font-weight: 600;
   color: #15803d;
@@ -75,38 +79,36 @@
   text-transform: uppercase;
 }
 
-/* HEADER — CENTERED */
+/* ─── HEADER ────────────────────────────────────────────────────────────── */
 .cardHeader {
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding-bottom: 4px;
+  gap: 5px;
+  padding-bottom: 6px;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .cardTitle {
-  font-family: var(--font-jakarta), sans-serif;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 800;
   color: #0f172a;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .cardSubtitle {
-  font-family: var(--font-inter), sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   color: #94a3b8;
   font-weight: 400;
+  line-height: 1.5;
 }
 
-/* SIGN IN TOP */
+/* ─── SIGN IN TOP ───────────────────────────────────────────────────────── */
 .signinTop {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-family: var(--font-inter), sans-serif;
   font-size: 13px;
   color: #64748b;
   background: #f8fafc;
@@ -121,28 +123,44 @@
   text-decoration: none;
   transition: color 0.2s;
 }
-
 .signinTopLink:hover { color: #166534; }
 
-/* SECTION LABEL */
+/* ─── SECTION LABEL — NO GREEN BACKGROUND ──────────────────────────────── */
+/* Removed the rgba(21,128,61,0.06) background. Clean, minimal label. */
 .sectionLabel {
-  font-family: var(--font-jakarta), sans-serif;
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
   font-weight: 700;
-  color: #15803d;
-  letter-spacing: 0.08em;
+  color: #64748b;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  padding: 7px 12px;
-  background: rgba(21, 128, 61, 0.06);
-  border-left: 3px solid #15803d;
-  border-radius: 0 6px 6px 0;
 }
 
-/* FORM */
+.sectionLabel::before {
+  content: '';
+  display: block;
+  width: 14px;
+  height: 2px;
+  background: #15803d;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.sectionLabel::after {
+  content: '';
+  display: block;
+  flex: 1;
+  height: 1px;
+  background: #f1f5f9;
+}
+
+/* ─── FORM ──────────────────────────────────────────────────────────────── */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 13px;
 }
 
 .row {
@@ -158,8 +176,7 @@
 }
 
 .label {
-  font-family: var(--font-inter), sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #374151;
 }
@@ -172,45 +189,44 @@
 
 .inputIcon {
   position: absolute;
-  left: 11px;
+  left: 12px;
   pointer-events: none;
   z-index: 1;
 }
 
 .inputIconRight {
   position: absolute;
-  right: 11px;
+  right: 12px;
   pointer-events: none;
   z-index: 1;
 }
 
 .input {
   width: 100%;
-  font-family: var(--font-inter), sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   color: #0f172a;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 9px;
-  padding: 10px 12px 10px 34px;
+  background: #fafbfc;
+  border: 1.5px solid #e8ecf0;
+  border-radius: 10px;
+  padding: 10px 12px 10px 36px;
   outline: none;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
 }
 
 .input:focus {
   border-color: #15803d;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.07);
+  box-shadow: 0 0 0 3px rgba(21,128,61,0.08);
 }
 
-.input::placeholder { color: #cbd5e1; }
+.input::placeholder { color: #c8d0da; }
 
 .inputPadRight {
   padding-left: 12px;
-  padding-right: 36px;
+  padding-right: 38px;
 }
 
-/* API ERROR BANNER */
+/* ─── API ERROR ──────────────────────────────────────────────────────────── */
 .apiBanner {
   display: flex;
   align-items: center;
@@ -219,82 +235,55 @@
   border: 1px solid #fecaca;
   border-radius: 10px;
   padding: 12px 14px;
-  font-family: var(--font-inter), sans-serif;
   font-size: 13px;
   color: #dc2626;
   font-weight: 500;
 }
 
-/* DATE INPUT — hides native calendar icon, uses custom icon on left */
+/* ─── DATE INPUT ─────────────────────────────────────────────────────────── */
 .inputDate {
-  padding-left: 34px;
+  padding-left: 36px;
   padding-right: 12px;
   color-scheme: light;
   min-width: 0;
 }
 
-.inputDate::-webkit-calendar-picker-indicator {
-  display: none;
-}
-
-.inputDate::-webkit-inner-spin-button {
-  display: none;
-}
-
-.inputDate::-webkit-date-and-time-value {
-  text-align: left;
-  margin-left: 0;
-}
-
+.inputDate::-webkit-calendar-picker-indicator { display: none; }
+.inputDate::-webkit-inner-spin-button { display: none; }
+.inputDate::-webkit-date-and-time-value { text-align: left; margin-left: 0; }
 .inputError { border-color: #ef4444 !important; }
 
-/* SELECT — match text colors to regular inputs */
+/* ─── SELECT ─────────────────────────────────────────────────────────────── */
 .select {
   width: 100%;
-  font-family: var(--font-inter), sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   color: #0f172a;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 9px;
-  padding: 10px 34px 10px 12px;
+  background: #fafbfc;
+  border: 1.5px solid #e8ecf0;
+  border-radius: 10px;
+  padding: 10px 36px 10px 12px;
   outline: none;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
   appearance: none;
   cursor: pointer;
 }
 
-/* Placeholder option (empty value) */
 .select:invalid,
-.select option[value=""] {
-  color: #cbd5e1;
-}
-
-/* Restore full color when a real value is selected */
-.select:not([value=""]) {
-  color: #0f172a;
-}
-
-/* Target the placeholder option itself */
-.select option[value=""] {
-  color: #cbd5e1;
-}
-
-.select option:not([value=""]) {
-  color: #0f172a;
-}
-
-.selectPadLeft { padding-left: 34px; }
+.select option[value=""] { color: #c8d0da; }
+.select:not([value=""]) { color: #0f172a; }
+.select option[value=""] { color: #c8d0da; }
+.select option:not([value=""]) { color: #0f172a; }
+.selectPadLeft { padding-left: 36px; }
 
 .select:focus {
   border-color: #15803d;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.07);
+  box-shadow: 0 0 0 3px rgba(21,128,61,0.08);
 }
 
 .eyeBtn {
   position: absolute;
-  right: 11px;
+  right: 12px;
   background: none;
   border: none;
   cursor: pointer;
@@ -306,23 +295,20 @@
 
 .ninCount {
   position: absolute;
-  right: 11px;
-  font-family: var(--font-inter), sans-serif;
+  right: 12px;
   font-size: 10px;
   color: #94a3b8;
   pointer-events: none;
 }
 
 .error {
-  font-family: var(--font-inter), sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #ef4444;
 }
 
 .hint {
-  font-family: var(--font-inter), sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   color: #94a3b8;
   line-height: 1.5;
 }
@@ -331,13 +317,12 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-family: var(--font-inter), sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   color: #15803d;
   font-weight: 500;
 }
 
-/* PASSWORD STRENGTH */
+/* ─── PASSWORD STRENGTH ──────────────────────────────────────────────────── */
 .strengthWrap {
   display: flex;
   flex-direction: column;
@@ -355,6 +340,7 @@
   display: flex;
   gap: 4px;
   align-items: center;
+  flex: 1;
 }
 
 .strengthBar {
@@ -365,9 +351,9 @@
 }
 
 .strengthLabel {
-  font-family: var(--font-inter), sans-serif;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
+  min-width: 40px;
 }
 
 .checkList {
@@ -380,22 +366,21 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-inter), sans-serif;
   font-size: 11px;
   color: #94a3b8;
   transition: color 0.2s;
 }
 
-/* TERMS */
+/* ─── TERMS — NO GREEN BACKGROUND ──────────────────────────────────────── */
+/* Removed #f0fdf4 / #bbf7d0 — clean neutral */
 .terms {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 9px;
+  background: #f8fafc;
+  border: 1px solid #e8ecf0;
+  border-radius: 10px;
   padding: 12px 14px;
 }
 
 .termsText {
-  font-family: var(--font-inter), sans-serif;
   font-size: 12px;
   line-height: 1.7;
   color: #64748b;
@@ -407,33 +392,56 @@
   text-decoration: none;
 }
 
-/* SUBMIT */
+/* ─── SUBMIT BUTTON — MODERN LOADING ────────────────────────────────────── */
 .submitBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
-  font-family: var(--font-jakarta), sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #ffffff;
   background: #15803d;
   border: none;
-  border-radius: 10px;
+  border-radius: 11px;
   padding: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.2);
+  box-shadow: 0 4px 14px rgba(21,128,61,0.22);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: -0.01em;
 }
 
-.submitBtn:hover {
+.submitBtn:hover:not(:disabled) {
   background: #166534;
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(21, 128, 61, 0.3);
+  box-shadow: 0 6px 20px rgba(21,128,61,0.32);
 }
 
-/* DIVIDER */
+.submitBtn:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Modern spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── DIVIDER ────────────────────────────────────────────────────────────── */
 .divider {
   display: flex;
   align-items: center;
@@ -443,51 +451,50 @@
 .dividerLine {
   flex: 1;
   height: 1px;
-  background: #e2e8f0;
-  display: block;
+  background: #e8ecf0;
 }
 
 .dividerText {
-  font-family: var(--font-inter), sans-serif;
   font-size: 12px;
   color: #94a3b8;
   white-space: nowrap;
 }
 
-/* SIGN IN BUTTON */
+/* ─── SIGN IN BUTTON ─────────────────────────────────────────────────────── */
 .signinBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  font-family: var(--font-jakarta), sans-serif;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #15803d;
   background: transparent;
-  border: 1.5px solid #15803d;
-  border-radius: 10px;
+  border: 1.5px solid #d1fae5;
+  border-radius: 11px;
   padding: 13px;
   text-decoration: none;
   transition: all 0.2s ease;
+  background: #f0fdf4;
+  letter-spacing: -0.01em;
 }
 
 .signinBtn:hover {
-  background: rgba(21, 128, 61, 0.05);
+  background: #dcfce7;
+  border-color: #bbf7d0;
 }
 
-/* BOTTOM BADGE */
+/* ─── BOTTOM BADGE ───────────────────────────────────────────────────────── */
 .bottomBadge {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-family: var(--font-inter), sans-serif;
   font-size: 11px;
   color: #94a3b8;
 }
 
-/* SUCCESS */
+/* ─── SUCCESS ────────────────────────────────────────────────────────────── */
 .success {
   display: flex;
   flex-direction: column;
@@ -498,9 +505,9 @@
 }
 
 .successIconWrap {
-  width: 68px;
-  height: 68px;
-  border-radius: 18px;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
   background: #f0fdf4;
   border: 1.5px solid #bbf7d0;
   display: flex;
@@ -509,15 +516,13 @@
 }
 
 .successTitle {
-  font-family: var(--font-jakarta), sans-serif;
   font-size: 24px;
   font-weight: 800;
   color: #0f172a;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .successDesc {
-  font-family: var(--font-inter), sans-serif;
   font-size: 14px;
   line-height: 1.7;
   color: #64748b;
@@ -530,7 +535,6 @@
   gap: 8px;
   background: #15803d;
   color: #ffffff;
-  font-family: var(--font-jakarta), sans-serif;
   font-size: 14px;
   font-weight: 700;
   padding: 12px 28px;
@@ -543,29 +547,22 @@
 .successBtn:hover { background: #166534; }
 
 .successBack {
-  font-family: var(--font-inter), sans-serif;
   font-size: 13px;
   color: #94a3b8;
   text-decoration: none;
 }
 
-/* RESPONSIVE */
-@media (max-width: 520px) {
-  .card { padding: 24px 18px; }
-  .row { grid-template-columns: 1fr; }
-}
-
-/* UPLOAD */
+/* ─── UPLOAD ─────────────────────────────────────────────────────────────── */
 .uploadArea {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1.5px dashed #cbd5e1;
+  border: 1.5px dashed #d1d9e0;
   border-radius: 10px;
-  padding: 24px 16px;
-  background: #f8fafc;
+  padding: 22px 16px;
+  background: #fafbfc;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
@@ -577,19 +574,17 @@
 }
 
 .uploadTitle {
-  font-family: var(--font-inter), sans-serif;
   font-size: 13px;
   font-weight: 600;
   color: #374151;
 }
 
 .uploadHint {
-  font-family: var(--font-inter), sans-serif;
   font-size: 11px;
   color: #94a3b8;
 }
 
-/* FILE PREVIEW */
+/* ─── FILE PREVIEW ───────────────────────────────────────────────────────── */
 .filePreview {
   display: flex;
   align-items: center;
@@ -609,7 +604,6 @@
 }
 
 .fileName {
-  font-family: var(--font-inter), sans-serif;
   font-size: 13px;
   font-weight: 600;
   color: #0f172a;
@@ -619,7 +613,6 @@
 }
 
 .fileSize {
-  font-family: var(--font-inter), sans-serif;
   font-size: 11px;
   color: #94a3b8;
 }
@@ -635,16 +628,64 @@
   transition: background 0.2s;
 }
 
-.fileRemove:hover {
-  background: #fee2e2;
+.fileRemove:hover { background: #fee2e2; }
+
+/* ─── OTP — MODERN, EMAIL ONLY ───────────────────────────────────────────── */
+/* Clean OTP screen inspired by reference screenshot */
+.otpScreen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
 }
 
-/* OTP */
+.otpIconRing {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #f0fdf4;
+  border: 1.5px solid #d1fae5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.otpTitle {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+}
+
+.otpSubtitle {
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.6;
+  max-width: 300px;
+}
+
+.otpEmailBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
 .otpWrap {
   display: flex;
   gap: clamp(6px, 2vw, 10px);
   justify-content: center;
   width: 100%;
+  margin: 8px 0 4px;
 }
 
 .otpInput {
@@ -653,27 +694,42 @@
   max-width: 52px;
   aspect-ratio: 1 / 1.1;
   text-align: center;
-  font-family: var(--font-jakarta), sans-serif;
-  font-size: clamp(16px, 5vw, 22px);
-  font-weight: 700;
+  font-size: clamp(18px, 5vw, 24px);
+  font-weight: 800;
   color: #0f172a;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 12px;
   outline: none;
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.18s ease;
   padding: 0;
   -webkit-appearance: none;
   caret-color: #15803d;
+  letter-spacing: -0.02em;
 }
 
 .otpInput:focus {
   border-color: #15803d;
   border-width: 2px;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.1);
+  box-shadow: 0 0 0 3px rgba(21,128,61,0.1);
 }
-/* RESEND BUTTON */
+
+.otpInput.inputError {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.otpResendRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* ─── RESEND BUTTON ──────────────────────────────────────────────────────── */
 .resendBtn {
   display: inline-flex;
   align-items: center;
@@ -681,8 +737,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  font-family: var(--font-inter), sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #15803d;
   padding: 0;
@@ -692,7 +747,7 @@
 .resendBtn:hover { color: #166534; }
 .resendBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* VERIFY TOGGLE */
+/* ─── VERIFY TOGGLE — kept for completeness but phone hidden ─────────────── */
 .verifyToggle {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -704,7 +759,6 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  font-family: var(--font-inter), sans-serif;
   font-size: 13px;
   font-weight: 600;
   color: #64748b;
@@ -727,8 +781,34 @@
   color: #15803d;
 }
 
+/* ─── PASSPORT CAPTURE — MODERN, COMPACT ────────────────────────────────── */
+/* These classes are used by PassportCapture component if it reads from CSS vars.
+   Kept here as utility overrides if needed. */
+.passportWrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid #e8ecf0;
+  background: #0f172a;
+  position: relative;
+  /* Compact — not full-bleed */
+  max-height: 260px;
+  aspect-ratio: 4/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.passportWrap video,
+.passportWrap canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 @media (max-width: 520px) {
-  .input {
-    font-size: 16px;
-  }
+  .card { padding: 24px 18px; }
+  .row { grid-template-columns: 1fr; }
+  .input { font-size: 16px; }
 }

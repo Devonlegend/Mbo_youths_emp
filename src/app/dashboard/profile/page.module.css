@@ -235,6 +235,20 @@ select.input:disabled { appearance: none; }
   box-shadow: 0 0 0 3px rgba(21,128,61,0.08);
 }
 
+.readValue {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 13.5px;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+}
+
 select.input { cursor: pointer; }
 
 /* ── FORM FOOTER ── */
