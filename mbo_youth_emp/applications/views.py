@@ -3,9 +3,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
+from django.db import transaction
 from django.utils import timezone
 
 from .models import Application, ApplicationStatus, ApplicationStatusHistory
+from .serializers import DETAILS_SERIALIZER_BY_TYPE
 from .services.eligibility import EligibilityEngine
 from schemes.models import ScholarshipScheme
 from accounts.permissions import IsAdmin, IsStudent
@@ -31,39 +33,62 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     def submit(self, request):
         """
         POST /applications/submit/
-        Body: { "scheme_id": "uuid" }
+        Body: {
+            "scheme_id": "uuid",
+            "details":   { ...fields specific to scheme.award_type... }
+        }
 
-        This is the main entry point. It:
-        1. Finds the student's profile
-        2. Finds the scheme
-        3. Runs the full eligibility engine
-        4. Creates the application with the result
-        5. Returns everything to the frontend
+        The shape of `details` depends on the scheme's award type:
+          * scholarship -> ScholarshipDetailsSerializer (academic + bank)
+          * empowerment -> EmpowermentDetailsSerializer (trade + bank)
+          * grant       -> GrantDetailsSerializer       (business + bank)
+
+        Details are validated BEFORE the Application is written, so an invalid
+        payload never creates an orphan application row. On success, the
+        Application and its detail row are persisted together in one transaction.
         """
         scheme_id = request.data.get('scheme_id')
         if not scheme_id:
             return Response({"error": "scheme_id is required"}, status=400)
 
-        # Get scheme
         scheme = ScholarshipScheme.objects.filter(id=scheme_id).first()
         if not scheme:
             return Response({"error": "Scheme not found"}, status=404)
 
-        # Get student profile linked to this user
         try:
             student = request.user.student_profile
         except Exception:
             return Response({"error": "No student profile found. Complete your profile first."}, status=400)
 
-        # Check for duplicate application
         if Application.objects.filter(student=student, scheme=scheme).exists():
             return Response({"error": "You have already applied for this scheme"}, status=400)
 
-        # ── RUN THE ELIGIBILITY ENGINE ──────────────────────────────────
-        result = EligibilityEngine.run_full_check(student, scheme)
-        # ───────────────────────────────────────────────────────────────
+        details_serializer_cls = DETAILS_SERIALIZER_BY_TYPE.get(scheme.award_type)
+        if details_serializer_cls is None:
+            return Response(
+                {"error": f"Unsupported award_type '{scheme.award_type}'"},
+                status=400,
+            )
 
-        # Determine initial status based on result
+        details_payload = request.data.get('details')
+        if not isinstance(details_payload, dict):
+            return Response(
+                {"error": "details object is required for this award type",
+                 "award_type": scheme.award_type,
+                 "expected_fields": list(details_serializer_cls().get_fields().keys())},
+                status=400,
+            )
+
+        details_serializer = details_serializer_cls(data=details_payload)
+        if not details_serializer.is_valid():
+            return Response(
+                {"error": "Invalid application details",
+                 "field_errors": details_serializer.errors},
+                status=400,
+            )
+
+        result = EligibilityEngine.run_full_check(student, scheme)
+
         if result['has_conflict']:
             initial_status = ApplicationStatus.DOUBLE_DIP_FLAG
         elif not result['eligible']:
@@ -71,36 +96,36 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         else:
             initial_status = ApplicationStatus.SUBMITTED
 
-        # Create the application record
-        application = Application.objects.create(
-            student             = student,
-            scheme              = scheme,
-            status              = initial_status,
-            submission_date     = timezone.now(),
-            eligibility_passed  = result['eligible'],
-            eligibility_details = result['checks'],
-            has_conflict        = result['has_conflict'],
-            conflict_scheme_ids = result['conflict_scheme_ids'],
-        )
+        with transaction.atomic():
+            application = Application.objects.create(
+                student             = student,
+                scheme              = scheme,
+                status              = initial_status,
+                submission_date     = timezone.now(),
+                eligibility_passed  = result['eligible'],
+                eligibility_details = result['checks'],
+                has_conflict        = result['has_conflict'],
+                conflict_scheme_ids = result['conflict_scheme_ids'],
+            )
+            details_serializer.save(application=application)
+            ApplicationStatusHistory.objects.create(
+                application = application,
+                from_status = '',
+                to_status   = initial_status,
+                changed_by  = request.user,
+                reason      = 'Auto-evaluated by EligibilityEngine on submission'
+            )
 
-        # Log the status to history
-        ApplicationStatusHistory.objects.create(
-            application = application,
-            from_status = '',
-            to_status   = initial_status,
-            changed_by  = request.user,
-            reason      = 'Auto-evaluated by EligibilityEngine on submission'
-        )
-
-        # Friendly response
         return Response({
-            "application_id": str(application.id),
-            "status":         application.status,
-            "eligible":       result['eligible'],
-            "has_conflict":   result['has_conflict'],
+            "application_id":   str(application.id),
+            "status":           application.status,
+            "award_type":       scheme.award_type,
+            "details":          details_serializer.data,
+            "eligible":         result['eligible'],
+            "has_conflict":     result['has_conflict'],
             "conflict_details": result['conflict_scheme_ids'],
-            "checks":         result['checks'],
-            "message":        self._status_message(initial_status),
+            "checks":           result['checks'],
+            "message":          self._status_message(initial_status),
         }, status=status.HTTP_201_CREATED)
 
     @staticmethod

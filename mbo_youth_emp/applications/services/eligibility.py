@@ -39,12 +39,14 @@ class EligibilityEngine:
 
         # Award-type specific checks
         if scheme.award_type == 'scholarship':
-            cgpa_result, = cls._check_cgpa(student, scheme)
+            cgpa_result, _ = cls._check_cgpa(student, scheme)
             checks['cgpa']  = cgpa_result
             checks['level'] = cls._check_level(student, scheme)
-        elif scheme.award_type == 'vocational':
+        elif scheme.award_type == 'empowerment':
             checks['age']   = cls._check_age(student, scheme)
             checks['trade'] = cls._check_trade(student, scheme)
+        elif scheme.award_type == 'grant':
+            checks['age']   = cls._check_age(student, scheme)
 
         # --- Determine overall eligibility ---
         conflict_ids = checks['double_dip'].detail.get('conflicting_ids', [])
@@ -156,7 +158,7 @@ class EligibilityEngine:
 
     @classmethod
     def _check_trade(cls, student, scheme) -> CheckResult:
-        """For vocational awards — check if student's trade matches."""
+        """For empowerment awards — check if student's trade matches."""
         allowed_trades = scheme.eligibility_criteria.get('allowed_trades')
         if not allowed_trades:
             return CheckResult(True, note="Open to all trades")
@@ -236,7 +238,7 @@ class EligibilityEngine:
                     "scheme_name": existing_scheme.name,
                     "award_type":  existing_scheme.award_type,
                     "reason": (
-                        "Cross-type conflict: cannot hold scholarship and vocational award simultaneously"
+                        "Cross-type conflict: cannot hold awards of different types simultaneously"
                         if is_cross_type else
                         "Stacking policy conflict: award amounts exceed major threshold"
                     )

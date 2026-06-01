@@ -60,3 +60,60 @@ class ApplicationStatusHistory(models.Model):
     changed_by  = models.ForeignKey('accounts.User', on_delete=models.CASCADE)
     reason      = models.TextField(blank=True)
     changed_at  = models.DateTimeField(auto_now_add=True)
+
+
+# ──────────────────────────── per-award detail tables ────────────────────────────
+# Each award type captures different submission-time information. Exactly one of
+# the three detail rows is created per Application, based on scheme.award_type.
+# Bank details are duplicated on each so a student can route different awards to
+# different accounts and so disbursement records are immutable per application.
+
+
+class _BankDetailsMixin(models.Model):
+    bank_name      = models.CharField(max_length=120)
+    account_number = models.CharField(max_length=20)
+    account_name   = models.CharField(max_length=200)
+
+    class Meta:
+        abstract = True
+
+
+class ScholarshipDetails(_BankDetailsMixin):
+    application      = models.OneToOneField(Application, on_delete=models.CASCADE, related_name='scholarship_details', primary_key=True)
+    institution_name = models.CharField(max_length=200)
+    course_of_study  = models.CharField(max_length=200)
+    current_level    = models.CharField(max_length=20)
+    cgpa             = models.DecimalField(max_digits=4, decimal_places=2)
+    admission_year   = models.IntegerField()
+    matric_number    = models.CharField(max_length=50, blank=True)
+
+    def __str__(self):
+        return f"ScholarshipDetails({self.application_id})"
+
+
+class EmpowermentDetails(_BankDetailsMixin):
+    application              = models.OneToOneField(Application, on_delete=models.CASCADE, related_name='empowerment_details', primary_key=True)
+    trade_or_skill           = models.CharField(max_length=120)
+    training_provider        = models.CharField(max_length=200, blank=True)
+    training_duration_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    prior_experience         = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"EmpowermentDetails({self.application_id})"
+
+
+class GrantDetails(_BankDetailsMixin):
+    application         = models.OneToOneField(Application, on_delete=models.CASCADE, related_name='grant_details', primary_key=True)
+    business_name       = models.CharField(max_length=200)
+    business_stage      = models.CharField(max_length=30, choices=[
+        ('idea',     'Idea Stage'),
+        ('startup',  'Startup / Early-stage'),
+        ('growth',   'Growth Stage'),
+        ('mature',   'Established'),
+    ])
+    business_description = models.TextField()
+    requested_amount     = models.DecimalField(max_digits=12, decimal_places=2)
+    intended_use         = models.TextField()
+
+    def __str__(self):
+        return f"GrantDetails({self.application_id})"

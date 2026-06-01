@@ -4,7 +4,8 @@ from django.db import models
 
 class AwardType(models.TextChoices):
     SCHOLARSHIP = 'scholarship', 'Scholarship (Academic)'
-    VOCATIONAL  = 'vocational',  'Vocational Training Award'
+    EMPOWERMENT = 'empowerment', 'Empowerment / Vocational Training'
+    GRANT       = 'grant',       'Grant'
 
 
 class StackingPolicy(models.TextChoices):
@@ -51,7 +52,7 @@ class ScholarshipScheme(models.Model):
         "max_prior_awards": 1
     }
 
-    For vocational:
+    For empowerment:
     {
         "min_age": 16,
         "max_age": 35,
@@ -61,7 +62,9 @@ class ScholarshipScheme(models.Model):
         "max_prior_awards": 1
     }
 
-    Note: host_community_only is deprecated and ignored by EligibilityEngine.
+    For grant: same shape as empowerment (age + ward + prior limit).
+
+   .
     """
     application_open_date  = models.DateField()
     application_close_date = models.DateField()

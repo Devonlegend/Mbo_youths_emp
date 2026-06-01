@@ -127,6 +127,7 @@ def register(request):
             lga=lga or '',
             date_of_birth=date_of_birth,
             passport=passport,
+            certificate=certificate
         )
 
     # No JWT cookies here — the client must complete the OTP flow
