@@ -30,6 +30,9 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='eligibility-check')
     def eligibility_check(self, request, pk=None):
+        # Simplified, label-based pre-check (uses the student's active_award flag).
+        # The authoritative conflict evaluation happens at submit time via
+        # EligibilityEngine, which inspects approved Application rows.
         student = self.get_object()
 
         try:
@@ -42,7 +45,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 
         student_cgpa = float(student.cgpa) if student.cgpa else 0.0
         cgpa_ok      = student_cgpa >= min_cgpa
-        level_ok     = (student.level == required_level) if required_level else True
+        level_ok     = (str(student.level) == str(required_level)) if required_level else True
         conflict     = student.has_active_award()
 
         return Response({

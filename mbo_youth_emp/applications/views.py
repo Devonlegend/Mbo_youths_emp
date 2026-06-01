@@ -87,7 +87,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                 status=400,
             )
 
-        result = EligibilityEngine.run_full_check(student, scheme)
+        result = EligibilityEngine.run_full_check(student, scheme, details_serializer.validated_data)
 
         if result['has_conflict']:
             initial_status = ApplicationStatus.DOUBLE_DIP_FLAG
@@ -148,24 +148,23 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         if application.status != ApplicationStatus.DOUBLE_DIP_FLAG:
             return Response({"error": "This application does not have an active conflict flag"}, status=400)
 
+        # The waiver does NOT auto-resolve the conflict. We record that the student
+        # submitted it and move the application into admin review with the conflict
+        # data intact (has_conflict / conflict_scheme_ids / active_award untouched),
+        # so an admin decides how to handle the prior award. No silent state changes.
         application.waiver_submitted = True
-        application.status           = ApplicationStatus.SUBMITTED
-        application.has_conflict     = False
+        application.status           = ApplicationStatus.DOCUMENT_REVIEW
         application.save()
 
         ApplicationStatusHistory.objects.create(
             application = application,
             from_status = ApplicationStatus.DOUBLE_DIP_FLAG,
-            to_status   = ApplicationStatus.SUBMITTED,
+            to_status   = ApplicationStatus.DOCUMENT_REVIEW,
             changed_by  = request.user,
-            reason      = 'Student submitted waiver — conflict cleared'
+            reason      = 'Student submitted waiver — sent to admin for review'
         )
 
-        # Clear the active award from their student profile
-        application.student.active_award = ''
-        application.student.save()
-
-        return Response({"message": "Waiver accepted. Application is now under review."})
+        return Response({"message": "Waiver submitted. An administrator will review your application."})
 
     @action(detail=True, methods=['post'], url_path='review', permission_classes=[IsAuthenticated, IsAdmin])
     def review(self, request, pk=None):
@@ -176,7 +175,11 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         """
         application = self.get_object()
 
-        if application.status not in [ApplicationStatus.SUBMITTED, ApplicationStatus.DOUBLE_DIP_FLAG]:
+        if application.status not in [
+            ApplicationStatus.SUBMITTED,
+            ApplicationStatus.DOUBLE_DIP_FLAG,
+            ApplicationStatus.DOCUMENT_REVIEW,
+        ]:
             return Response({"error": "Only submitted applications can be reviewed"}, status=400)
 
         approve = request.data.get('approve')
@@ -195,6 +198,13 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         if not approve:
             application.rejection_reason = notes
         application.save()
+
+        # Approved Applications are the source of truth for "holds an award";
+        # keep the student's active_award label in sync with that.
+        if approve:
+            student = application.student
+            student.active_award = application.scheme.name
+            student.save(update_fields=['active_award'])
 
         ApplicationStatusHistory.objects.create(
             application = application,

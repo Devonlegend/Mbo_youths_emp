@@ -15,9 +15,15 @@ class CheckResult:
 
 class EligibilityEngine:
     @classmethod
-    def run_full_check(cls, student, scheme) -> dict:
+    def run_full_check(cls, student, scheme, details=None) -> dict:
         """
         Master method. Runs every check and returns a complete result.
+
+        `details` is the validated per-award submission payload (the
+        `validated_data` from the scholarship/empowerment/grant serializer).
+        Award-type-specific checks (cgpa, level, trade) read the values the
+        applicant submitted with *this* application rather than stale profile
+        fields. It defaults to {} so the engine still runs without a payload.
 
         Returns:
         {
@@ -28,6 +34,7 @@ class EligibilityEngine:
             "checks": { ... }
         }
         """
+        details     = details or {}
         checks      = {}
 
         # --- Run all checks ---
@@ -37,14 +44,14 @@ class EligibilityEngine:
         checks['prior_awards']   = cls._check_prior_awards(student, scheme)
         checks['double_dip']     = cls._check_double_dip(student, scheme)
 
-        # Award-type specific checks
+        # Award-type specific checks — sourced from the submitted `details`.
         if scheme.award_type == 'scholarship':
-            cgpa_result, _ = cls._check_cgpa(student, scheme)
+            cgpa_result, _ = cls._check_cgpa(student, scheme, details)
             checks['cgpa']  = cgpa_result
-            checks['level'] = cls._check_level(student, scheme)
+            checks['level'] = cls._check_level(student, scheme, details)
         elif scheme.award_type == 'empowerment':
             checks['age']   = cls._check_age(student, scheme)
-            checks['trade'] = cls._check_trade(student, scheme)
+            checks['trade'] = cls._check_trade(student, scheme, details)
         elif scheme.award_type == 'grant':
             checks['age']   = cls._check_age(student, scheme)
 
@@ -99,13 +106,16 @@ class EligibilityEngine:
     # Any 'host_community_only' key in scheme.eligibility_criteria is now ignored.
 
     @classmethod
-    def _check_cgpa(cls, student, scheme):
+    def _check_cgpa(cls, student, scheme, details=None):
         """Returns (CheckResult, relaxation_string_or_None)"""
+        details    = details or {}
         min_cgpa   = Decimal(str(scheme.eligibility_criteria.get('min_cgpa', 0)))
         relaxation = None
 
-
-        student_cgpa = student.cgpa or Decimal('0')
+        # CGPA submitted with this application takes precedence over the profile.
+        submitted    = details.get('cgpa')
+        raw_cgpa     = submitted if submitted is not None else (student.cgpa or Decimal('0'))
+        student_cgpa = Decimal(str(raw_cgpa))
         passed       = student_cgpa >= min_cgpa
 
         return CheckResult(
@@ -116,14 +126,20 @@ class EligibilityEngine:
         ), relaxation
 
     @classmethod
-    def _check_level(cls, student, scheme) -> CheckResult:
+    def _check_level(cls, student, scheme, details=None) -> CheckResult:
+        details = details or {}
         allowed = scheme.eligibility_criteria.get('allowed_levels', [])
         if not allowed:
             return CheckResult(True, note="No level restriction")
-        passed = student.level in allowed
+        # Level submitted with this application takes precedence over the profile.
+        level = details.get('current_level', student.level)
+        # eligibility_criteria is admin-authored JSON (levels may be "200" or 200)
+        # and the level may be an int — compare as strings so they always line up.
+        allowed_str = [str(lvl) for lvl in allowed]
+        passed = str(level) in allowed_str
         return CheckResult(
             passed,
-            student_level=student.level,
+            student_level=level,
             allowed_levels=allowed
         )
 
@@ -157,15 +173,17 @@ class EligibilityEngine:
         )
 
     @classmethod
-    def _check_trade(cls, student, scheme) -> CheckResult:
-        """For empowerment awards — check if student's trade matches."""
+    def _check_trade(cls, student, scheme, details=None) -> CheckResult:
+        """For empowerment awards — check the submitted trade against the scheme."""
+        details = details or {}
         allowed_trades = scheme.eligibility_criteria.get('allowed_trades')
         if not allowed_trades:
             return CheckResult(True, note="Open to all trades")
 
-        student_trade = getattr(student, 'vocational_trade', None)
+        # The trade comes from the empowerment submission (`trade_or_skill`).
+        student_trade = details.get('trade_or_skill')
         if not student_trade:
-            return CheckResult(False, note="No trade set on student profile")
+            return CheckResult(False, note="No trade provided in application")
 
         passed = student_trade in allowed_trades
         return CheckResult(

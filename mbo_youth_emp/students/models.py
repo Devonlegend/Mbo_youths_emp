@@ -26,14 +26,19 @@ class Student(models.Model):
     level = models.IntegerField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     active_award = models.CharField(max_length=300, blank=True)
+    nin_hash = models.CharField(max_length=20, blank=True, default='')
     lga = models.CharField(max_length=80, blank=True)
     passport = models.FileField(null=True, blank=True)
     ward        = models.CharField(max_length=40, blank=True)
     date_of_birth = models.DateField(null=True)
-    state_of_origin = models.FileField(null=True, blank=True)
+    certificate = models.FileField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.firstname} {self.lastname} - {self.is_verified}"
+
+    @property
+    def full_name(self):
+        return f"{self.firstname} {self.lastname}"
 
     def has_active_award(self):
         return bool(self.active_award)

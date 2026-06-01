@@ -126,6 +126,7 @@ def register(request):
             ward=ward or '',
             lga=lga or '',
             date_of_birth=date_of_birth,
+            nin_hash=nin_hash,
             passport=passport,
             certificate=certificate
         )
@@ -311,6 +312,7 @@ def me(request):
     return Response({
         "id":           str(request.user.id),
         "email":        request.user.email,
+        "passport":     request.user.passport,
         "firstname":    request.user.firstname,
         "lastname":     request.user.lastname,
         "phone_number": request.user.phone_number,
