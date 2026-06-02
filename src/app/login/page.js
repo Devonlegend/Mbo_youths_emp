@@ -294,7 +294,7 @@ export default function LoginPage() {
           <form className={styles.form} onSubmit={handleSubmit}>
             <div className={styles.sectionLabel}>
               <LogIn size={13} color="#15803d" strokeWidth={2.5} style={{ flexShrink: 0 }} />
-              Account Details
+              Login Details
             </div>
 
             <div className={styles.field}>

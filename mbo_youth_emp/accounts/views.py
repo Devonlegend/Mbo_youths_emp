@@ -312,7 +312,7 @@ def me(request):
     return Response({
         "id":           str(request.user.id),
         "email":        request.user.email,
-        "passport":     request.user.passport,
+        # "passport":     request.user.passport,
         "firstname":    request.user.firstname,
         "lastname":     request.user.lastname,
         "phone_number": request.user.phone_number,

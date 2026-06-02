@@ -259,7 +259,7 @@ function handleOtpKeyDown(index, e) {
       <form className={styles.form} onSubmit={handleEmailSubmit}>
         <div className={styles.sectionLabel}>
           <Mail size={13} color="#15803d" strokeWidth={2.5} style={{ flexShrink: 0 }} />
-          Account Email
+          Login Email
         </div>
 
         <div className={styles.field}>
