@@ -1,0 +1,564 @@
+/* ── PAGE ─────────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── BACK LINK ────────────────────────────── */
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.backLink:hover {
+  color: #0f172a;
+}
+
+/* ── PAGE HEADER ──────────────────────────── */
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pageHeaderLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pageTitle {
+  font-family: var(--font-jakarta, sans-serif);
+  font-weight: 800;
+  font-size: 22px;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.pageMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.pageMetaDot {
+  color: #e2e8f0;
+}
+
+/* ── STEPPER ──────────────────────────────── */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 24px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.stepCircle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 2px solid #e2e8f0;
+  color: #94a3b8;
+  background-color: #f8fafc;
+}
+
+.stepCircleDone {
+  background-color: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+}
+
+.stepCircleActive {
+  background-color: #ffffff;
+  border-color: #15803d;
+  color: #15803d;
+}
+
+.stepCircleError {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.stepLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.stepLabelActive {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.stepLabelDone {
+  color: #15803d;
+}
+
+.stepLabelError {
+  color: #ef4444;
+}
+
+.stepConnector {
+  flex: 1;
+  height: 1px;
+  background-color: #e2e8f0;
+  margin: 0 12px;
+  max-width: 60px;
+}
+
+.stepConnectorDone {
+  background-color: #15803d;
+}
+
+/* ── BODY GRID ────────────────────────────── */
+.bodyGrid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── CARD ─────────────────────────────────── */
+.card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.cardHeader {
+  padding: 18px 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cardTitle {
+  font-family: var(--font-jakarta, sans-serif);
+  font-weight: 700;
+  font-size: 14px;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.cardBody {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── INFO GRID ────────────────────────────── */
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.infoField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infoFieldFull {
+  grid-column: 1 / -1;
+}
+
+.infoLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.infoValue {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.infoValueMono {
+  font-family: monospace;
+  font-size: 13px;
+  color: #374151;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: inline-block;
+}
+
+.infoValueMuted {
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* ── STATEMENT ────────────────────────────── */
+.statement {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.7;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+/* ── FLAG BANNER ──────────────────────────── */
+.flagBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.flagBannerText {
+  font-size: 13px;
+  color: #991b1b;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.flagBannerLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ef4444;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+/* ── DECISION PANEL ───────────────────────── */
+.decisionCard {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  position: sticky;
+  top: 80px;
+}
+
+.decisionHeader {
+  padding: 18px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  background-color: #f8fafc;
+}
+
+.decisionTitle {
+  font-family: var(--font-jakarta, sans-serif);
+  font-weight: 700;
+  font-size: 14px;
+  color: #0f172a;
+  margin: 0;
+}
+
+.decisionSubtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.decisionBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.decisionLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.rejectionSelect {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  font-size: 13px;
+  color: #374151;
+  background-color: #f8fafc;
+  outline: none;
+  cursor: pointer;
+  font-family: var(--font-inter, sans-serif);
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.rejectionSelect:focus {
+  border-color: #ef4444;
+}
+
+.noteTextarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  font-size: 13px;
+  color: #0f172a;
+  background-color: #f8fafc;
+  outline: none;
+  resize: vertical;
+  font-family: var(--font-inter, sans-serif);
+  line-height: 1.6;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.noteTextarea::placeholder {
+  color: #cbd5e1;
+}
+
+.noteTextarea:focus {
+  border-color: #15803d;
+  background-color: #ffffff;
+}
+
+.noteError {
+  border-color: #ef4444;
+}
+
+.noteHint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.noteHintError {
+  color: #ef4444;
+}
+
+.decisionButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btnApprove {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #15803d;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-family: var(--font-inter, sans-serif);
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.2);
+}
+
+.btnApprove:hover {
+  background-color: #166534;
+}
+
+.btnApprove:disabled {
+  background-color: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btnReject {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #991b1b;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-inter, sans-serif);
+}
+
+.btnReject:hover {
+  background-color: #fee2e2;
+}
+
+.btnReject:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── APPROVED / REJECTED RESULT ───────────── */
+.resultBanner {
+  padding: 16px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.resultBannerApproved {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.resultBannerRejected {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.resultBannerLabel {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.resultBannerLabelApproved {
+  color: #15803d;
+}
+
+.resultBannerLabelRejected {
+  color: #64748b;
+}
+
+.resultBannerNote {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.resultBannerMeta {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* ── STATUS BADGES ────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.badgePending {
+  color: #92400e;
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.badgeFlagged {
+  color: #991b1b;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.badgeApproved {
+  color: #166534;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.badgeRejected {
+  color: #475569;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+/* ── DIVIDER ──────────────────────────────── */
+.divider {
+  height: 1px;
+  background-color: #f1f5f9;
+}
+/* ── MOBILE RESPONSIVE ────────────────────── */
+@media (max-width: 1024px) {
+  .bodyGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .decisionCard {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .pageTitle {
+    font-size: 18px;
+  }
+
+  .pageMeta {
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 12px;
+  }
+
+  .stepper {
+    padding: 12px 16px;
+    overflow-x: auto;
+  }
+
+  .stepConnector {
+    max-width: 32px;
+    margin: 0 6px;
+  }
+
+  .stepLabel {
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cardBody {
+    padding: 16px;
+  }
+
+  .cardHeader {
+    padding: 14px 16px;
+  }
+
+  .decisionBody {
+    padding: 16px;
+  }
+}

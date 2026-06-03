@@ -1,0 +1,38 @@
+/* ─── Root shell ─────────────────────────────────────────────── */
+.root {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  font-family: var(--font-inter, Inter, sans-serif);
+}
+
+/* ─── Body (topbar + main), sits to the right of sidebar ─────── */
+.body {
+  /* collapsed sidebar is 64px on desktop */
+  margin-left: 64px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-width: 0;
+  transition: margin-left 220ms ease;
+}
+
+/* ─── Main content area ──────────────────────────────────────── */
+.main {
+  flex: 1;
+  padding: 32px 36px;
+  background-color: #f8fafc;
+  min-width: 0;
+}
+
+/* ─── Mobile: sidebar is a drawer, body fills full width ─────── */
+@media (max-width: 767px) {
+  .body {
+    margin-left: 0;
+  }
+
+  .main {
+    padding: 20px 16px;
+  }
+}
