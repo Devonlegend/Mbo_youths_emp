@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/services";
 
-const TIMEOUT_MS = 15 * 60 * 1000; // 10 minutes
+const TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes, matches backend access token lifetime
 
 export function useInactivityLogout() {
   const router   = useRouter();

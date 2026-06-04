@@ -187,19 +187,22 @@
 
 /* Active — green pill */
 .navItemActive {
-  background: #f0fdf4;
+  background: transparent;
   color: #15803d;
+  border-left: 3px solid #15803d;
+  border-radius: 0;
+  padding-left: 7px;
 }
 
 .navItemActive:hover {
-  background: #dcfce7;
+  background: #f8fafc;
   color: #166534;
 }
 
 /* Icon */
 .navIcon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -230,30 +233,32 @@
   border-top: 1px solid #f1f5f9;
 }
 
-/* Admin profile snippet */
+/* ── PROFILE ── */
 .adminProfile {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px;
+  padding: 8px 10px;
   border-radius: 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
   overflow: hidden;
-  margin-bottom: 2px;
 }
 
 .adminAvatar {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  background: #f0fdf4;
-  border: 1.5px solid #bbf7d0;
+  border-radius: 50%;
+  background: #15803d;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
   font-size: 12px;
   font-weight: 800;
-  color: #15803d;
+  color: #ffffff;
   flex-shrink: 0;
 }
 
@@ -273,7 +278,7 @@
 .adminName {
   font-size: 12px;
   font-weight: 600;
-  color:  #374151;
+  color: #374151;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -283,15 +288,11 @@
   font-size: 10.5px;
   color: #15803d;
   font-weight: 500;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
   border-radius: 4px;
-  padding: 1px 6px;
   display: inline-block;
   white-space: nowrap;
 }
 
-/* Sign out */
 .signOut {
   color: #94a3b8;
 }
@@ -310,27 +311,22 @@
     display: block;
   }
 
-  /* On mobile sidebar is hidden off-screen */
   .sidebar {
     width: var(--admin-sidebar-expanded);
     transform: translateX(-100%);
     transition: transform var(--admin-transition);
-    /* Remove hover expand on mobile */
   }
 
-  /* Sidebar stays expanded when open on mobile */
   .sidebar:hover {
     width: var(--admin-sidebar-expanded);
     box-shadow: none;
   }
 
-  /* Open state — slides in */
   .sidebarOpen {
     transform: translateX(0);
     box-shadow: 4px 0 32px rgba(0, 0, 0, 0.12);
   }
 
-  /* Show all labels on mobile since sidebar is full width */
   .logoBrand,
   .navLabel,
   .adminInfo,
@@ -338,7 +334,6 @@
     opacity: 1;
   }
 
-  /* Show close button on mobile */
   .closeBtn {
     display: flex;
   }

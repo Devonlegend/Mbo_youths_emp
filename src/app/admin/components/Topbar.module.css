@@ -24,37 +24,26 @@
   min-width: 0;
 }
 
-/* Hamburger — visible on mobile, hidden on desktop */
+/* Hamburger — always flex, hidden on desktop via visibility */
 .menuBtn {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 34px;
   height: 34px;
   border-radius: 8px;
   background: transparent;
   border: none;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
   color: #64748b;
   transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
+  visibility: hidden; /* hidden on desktop */
 }
 
 .menuBtn:hover {
   background: #f8fafc;
   color: #0f172a;
-}
-
-/* Page title */
-.pageTitle {
-  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 700;
-  color: #94a3b8;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ── RIGHT ── */
@@ -65,6 +54,57 @@
   flex-shrink: 0;
 }
 
+/* Separator */
+.sep {
+  width: 1px;
+  height: 20px;
+  background: #e2e8f0;
+  margin: 0 6px;
+}
+
+/* ── SEARCH ── */
+.searchWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  padding: 0 12px;
+  height: 34px;
+  width: 200px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.searchWrap:focus-within {
+  border-color: #15803d;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.08);
+}
+
+.searchIcon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.searchInput::placeholder {
+  color: #cbd5e1;
+}
+
+/* Mobile search icon button — hidden on desktop */
+.searchIconBtn {
+  display: none;
+}
+
 /* ── AVATAR DROPDOWN ── */
 .avatarWrap { position: relative; }
 
@@ -73,28 +113,29 @@
   align-items: center;
   gap: 8px;
   padding: 4px 8px 4px 4px;
-  border-radius: 10px;
+  border-radius: 50px;
   background: transparent;
   border: none;
   cursor: pointer;
   transition: background 0.15s;
 }
 
-.avatarBtn:hover { background: #f8fafc; }
+.avatarBtn:hover {
+  background: #f0fdf4;
+}
 
 .avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: #f0fdf4;
-  border: 1.5px solid #bbf7d0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #15803d;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
-  color: #15803d;
+  color: #ffffff;
   flex-shrink: 0;
 }
 
@@ -132,18 +173,36 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 220px;
+  width: 230px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   z-index: 100;
 }
 
 .dropHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 14px 16px 12px;
   border-bottom: 1px solid #f1f5f9;
+}
+
+.dropAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffffff;
+  flex-shrink: 0;
 }
 
 .dropName {
@@ -162,17 +221,7 @@
 }
 
 .dropRoleBadge {
-  display: inline-block;
-  margin-top: 6px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #15803d;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 4px;
-  padding: 2px 8px;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  display: none;
 }
 
 .dropDivider {
@@ -207,8 +256,9 @@
 ══════════════════════════════════════════════ */
 @media (max-width: 768px) {
 
+  /* Show hamburger on mobile */
   .menuBtn {
-    display: flex;
+    visibility: visible;
   }
 
   .avatarInfo {
@@ -219,13 +269,70 @@
     display: none;
   }
 
-  .bellDropdown {
-    right: -60px;
-    width: 300px;
-  }
-
   .dropdown {
     right: 0;
+  }
+
+  /* Search — collapse to bordered icon on mobile */
+  .searchWrap {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .searchIcon {
+    display: none;
+  }
+
+  .searchInput {
+    display: none;
+  }
+
+  .searchIconBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    color: #64748b;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* Search open state — expands full width across topbar */
+  .searchWrapOpen {
+    position: fixed;
+    top: 18px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    height: 38px;
+    padding: 0 12px;
+    background: #ffffff;
+    border: 1.5px solid #15803d;
+    border-radius: 9px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    z-index: 200;
+    overflow: visible;
+  }
+
+  .searchWrapOpen .searchIcon {
+    display: flex;
+    color: #15803d;
+  }
+
+  .searchWrapOpen .searchInput {
+    display: flex;
+  }
+
+  .searchWrapOpen .searchIconBtn {
+    display: none;
   }
 
 }

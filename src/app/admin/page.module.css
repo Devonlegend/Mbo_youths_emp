@@ -1,329 +1,498 @@
+/* ══════════════════════════════════════════════
+   ADMIN OVERVIEW PAGE — RMHCDT Admin Portal
+══════════════════════════════════════════════ */
+
 .page {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 32px;
+  width: 100%;
 }
+
+
+/* ── PAGE HEADER ── */
 
 .header {
   display: flex;
-  justify-content: space-between;
+  flex-direction: row;
   align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.dateBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 8px 14px;
+  flex-shrink: 0;
+}
+
+.dateBadgeText {
+  font-size: 12px;
+  font-weight: 500;
+  color: #15803d;
+  white-space: nowrap;
 }
 
 .title {
-  font-size: 28px;
-  line-height: 1.1;
-  font-weight: 800;
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 650;
   color: #0f172a;
+  letter-spacing: 0.00em;
   margin: 0;
+  line-height: 1.2;
 }
 
 .sub {
-  margin-top: 6px;
-  color: #64748b;
   font-size: 13px;
+  color: #94a3b8;
+  margin: -2px 0 0;
 }
 
-.cyclePill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  align-self: flex-start;
-  padding: 8px 10px;
-  border-radius: 999px;
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
-  font-size: 12px;
-  font-weight: 700;
-}
 
-.cycleDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #22c55e;
-}
-
+/* ── STAT CARDS GRID ── */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
 }
 
 .statCard {
-  background: #fff;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 14px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  border-radius: 16px;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow 0.2s;
+}
+
+.statCard:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
 }
 
 .statTop {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
 }
 
 .statIcon {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .statBottom {
-  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .statValue {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
   font-size: 26px;
-  line-height: 1;
   font-weight: 800;
   color: #0f172a;
+  letter-spacing: -0.04em;
+  line-height: 1;
 }
 
 .statLabel {
-  margin-top: 4px;
-  color: #64748b;
-  font-size: 12px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-weight: 500;
 }
 
-.statSkeleton,
-.skeletonBlock {
-  border-radius: 999px;
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 37%, #e2e8f0 63%);
-  background-size: 400% 100%;
-  animation: shimmer 1.2s ease infinite;
-}
-
+/* Stat skeleton */
 .statSkeleton {
-  width: 60%;
+  width: 48px;
   height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
 }
 
+/* ── MIDDLE ROW — chart + quick actions ── */
 .middleRow {
   display: grid;
-  grid-template-columns: 1.3fr 1fr;
+  grid-template-columns: 1fr 520px;
   gap: 16px;
+  align-items: stretch;
 }
 
+/* ── SHARED CARD STYLES ── */
 .chartCard,
 .quickCard,
 .activityCard {
-  background: #fff;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 14px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  border-radius: 20px;
+  padding: 24px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .cardHead {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
 }
 
 .cardTitle {
-  margin: 0;
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
   font-size: 15px;
-  line-height: 1.2;
+  font-weight: 700;
   color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
 }
 
 .cardSub {
-  margin-top: 4px;
-  color: #64748b;
   font-size: 12px;
+  color: #94a3b8;
+  margin: 3px 0 0;
 }
 
 .cardHeadIcon {
-  display: grid;
-  place-items: center;
   width: 32px;
   height: 32px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+/* Empty state for chart */
+
+.chartEmpty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+  background: #f8fafc;
   border-radius: 10px;
-  background: #ecfdf5;
+  border: 1px dashed #e2e8f0;
+  min-height: 160px;
 }
 
+/* Chart skeleton */
 .chartSkeleton {
   height: 220px;
-  border-radius: 14px;
-  background: linear-gradient(90deg, #f8fafc 25%, #f1f5f9 37%, #f8fafc 63%);
-  background-size: 400% 100%;
-  animation: shimmer 1.2s ease infinite;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
 }
 
+/* ── TOOLTIP ── */
+.tooltip {
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: none;
+}
+
+.tooltipLabel {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 0 0 2px;
+}
+
+.tooltipValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* ── QUICK ACTIONS ── */
 .quickList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .quickItem {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  border-radius: 14px;
-  padding: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
   cursor: pointer;
   text-align: left;
+  width: 100%;
+  transition: background 0.15s;
+}
+
+.quickItem:hover {
+  background: #f8fafc;
 }
 
 .quickIcon {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .quickLabel {
   font-size: 13px;
-  color: #0f172a;
-  font-weight: 600;
+  font-weight: 500;
+  color: #374151;
+  flex: 1;
 }
 
 .quickArrow {
-  color: #94a3b8;
+  color: #cbd5e1;
+  transition: color 0.15s, transform 0.15s;
 }
 
-.viewAllBtn,
-.viewBtn {
+.quickItem:hover .quickArrow {
+  color: #15803d;
+  transform: translateX(2px);
+}
+
+/* ── ACTIVITY TABLE ── */
+.viewAllBtn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  border-radius: 10px;
-  color: #0f172a;
+  gap: 4px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
+  color: #15803d;
+  background: none;
+  border: none;
   cursor: pointer;
-  padding: 8px 10px;
+  padding: 0;
+  transition: color 0.15s;
+  white-space: nowrap;
 }
 
-.tableSkeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tableSkeletonRow {
-  display: grid;
-  grid-template-columns: 1.3fr 1.1fr 0.8fr 0.7fr 0.5fr;
-  gap: 10px;
-}
+.viewAllBtn:hover { color: #166534; }
 
 .table {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
 .tableRow {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 0.55fr;
+  grid-template-columns: 1.5fr 2fr 1fr 1fr 80px;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid #f8fafc;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid #e2e8f0;
-  color: #334155;
-  font-size: 13px;
 }
 
+.tableRow:last-child { border-bottom: none; }
+
 .tableHeader {
-  color: #64748b;
-  font-size: 12px;
+  padding: 0 4px 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tableHeader span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
 }
 
 .tdName {
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tdScheme {
-  color: #475569;
+  font-size: 12.5px;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tdDate {
-  color: #64748b;
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
 }
 
 .statusBadge {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  padding: 6px 8px;
+  padding: 3px 10px;
+  border-radius: 20px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.emptyState {
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  padding: 18px;
-  color: #64748b;
-  text-align: center;
-}
-
-.tooltip {
-  background: #0f172a;
-  color: #fff;
-  border-radius: 10px;
-  padding: 8px 10px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
-}
-
-.tooltipLabel {
-  margin: 0;
+.viewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
-  color: #cbd5e1;
+  font-weight: 600;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 7px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
 }
 
-.tooltipValue {
-  margin: 4px 0 0;
+.viewBtn:hover { background: #dcfce7; }
+
+/* Table skeleton */
+.tableSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tableSkeletonRow {
+  display: flex;
+  gap: 12px;
+  padding: 14px 4px;
+  border-bottom: 1px solid #f8fafc;
+  align-items: center;
+}
+
+.skeletonBlock {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+/* Empty state */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 0;
+  color: #94a3b8;
   font-size: 13px;
-  font-weight: 700;
 }
 
+
+
+/* ── SHIMMER ANIMATION ── */
 @keyframes shimmer {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: 0 0;
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — 1280px
+══════════════════════════════════════════════ */
+@media (max-width: 1280px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
-@media (max-width: 1080px) {
-  .statsGrid,
+/* ══════════════════════════════════════════════
+   RESPONSIVE — 1024px
+══════════════════════════════════════════════ */
+@media (max-width: 1024px) {
   .middleRow {
     grid-template-columns: 1fr;
   }
-}
-
-@media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-  }
 
   .tableRow {
-    grid-template-columns: 1fr;
-    gap: 6px;
+    grid-template-columns: 1.5fr 2fr 1fr 80px;
   }
 
-  .tableHeader {
-    display: none;
+  /* Hide date column on tablet */
+  .tdDate { display: none; }
+  .tableHeader span:nth-child(3) { display: none; }
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — 768px (mobile)
+══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  .page { gap: 16px; }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .statCard { padding: 14px 12px; }
+  .statValue { font-size: 22px; }
+
+  .chartCard,
+  .quickCard,
+  .activityCard {
+    padding: 18px 16px;
+  }
+
+  /* Table becomes simpler on mobile */
+  .tableRow {
+    grid-template-columns: 1fr 1fr 80px;
+    gap: 8px;
+  }
+
+  /* Hide scheme column on mobile */
+  .tdScheme { display: none; }
+  .tableHeader span:nth-child(2) { display: none; }
+
+  .title { font-size: 18px; }
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — 480px
+══════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dateBadgeText {
+    font-size: 11px;
+  }
+  .dateBadge {
+    padding: 6px 10px;
+  }
+  .header { 
+    flex-direction: column; 
+    align-items: flex-start; 
   }
 }

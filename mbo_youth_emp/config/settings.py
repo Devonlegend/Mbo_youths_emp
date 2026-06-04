@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -80,6 +81,15 @@ REST_FRAMEWORK = {
 # in production set JWT_COOKIE_SECURE=True and tighten JWT_COOKIE_SAMESITE.
 JWT_COOKIE_SECURE   = None 
 JWT_COOKIE_SAMESITE = 'Lax'
+
+# JWT settings - adjust token lifetimes and rotation as needed. fix by me @Prince
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
 
 # Required so the browser will send the cookie cross-origin to the API.
 CORS_ALLOW_CREDENTIALS = True

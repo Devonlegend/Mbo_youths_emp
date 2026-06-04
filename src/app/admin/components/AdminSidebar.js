@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ClipboardList, Users, BookOpen,
   BadgeCheck, ShieldAlert, ScrollText, Settings,
-  LogOut, X, ChevronRight,
+  LogOut, X,
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
 
@@ -33,7 +33,7 @@ function NavItem({ item, active, onClick }) {
       title={item.label}
     >
       <span className={styles.navIcon}>
-        <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
+        <Icon size={20} strokeWidth={active ? 2.2 : 1.8} />
       </span>
       <span className={styles.navLabel}>{item.label}</span>
     </Link>
@@ -49,12 +49,10 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
     return pathname.startsWith(href);
   }
 
-  // Initials from admin name
   const initials =
     (user?.firstname?.[0]?.toUpperCase() || "") +
     (user?.lastname?.[0]?.toUpperCase()  || "");
 
-  // Role label
   const roleLabel =
     user?.role === "superadmin" ? "Super Admin" :
     user?.role === "verifier"   ? "Verifier"    :
@@ -78,7 +76,6 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
             <span className={styles.logoName}>RMHCDT</span>
             <span className={styles.logoSub}>Admin Portal</span>
           </div>
-          {/* Close button — mobile only */}
           <button
             className={styles.closeBtn}
             onClick={onClose}
@@ -91,7 +88,6 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
         {/* ── NAV ── */}
         <nav className={styles.nav}>
 
-          {/* Section label — hidden in collapsed mode */}
           <span className={styles.sectionLabel}>Main</span>
 
           {navMain.map((item) => (
@@ -118,7 +114,7 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
 
         </nav>
 
-        {/* ── BOTTOM — settings + admin profile + sign out ── */}
+        {/* ── BOTTOM ── */}
         <div className={styles.bottom}>
 
           <Link
@@ -128,14 +124,14 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
             onClick={onClose}
           >
             <span className={styles.navIcon}>
-              <Settings size={17} strokeWidth={1.8} />
+              <Settings size={20} strokeWidth={1.8} />
             </span>
             <span className={styles.navLabel}>Settings</span>
           </Link>
 
           <div className={styles.divider} />
 
-          {/* Admin profile snippet */}
+          {/* Static profile display */}
           <div className={styles.adminProfile}>
             <div className={styles.adminAvatar}>
               {initials || "AD"}
@@ -148,6 +144,7 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
             </div>
           </div>
 
+          {/* Sign out */}
           <button
             className={`${styles.navItem} ${styles.signOut}`}
             title="Sign out"
