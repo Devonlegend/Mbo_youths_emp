@@ -28,17 +28,20 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({});
 
   // ── IF ALREADY LOGGED IN → GO TO DASHBOARD ────────────────────────────────
-  useEffect(() => {
-    getMe()
-      .then(() => {
-        // Valid cookie exists — user is already logged in
+ useEffect(() => {
+  getMe()
+    .then((res) => {
+      const role = res.data.role;
+      if (role === "admin" || role === "superadmin" || role === "verifier") {
+        router.replace("/admin");
+      } else {
         router.replace("/dashboard");
-      })
-      .catch(() => {
-        // Not logged in — show the login form
-        setCheckingAuth(false);
-      });
-  }, []);
+      }
+    })
+    .catch(() => {
+      setCheckingAuth(false);
+    });
+}, []);
 
   // Don't render the form until we've confirmed they're not already logged in
   // This prevents a flash of the login form before the redirect fires
@@ -162,7 +165,14 @@ export default function LoginPage() {
 
     try {
       await otpVerify({ email: form.email, code });
-      window.location.href = "/dashboard";
+      const meRes = await getMe();
+      const role = meRes.data.role;
+
+      if (role === "admin" || role === "superadmin" || role === "verifier") {
+        window.location.href = "/admin";
+      } else {
+        window.location.href = "/dashboard";
+      }
     } catch (err) {
       setOtpError(
         err?.response?.data?.error ||

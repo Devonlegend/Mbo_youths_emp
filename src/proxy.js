@@ -10,7 +10,7 @@ import { NextResponse } from "next/server";
 // The layout.js getMe() call is the real auth check. Middleware just
 // prevents the flash of the dashboard before the redirect fires.
 
-const PROTECTED = ["/dashboard"];
+const PROTECTED = ["/dashboard", "/admin"];
 const PUBLIC    = ["/login", "/register", "/forgot-password", "/"];
 
 export function proxy(request) {
@@ -44,5 +44,6 @@ export function proxy(request) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/admin/:path*",
   ],
 };

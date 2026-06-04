@@ -1,0 +1,80 @@
+/* ══════════════════════════════════════════════
+   ADMIN LAYOUT — RMHCDT Admin Portal
+══════════════════════════════════════════════ */
+
+/* ── LOADING SHELL ── */
+.loadingShell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #f8fafc;
+}
+
+.loadingSpinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid #e2e8f0;
+  border-top-color: #15803d;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── SHELL ── */
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+/* ── MAIN WRAP ── */
+/* Sits to the right of the collapsed sidebar (64px) */
+.mainWrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  /* Offset for the fixed collapsed sidebar */
+  margin-left: 64px;
+  transition: margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── CONTENT AREA ── */
+.content {
+  flex: 1;
+  padding: 28px 24px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ══════════════════════════════════════════════
+   MOBILE — 768px and below
+══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* On mobile sidebar is hidden — no left margin needed */
+  .mainWrap {
+    margin-left: 0;
+  }
+
+  .content {
+    padding: 20px 16px;
+  }
+
+}
+
+/* ══════════════════════════════════════════════
+   TABLET — 769px to 1024px
+══════════════════════════════════════════════ */
+@media (min-width: 769px) and (max-width: 1024px) {
+
+  .content {
+    padding: 24px 20px;
+  }
+
+}
