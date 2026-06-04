@@ -20,45 +20,13 @@ const PAGE_TITLES = {
   "/admin/settings":          "Settings",
 };
 
-// ── Mock notifications — replace with real endpoint when backend adds it ──────
-const PREVIEW_NOTIFS = [
-  {
-    id: 1,
-    icon: ClipboardList,
-    iconBg: "#fffbeb", iconBorder: "#fde68a", iconColor: "#d97706",
-    title: "New application submitted",
-    message: "Emmanuel Etim applied for the University Scholarship Award.",
-    time: "5 min ago",
-  },
-  {
-    id: 2,
-    icon: AlertCircle,
-    iconBg: "#fef2f2", iconBorder: "#fecaca", iconColor: "#dc2626",
-    title: "Flagged application",
-    message: "Duplicate NIN detected on application APP-007.",
-    time: "1 hour ago",
-  },
-  {
-    id: 3,
-    icon: Users,
-    iconBg: "#f0fdf4", iconBorder: "#bbf7d0", iconColor: "#15803d",
-    title: "New student registered",
-    message: "Blessing Okon completed registration.",
-    time: "2 hours ago",
-  },
-];
-
 export default function AdminTopbar({ user, onMenuOpen }) {
   const pathname = useRouter();
   const currentPath = usePathname();
   const router = useRouter();
 
   const [dropOpen, setDropOpen] = useState(false);
-  const [bellOpen, setBellOpen] = useState(false);
-  const [unread,   setUnread]   = useState(PREVIEW_NOTIFS.length);
-
   const dropRef = useRef(null);
-  const bellRef = useRef(null);
 
   // Get current page title
   const pageTitle = Object.entries(PAGE_TITLES).find(([path]) =>
@@ -80,7 +48,6 @@ export default function AdminTopbar({ user, onMenuOpen }) {
   useEffect(() => {
     function handleClick(e) {
       if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false);
-      if (bellRef.current && !bellRef.current.contains(e.target)) setBellOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -113,75 +80,13 @@ export default function AdminTopbar({ user, onMenuOpen }) {
 
       {/* RIGHT — bell + avatar */}
       <div className={styles.right}>
-
-        {/* ── BELL ── */}
-        <div className={styles.bellWrap} ref={bellRef}>
-          <button
-            className={styles.iconBtn}
-            aria-label="Notifications"
-            onClick={() => { setBellOpen((o) => !o); setDropOpen(false); }}
-          >
-            <Bell size={16} strokeWidth={2} />
-            {unread > 0 && (
-              <span className={styles.notifBadge}>{unread}</span>
-            )}
-          </button>
-
-          {bellOpen && (
-            <div className={styles.bellDropdown}>
-              <div className={styles.bellHead}>
-                <span className={styles.bellHeadTitle}>Notifications</span>
-                {unread > 0 && (
-                  <button
-                    className={styles.bellMarkAll}
-                    onClick={() => setUnread(0)}
-                  >
-                    <CheckCheck size={12} strokeWidth={2} /> Mark all read
-                  </button>
-                )}
-              </div>
-
-              <div className={styles.bellList}>
-                {PREVIEW_NOTIFS.map((n) => {
-                  const Icon = n.icon;
-                  return (
-                    <div key={n.id} className={styles.bellItem}>
-                      <div
-                        className={styles.bellItemIcon}
-                        style={{
-                          background:   n.iconBg,
-                          border:       `1px solid ${n.iconBorder}`,
-                        }}
-                      >
-                        <Icon size={13} strokeWidth={2} style={{ color: n.iconColor }} />
-                      </div>
-                      <div className={styles.bellItemBody}>
-                        <span className={styles.bellItemTitle}>{n.title}</span>
-                        <span className={styles.bellItemMsg}>{n.message}</span>
-                        <span className={styles.bellItemTime}>{n.time}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <button
-                className={styles.bellFooter}
-                onClick={() => { setBellOpen(false); router.push("/admin/notifications"); }}
-              >
-                View all notifications
-              </button>
-            </div>
-          )}
-        </div>
-
         <div className={styles.sep} />
 
         {/* ── AVATAR DROPDOWN ── */}
         <div className={styles.avatarWrap} ref={dropRef}>
           <button
             className={styles.avatarBtn}
-            onClick={() => { setDropOpen((o) => !o); setBellOpen(false); }}
+            onClick={() => { setDropOpen((o) => !o); }}
             aria-label="Admin menu"
           >
             <div className={styles.avatar}>{initials || "AD"}</div>

@@ -35,9 +35,6 @@
   z-index: 50;
   overflow: hidden;
   transition: width var(--admin-transition);
-
-  /* Subtle top green accent — distinguishes from student dashboard */
-  border-top: 3px solid #15803d;
 }
 
 /* Expand on hover — desktop only */
@@ -274,9 +271,9 @@
 }
 
 .adminName {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
-  color: #0f172a;
+  color:  #374151;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -285,7 +282,7 @@
 .adminRole {
   font-size: 10.5px;
   color: #15803d;
-  font-weight: 600;
+  font-weight: 500;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
   border-radius: 4px;
