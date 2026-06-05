@@ -42,9 +42,9 @@
 .title {
   font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
   font-size: 22px;
-  font-weight: 650;
+  font-weight: 800;
   color: #0f172a;
-  letter-spacing: 0.00em;
+  letter-spacing: -0.03em;
   margin: 0;
   line-height: 1.2;
 }

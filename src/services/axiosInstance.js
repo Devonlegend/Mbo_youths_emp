@@ -8,6 +8,21 @@ const api = axios.create({
   withCredentials: true, // sends httpOnly cookies with every request
 });
 
+const PUBLIC_AUTH_PATHS = [
+  "/auth/login/",
+  "/auth/register/",
+  "/auth/otp/send/",
+  "/auth/otp/resend/",
+  "/auth/otp/verify/",
+  "/auth/password/reset/request/",
+  "/auth/password/reset/verify/",
+  "/auth/password/reset/confirm/",
+];
+
+function isPublicAuthRequest(url) {
+  return PUBLIC_AUTH_PATHS.some((path) => url === path || url.startsWith(path));
+}
+
 // ── TOKEN REFRESH INTERCEPTOR ──────────────────────────────────────────
 // When any request comes back with 401 (token expired), this interceptor:
 // 1. Calls /auth/token/refresh/ to get a new access token (sets new cookie)
@@ -43,6 +58,7 @@ api.interceptors.response.use(
 if (
   error.response?.status !== 401 ||
   originalRequest._isRetry ||
+  isPublicAuthRequest(originalRequest.url) ||
   originalRequest.url === "/auth/token/refresh/" ||
   originalRequest.url === "/auth/me/"
 ) {

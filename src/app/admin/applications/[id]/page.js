@@ -1,0 +1,582 @@
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import {
+  ArrowLeft, CheckCircle2, Clock, XCircle, AlertCircle,
+  ShieldAlert, FileText, User, MapPin, Phone, Mail,
+  GraduationCap, Briefcase, Wrench, Banknote,
+  ShieldCheck, AlertTriangle, Loader2,
+} from "lucide-react";
+import styles from "./page.module.css";
+import { getApplication, reviewApplication } from "@/services";
+
+// ── STATUS MAPPING ────────────────────────────────────────────────────────────
+const statusConfig = {
+  submitted:         { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
+  eligibility_check: { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
+  document_review:   { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
+  shortlisted:       { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
+  draft:             { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
+  double_dip_flag:   { label: "Flagged",  color: "#ef4444", bg: "#fef2f2" },
+  approved:          { label: "Approved", color: "#15803d", bg: "#f0fdf4" },
+  rejected:          { label: "Rejected", color: "#64748b", bg: "#f8fafc" },
+  withdrawn:         { label: "Rejected", color: "#64748b", bg: "#f8fafc" },
+};
+
+// ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
+const categoryConfig = {
+  scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4", icon: GraduationCap },
+  vocational:  { label: "Training",    color: "#1d4ed8", bg: "#eff6ff", icon: Wrench        },
+  empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb", icon: Briefcase     },
+  grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff", icon: Banknote      },
+};
+
+// ── STEPPER ───────────────────────────────────────────────────────────────────
+const STEPS = ["Submitted", "Verified", "Review", "Decision"];
+
+const stepFromStatus = {
+  submitted:         1,
+  eligibility_check: 1,
+  document_review:   2,
+  shortlisted:       3,
+  double_dip_flag:   2,
+  approved:          4,
+  rejected:          4,
+  withdrawn:         4,
+  draft:             1,
+};
+
+function Stepper({ step, uiStatus }) {
+  const stepIcons = [CheckCircle2, ShieldCheck, FileText, CheckCircle2];
+
+  return (
+    <div className={styles.stepper}>
+      {STEPS.map((label, i) => {
+        const done     = i < step - 1 || uiStatus === "approved" || uiStatus === "rejected";
+        const current  = i === step - 1;
+        const isApproved = current && uiStatus === "approved";
+        const isRejected = current && uiStatus === "rejected";
+        const isFlagged  = current && uiStatus === "flagged";
+        const Icon = stepIcons[i];
+
+        return (
+          <div key={label} className={styles.stepWrap}>
+            <div
+              className={`${styles.stepPill}
+                ${done ? styles.pillDone : ""}
+                ${current && !isApproved && !isRejected && !isFlagged ? styles.pillCurrent : ""}
+                ${isApproved ? styles.pillApproved : ""}
+                ${isRejected ? styles.pillRejected : ""}
+                ${isFlagged  ? styles.pillFlagged  : ""}
+                ${!done && !current ? styles.pillPending : ""}
+              `}
+            >
+              <Icon size={13} strokeWidth={2} />
+              {label}
+            </div>
+            {i < STEPS.length - 1 && (
+              <span className={`${styles.stepConnector} ${done ? styles.connectorDone : ""}`}>
+                —
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── BUILD FORM FIELDS from form_data ──────────────────────────────────────────
+function buildFields(schemeCategory, formData) {
+  if (!formData || Object.keys(formData).length === 0) return [];
+
+  const fd = formData;
+
+  const declaration = {
+    section: "Self-Declaration",
+    items: [{
+      label: "Received External Support",
+      value: fd.declared_external === "yes"
+        ? `Yes — ${fd.declaration_details || "No details provided"}`
+        : "No",
+    }],
+  };
+
+  const bankDetails = (fd.bank_name || fd.account_number) ? {
+    section: "Bank Details",
+    items: [
+      { label: "Bank Name",      value: fd.bank_name      || "—" },
+      { label: "Account Number", value: fd.account_number || "—" },
+      { label: "Account Name",   value: fd.account_name   || "—" },
+    ],
+  } : null;
+
+  if (schemeCategory === "scholarship") {
+    return [
+      {
+        section: "Academic Information",
+        items: [
+          { label: "Institution",       value: fd.institution    || "—" },
+          { label: "Level of Study",    value: fd.level          || "—" },
+          { label: "Department",        value: fd.department     || "—" },
+          { label: "Current Level",     value: fd.current_level  || "—" },
+          { label: "Matric Number",     value: fd.matric_number  || "—" },
+          { label: "CGPA / Last Score", value: fd.cgpa           || "—" },
+        ],
+      },
+      ...(bankDetails ? [bankDetails] : []),
+      declaration,
+    ];
+  }
+
+  if (schemeCategory === "grant") {
+    return [
+      {
+        section: "Grant Details",
+        items: [
+          { label: "Grant Purpose",          value: fd.grant_purpose          || "—" },
+          { label: "Business Plan Summary",  value: fd.business_plan_desc     || "—" },
+          { label: "Amount Requested",       value: fd.amount_requested       || "—" },
+          { label: "Expected Beneficiaries", value: fd.expected_beneficiaries || "—" },
+        ],
+      },
+      ...(bankDetails ? [bankDetails] : []),
+      declaration,
+    ];
+  }
+
+  if (schemeCategory === "vocational") {
+    return [
+      {
+        section: "Training Details",
+        items: [
+          { label: "Training Applied For",    value: fd.training_name    || "—" },
+          { label: "Education Level",         value: fd.education_level  || "—" },
+          { label: "Prior Experience",        value: fd.prior_experience || "—" },
+          { label: "Career Goal",             value: fd.career_goal      || "—" },
+          { label: "Availability",            value: fd.availability     || "—" },
+        ],
+      },
+      declaration,
+    ];
+  }
+
+  if (schemeCategory === "empowerment") {
+    return [
+      {
+        section: "Business / Trade Information",
+        items: [
+          { label: "Trade / Skill",      value: fd.trade             || "—" },
+          { label: "Current Status",     value: fd.current_status    || "—" },
+          { label: "Support Needed",     value: fd.support_needed    || "—" },
+          { label: "Equipment List",     value: fd.equipment         || "—" },
+          { label: "Business Location",  value: fd.business_location || "—" },
+        ],
+      },
+      declaration,
+    ];
+  }
+
+  return [declaration];
+}
+
+// ── PAGE ──────────────────────────────────────────────────────────────────────
+export default function ApplicationDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+
+  const [app,          setApp]          = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(null);
+
+  // Decision panel state
+  const [note,         setNote]         = useState("");
+  const [noteError,    setNoteError]    = useState("");
+  const [submitting,   setSubmitting]   = useState(false);
+  const [actionError,  setActionError]  = useState("");
+  const [decided,      setDecided]      = useState(false);
+
+  // ── FETCH APPLICATION ────────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res  = await getApplication(params.id);
+        if (cancelled) return;
+        setApp(res.data);
+      } catch {
+        if (!cancelled) setError("Failed to load application.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [params.id]);
+
+  // ── DECISION ACTION ──────────────────────────────────────────────────────
+  async function handleDecision(approve) {
+    // Validate note — minimum 10 characters
+    if (note.trim().length < 10) {
+      setNoteError("Decision note must be at least 10 characters.");
+      return;
+    }
+
+    setSubmitting(true);
+    setActionError("");
+    setNoteError("");
+
+    try {
+      await reviewApplication(params.id, {
+        approve,
+        notes: note.trim(),
+      });
+      setDecided(true);
+      // Refresh the application data to show updated status
+      const res = await getApplication(params.id);
+      setApp(res.data);
+    } catch (err) {
+      setActionError(
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        "Action failed. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ── LOADING ──────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className={styles.centerState}>
+        <div className={styles.spinner} />
+      </div>
+    );
+  }
+
+  // ── ERROR ────────────────────────────────────────────────────────────────
+  if (error || !app) {
+    return (
+      <div className={styles.centerState}>
+        <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
+        <p style={{ color: "#ef4444", fontWeight: 600 }}>
+          {error || "Application not found."}
+        </p>
+        <button
+          className={styles.backBtn}
+          onClick={() => router.push("/admin/applications")}
+        >
+          <ArrowLeft size={14} strokeWidth={2} /> Back to Applications
+        </button>
+      </div>
+    );
+  }
+
+  // ── DERIVE DISPLAY DATA ──────────────────────────────────────────────────
+  const catKey   = (app.scheme_category || "scholarship").toLowerCase();
+  const category = categoryConfig[catKey] || categoryConfig.scholarship;
+  const Icon     = category.icon;
+  const status   = statusConfig[app.status] || statusConfig.submitted;
+  const uiStatus = status.label.toLowerCase();
+  const step     = stepFromStatus[app.status] || 1;
+  const fields   = buildFields(catKey, app.form_data || {});
+
+  const isDecidable = ["submitted", "eligibility_check", "document_review",
+    "shortlisted", "double_dip_flag"].includes(app.status);
+
+  const submissionDate = app.submission_date
+    ? new Date(app.submission_date).toLocaleDateString("en-GB", {
+        day: "numeric", month: "long", year: "numeric",
+      })
+    : "—";
+
+  return (
+    <div className={styles.page}>
+
+      {/* BACK */}
+      <button
+        className={styles.backBtn}
+        onClick={() => router.push("/admin/applications")}
+      >
+        <ArrowLeft size={14} strokeWidth={2} /> Back to Applications
+      </button>
+
+
+      {/* PAGE HEADER */}
+        <div className={styles.pageHeader}>
+          <div className={styles.headerLeft}>
+            <div
+              className={styles.schemeIcon}
+              style={{ background: category.bg, border: `1.5px solid ${category.color}30` }}
+            >
+              <Icon size={20} color={category.color} strokeWidth={1.8} />
+            </div>
+            <div>
+              <h1 className={styles.title}>{app.scheme_name || "Application"}</h1>
+              <p className={styles.sub}>Submitted {submissionDate}</p>
+            </div>
+          </div>
+
+          <span
+            className={`${styles.statusBadge} ${styles.statusBadgeDesktop}`}
+            style={{ color: status.color, background: status.bg }}
+          >
+            {status.label}
+          </span>
+
+          <span
+            className={`${styles.statusBadge} ${styles.statusBadgeMobile}`}
+            style={{ color: status.color, background: status.bg }}
+          >
+            {status.label}
+          </span>
+        </div>
+      {/* STEPPER */}
+      <Stepper step={step} uiStatus={uiStatus} />
+
+      {/* FLAG BANNER */}
+      {app.status === "double_dip_flag" && (
+        <div className={styles.flagBanner}>
+          <ShieldAlert size={16} color="#ef4444" strokeWidth={2} style={{ flexShrink: 0 }} />
+          <div>
+            <p className={styles.flagBannerTitle}>Conflict Detected</p>
+            <p className={styles.flagBannerSub}>
+              This application has been flagged by the eligibility engine.
+              A duplicate benefit conflict was detected for this NIN in the current cycle.
+              Review carefully before making a decision.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* MAIN BODY — two column on desktop */}
+      <div className={styles.body}>
+
+        {/* LEFT — student info + submitted fields */}
+        <div className={styles.leftCol}>
+
+          {/* Student Card */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Student Information</h2>
+            <div className={styles.studentGrid}>
+              <div className={styles.studentField}>
+                <User size={13} color="#94a3b8" strokeWidth={2} />
+                <div>
+                  <span className={styles.fieldLabel}>Full Name</span>
+                  <span className={styles.fieldValue}>
+                    {app.student
+                      ? `${app.student.firstname} ${app.student.lastname}`
+                      : "—"
+                    }
+                  </span>
+                </div>
+              </div>
+              <div className={styles.studentField}>
+                <Mail size={13} color="#94a3b8" strokeWidth={2} />
+                <div>
+                  <span className={styles.fieldLabel}>Email</span>
+                  <span className={styles.fieldValue}>{app.student?.email || "—"}</span>
+                </div>
+              </div>
+              <div className={styles.studentField}>
+                <MapPin size={13} color="#94a3b8" strokeWidth={2} />
+                <div>
+                  <span className={styles.fieldLabel}>LGA / Ward</span>
+                  <span className={styles.fieldValue}>
+                    {app.student?.lga || "—"} · {app.student?.ward || "—"}
+                  </span>
+                </div>
+              </div>
+              <div className={styles.studentField}>
+                <ShieldCheck size={13} color="#94a3b8" strokeWidth={2} />
+                <div>
+                  <span className={styles.fieldLabel}>Eligibility Check</span>
+                  <span
+                    className={styles.fieldValue}
+                    style={{ color: app.eligibility_passed ? "#15803d" : "#ef4444" }}
+                  >
+                    {app.eligibility_passed ? "Passed" : "Failed"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Submitted Fields */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Submitted Information</h2>
+            <p className={styles.cardSub}>
+              Read-only. Exactly as submitted by the applicant.
+            </p>
+
+            {fields.length === 0 ? (
+              <div className={styles.noFormData}>
+                <FileText size={22} color="#cbd5e1" strokeWidth={1.5} />
+                <p>Form data not yet available.</p>
+                <p style={{ fontSize: 12, color: "#cbd5e1" }}>
+                  Backend form data storage coming soon.
+                </p>
+              </div>
+            ) : (
+              <div className={styles.sections}>
+                {fields.map((sec, si) => (
+                  <div key={si} className={styles.section}>
+                    <div className={styles.sectionHead}>
+                      <span className={styles.sectionNum}>{si + 1}</span>
+                      <h3 className={styles.sectionTitle}>{sec.section}</h3>
+                    </div>
+                    <div className={styles.fieldGrid}>
+                      {sec.items.map((item, ii) => (
+                        <div
+                          key={ii}
+                          className={`${styles.fieldItem} ${
+                            (item.value?.length || 0) > 60 ? styles.fieldItemFull : ""
+                          }`}
+                        >
+                          <span className={styles.fieldLabel}>{item.label}</span>
+                          <span className={styles.fieldValue}>{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Attestation confirmation */}
+            <div className={styles.attestConfirm}>
+              <CheckCircle2 size={13} color="#15803d" strokeWidth={2} />
+              <span>Applicant confirmed accuracy of all information at time of submission.</span>
+            </div>
+          </div>
+
+        </div>
+
+        {/* RIGHT — decision panel */}
+        <div className={styles.rightCol}>
+          <div className={`${styles.card} ${styles.decisionCard}`}>
+
+            <h2 className={styles.cardTitle}>Admin Decision</h2>
+            <p className={styles.cardSub}>
+              Your decision is final and will be permanently recorded.
+            </p>
+
+            {/* Already decided */}
+            {!isDecidable ? (
+              <div className={styles.alreadyDecided}>
+                <div
+                  className={styles.alreadyDecidedIcon}
+                  style={{
+                    background: uiStatus === "approved" ? "#f0fdf4" : "#f8fafc",
+                    border: `1.5px solid ${uiStatus === "approved" ? "#bbf7d0" : "#e2e8f0"}`,
+                  }}
+                >
+                  {uiStatus === "approved"
+                    ? <CheckCircle2 size={22} color="#15803d" strokeWidth={1.8} />
+                    : <XCircle size={22} color="#64748b" strokeWidth={1.8} />
+                  }
+                </div>
+                <p className={styles.alreadyDecidedTitle}>
+                  {uiStatus === "approved" ? "Application Approved" : "Application Rejected"}
+                </p>
+                {app.reviewer_notes && (
+                  <div className={styles.reviewerNotes}>
+                    <p className={styles.reviewerNotesLabel}>Decision note</p>
+                    <p className={styles.reviewerNotesText}>{app.reviewer_notes}</p>
+                  </div>
+                )}
+                {app.rejection_reason && uiStatus === "rejected" && (
+                  <div className={styles.rejectionReason}>
+                    <p className={styles.reviewerNotesLabel}>Rejection reason</p>
+                    <p className={styles.reviewerNotesText}>{app.rejection_reason}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                {/* Decision success banner */}
+                {decided && (
+                  <div className={styles.successBanner}>
+                    <CheckCircle2 size={14} color="#15803d" strokeWidth={2} />
+                    Decision recorded successfully.
+                  </div>
+                )}
+
+                {/* Action error */}
+                {actionError && (
+                  <div className={styles.errorBanner}>
+                    <AlertCircle size={14} color="#dc2626" strokeWidth={2} />
+                    {actionError}
+                  </div>
+                )}
+
+                {/* Decision note */}
+                <div className={styles.noteWrap}>
+                  <label className={styles.noteLabel}>
+                    Decision Note
+                    <span className={styles.noteRequired}>Required · min 10 characters</span>
+                  </label>
+                  <textarea
+                    className={`${styles.noteInput} ${noteError ? styles.noteInputError : ""}`}
+                    rows={6}
+                    placeholder="Provide a clear reason for your decision. This note is permanently recorded for audit purposes..."
+                    value={note}
+                    onChange={(e) => { setNote(e.target.value); setNoteError(""); }}
+                  />
+                  <div className={styles.noteFooter}>
+                    {noteError && (
+                      <span className={styles.noteError}>{noteError}</span>
+                    )}
+                    <span className={`${styles.noteCount} ${note.length >= 10 ? styles.noteCountOk : ""}`}>
+                      {note.length} / 10 min
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className={styles.actions}>
+                  <button
+                    className={styles.approveBtn}
+                    onClick={() => handleDecision(true)}
+                    disabled={submitting}
+                  >
+                    {submitting
+                      ? <Loader2 size={15} strokeWidth={2} className={styles.spin} />
+                      : <CheckCircle2 size={15} strokeWidth={2} />
+                    }
+                    Approve Application
+                  </button>
+
+                  <button
+                    className={styles.rejectBtn}
+                    onClick={() => handleDecision(false)}
+                    disabled={submitting}
+                  >
+                    {submitting
+                      ? <Loader2 size={15} strokeWidth={2} className={styles.spin} />
+                      : <XCircle size={15} strokeWidth={2} />
+                    }
+                    Reject Application
+                  </button>
+                </div>
+
+                {/* Warning */}
+                <div className={styles.decisionWarning}>
+                  <AlertTriangle size={12} color="#f59e0b" strokeWidth={2} />
+                  <span>
+                    This action is irreversible. Approved applications create a permanent
+                    beneficiary record. Rejected applications are logged against the student's NIN.
+                  </span>
+                </div>
+              </>
+            )}
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  );
+}

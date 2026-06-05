@@ -38,7 +38,6 @@ const colorMap = {
 
 const STEPS = ["Submitted", "Verified", "Review", "Decision"];
 
-// ── Map form_data fields into display sections based on category ──────────────
 function buildFields(schemeType, formData) {
   if (!formData || Object.keys(formData).length === 0) return [];
 
@@ -146,34 +145,36 @@ function StatusBadge({ status }) {
 }
 
 function Stepper({ step, status }) {
+  const stepIcons = [CheckCircle2, CheckCircle2, FileText, CheckCircle2];
+
   return (
     <div className={styles.stepper}>
       {STEPS.map((label, i) => {
-        const done     = status === "approved" || i < step;
-        const active   = i === step - 1 && status !== "approved";
-        const flagged  = active && status === "flagged";
-        const rejected = i === step - 1 && status === "rejected";
+        const done       = i < step - 1 || status === "approved" || status === "rejected";
+        const current    = i === step - 1;
+        const isApproved = current && status === "approved";
+        const isRejected = current && status === "rejected";
+        const isFlagged  = current && status === "flagged";
+        const Icon = stepIcons[i];
+
         return (
           <div key={label} className={styles.stepWrap}>
-            <div className={styles.stepRow}>
-              <div className={`${styles.stepDot}
-                ${done     ? styles.dotDone   : ""}
-                ${flagged  ? styles.dotFlag   : ""}
-                ${rejected ? styles.dotReject : ""}
-              `}>
-                {done ? "✓" : flagged ? "!" : rejected ? "✕" : i + 1}
-              </div>
-              {i < STEPS.length - 1 && (
-                <div className={`${styles.stepLine} ${done ? styles.lineDone : ""}`} />
-              )}
-            </div>
-            <div className={`${styles.stepLabel}
-              ${done     ? styles.labelDone   : ""}
-              ${flagged  ? styles.labelFlag   : ""}
-              ${rejected ? styles.labelReject : ""}
+            <div className={`${styles.stepPill}
+              ${done                                                 ? styles.pillDone    : ""}
+              ${current && !isApproved && !isRejected && !isFlagged ? styles.pillCurrent : ""}
+              ${isApproved                                           ? styles.pillApproved : ""}
+              ${isRejected                                           ? styles.pillRejected : ""}
+              ${isFlagged                                            ? styles.pillFlagged  : ""}
+              ${!done && !current                                    ? styles.pillPending  : ""}
             `}>
+              <Icon size={13} strokeWidth={2} />
               {label}
             </div>
+            {i < STEPS.length - 1 && (
+              <span className={`${styles.stepConnector} ${done ? styles.connectorDone : ""}`}>
+                —
+              </span>
+            )}
           </div>
         );
       })}
@@ -197,8 +198,8 @@ export default function ApplicationDetailPage() {
         if (cancelled) return;
         const data = res.data;
 
-        const catKey  = (data.scheme_type || "scholarship").toLowerCase();
-        const config  = categoryConfig[catKey] || categoryConfig.scholarship;
+        const catKey   = (data.scheme_type || "scholarship").toLowerCase();
+        const config   = categoryConfig[catKey] || categoryConfig.scholarship;
         const uiStatus = statusMap[data.status] || "pending";
 
         const date = data.submission_date
@@ -207,7 +208,6 @@ export default function ApplicationDetailPage() {
             })
           : "—";
 
-        // Step position based on status
         const stepMap = {
           submitted:         1,
           eligibility_check: 1,
