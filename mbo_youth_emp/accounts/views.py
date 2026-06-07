@@ -323,16 +323,19 @@ def otp_verify(request):
 @permission_classes([IsAuthenticated])
 def me(request):
     """GET /auth/me/ — who am I?"""
+    nin = request.user.nin_hash or ""
     return Response({
-        "id":           str(request.user.id),
-        "email":        request.user.email,
-        "firstname":    request.user.firstname,
-        "lastname":     request.user.lastname,
-        # "passport":     request.user.passport,
-        "phone_number": request.user.phone_number,
-        "role":         request.user.role,
-         # Added last_login to response so frontend can display last login time
-        "last_login":   request.user.last_login,
+        "id":            str(request.user.id),
+        "email":         request.user.email,
+        "firstname":     request.user.firstname,
+        "lastname":      request.user.lastname,
+        "phone_number":  request.user.phone_number,
+        "role":          request.user.role,
+        "last_login":    request.user.last_login,
+        # "passport":      request.user.student_profile.passport.url if hasattr(request.user, 'student_profile') and request.user.student_profile.passport else "",
+        "date_of_birth": str(request.user.date_of_birth) if request.user.date_of_birth else "",
+        "gender":        request.user.gender or "",
+        "nin_last4":     nin[-4:] if len(nin) >= 4 else nin,
     })
 
 @api_view(['GET'])

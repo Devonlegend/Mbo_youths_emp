@@ -177,6 +177,7 @@ export default function RegisterPage() {
       formData.append("date_of_birth", form.dob);
       formData.append("gender", form.gender);
       formData.append("ward", form.ward);
+      formData.append("lga", form.lga);
       formData.append("password", form.password);
       if (passport) formData.append("passport", passport);
       if (certificate) formData.append("certificate", certificate);

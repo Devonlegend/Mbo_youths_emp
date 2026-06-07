@@ -20,13 +20,12 @@ class StudentSerializer(serializers.ModelSerializer):
         model  = Student
         fields = [
             'user_id', 'firstname', 'lastname', 'ward', 'lga', 'level', 'cgpa',
-            'is_verified',
-            'active_award', 'has_active_award', 'academic_records',
+            'is_verified', 'active_award', 'has_active_award', 'academic_records',
+            'date_of_birth', 'passport', 'nin_hash', 
         ]
 
     def get_has_active_award(self, obj):
         return obj.has_active_award()
-
 
 class StudentCreateSerializer(serializers.ModelSerializer):
     """Used only when creating a new student profile."""
