@@ -197,8 +197,9 @@ export default function ApplicationDetailPage() {
         const res  = await getApplication(params.id);
         if (cancelled) return;
         const data = res.data;
+        if (!data) throw new Error("No data returned");
 
-        const catKey = (app.scheme_category || app.scheme_type || "scholarship").toLowerCase();
+        const catKey = (data.scheme_category || data.scheme_type || "scholarship").toLowerCase();
         const config   = categoryConfig[catKey] || categoryConfig.scholarship;
         const uiStatus = statusMap[data.status] || "pending";
 
@@ -237,8 +238,9 @@ export default function ApplicationDetailPage() {
           fields:          buildFields(catKey, data.form_data || {}),
         });
 
-      } catch {
-        if (!cancelled) setError("Failed to load application. Please try again.");
+      } catch (err) {
+      console.error("Application load error:", err);
+      if (!cancelled) setError("Failed to load application. Please try again.");
       } finally {
         if (!cancelled) setLoading(false);
       }
