@@ -40,7 +40,7 @@ const FILTERS = ["All", "Pending", "Flagged", "Approved", "Rejected"];
 
 function mapApplication(app) {
   const uiStatus = statusMap[app.status] || "pending";
-  const catKey   = (app.scheme_type || "scholarship").toLowerCase();
+  const catKey = (app.scheme_category || app.scheme_type || "scholarship").toLowerCase();
   const config   = categoryConfig[catKey] || categoryConfig.scholarship;
 
   const date = app.submission_date

@@ -198,7 +198,7 @@ export default function ApplicationDetailPage() {
         if (cancelled) return;
         const data = res.data;
 
-        const catKey   = (data.scheme_type || "scholarship").toLowerCase();
+        const catKey = (app.scheme_category || app.scheme_type || "scholarship").toLowerCase();
         const config   = categoryConfig[catKey] || categoryConfig.scholarship;
         const uiStatus = statusMap[data.status] || "pending";
 
