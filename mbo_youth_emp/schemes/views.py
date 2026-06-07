@@ -7,6 +7,8 @@ from .models import ScholarshipScheme
 from .serializers import ScholarshipSchemeSerializer
 from accounts.permissions import IsAdmin
 from audit.models import AuditLog
+from notifications.models import Notification
+from students.models import Student
 
 
 class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
@@ -65,6 +67,17 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
             entity_type = "Scheme",
             entity_id   = str(scheme.id),
         )
+        # Notify all students
+        students = Student.objects.select_related('user').all()
+        Notification.objects.bulk_create([
+            Notification(
+                user    = s.user,
+                type    = 'programme',
+                title   = 'New programme available',
+                message = f'{scheme.name} is now open for applications. Log in to apply before slots run out.',
+            )
+            for s in students
+        ])
         return Response({"message": "Scheme published successfully."})
 
     @action(detail=True, methods=['post'], url_path='close')
@@ -80,6 +93,17 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
             entity_type = "Scheme",
             entity_id   = str(scheme.id),
         )
+        # Notify all students
+        students = Student.objects.select_related('user').all()
+        Notification.objects.bulk_create([
+            Notification(
+                user    = s.user,
+                type    = 'deadline',
+                title   = 'Programme closed',
+                message = f'{scheme.name} is now closed and no longer accepting applications.',
+            )
+            for s in students
+        ])
         return Response({"message": "Scheme closed successfully."})
 
     @action(detail=True, methods=['post'], url_path='reopen')
@@ -95,4 +119,15 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
             entity_type = "Scheme",
             entity_id   = str(scheme.id),
         )
+        # Notify all students
+        students = Student.objects.select_related('user').all()
+        Notification.objects.bulk_create([
+            Notification(
+                user    = s.user,
+                type    = 'programme',
+                title   = 'Programme reopened',
+                message = f'{scheme.name} is now accepting applications again.',
+            )
+            for s in students
+        ])
         return Response({"message": "Scheme reopened successfully."})

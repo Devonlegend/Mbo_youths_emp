@@ -19,29 +19,41 @@ class StudentViewSet(viewsets.ModelViewSet):
         return StudentSerializer
 
     def get_permissions(self):
-        """
-        Different actions need different permissions.
-        Students can only see their own profile.
-        Admins can see everyone.
-        """
         if self.action in ['list', 'destroy']:
             return [IsAdmin()]
         return [IsAuthenticated()]
 
+    @action(detail=False, methods=['get', 'post'], url_path='bank-detail')
+    def bank_detail(self, request):
+        student = getattr(request.user, 'student_profile', None)
+        if student is None:
+            return Response({"error": "No student profile found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.method == 'GET':
+            return Response({
+                "bank_name":      student.bank_name      or "",
+                "account_number": student.account_number or "",
+                "account_name":   student.account_name   or "",
+            })
+
+        student.bank_name      = request.data.get('bank_name', '')
+        student.account_number = request.data.get('account_number', '')
+        student.account_name   = request.data.get('account_name', '')
+        student.save(update_fields=['bank_name', 'account_number', 'account_name'])
+        return Response({
+            "bank_name":      student.bank_name,
+            "account_number": student.account_number,
+            "account_name":   student.account_name,
+        })
+
     @action(detail=True, methods=['get'], url_path='eligibility-check')
     def eligibility_check(self, request, pk=None):
-        # Simplified, label-based pre-check (uses the student's active_award flag).
-        # The authoritative conflict evaluation happens at submit time via
-        # EligibilityEngine, which inspects approved Application rows.
         student = self.get_object()
-
         try:
             min_cgpa       = float(request.query_params.get('min_cgpa', 2.20))
             required_level = request.query_params.get('level', '')
         except ValueError:
             return Response({"error": "Invalid parameters"}, status=400)
-
-        
 
         student_cgpa = float(student.cgpa) if student.cgpa else 0.0
         cgpa_ok      = student_cgpa >= min_cgpa
@@ -60,12 +72,11 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='stats')
     def stats(self, request):
-        """GET /students/stats/"""
         from django.db.models import Count
 
-        total        = Student.objects.count()
-        verified     = Student.objects.filter(is_verified=True).count()
-        with_award   = Student.objects.exclude(active_award='').count()
+        total      = Student.objects.count()
+        verified   = Student.objects.filter(is_verified=True).count()
+        with_award = Student.objects.exclude(active_award='').count()
 
         by_ward = {}
         for student in Student.objects.values('ward').annotate(count=Count('id')):
@@ -81,9 +92,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='me')
     def me(self, request):
-        """GET /students/me/ — return current user's student profile."""
-        user = request.user
-        student = getattr(user, 'student_profile', None)
+        student = getattr(request.user, 'student_profile', None)
         if student is None:
             return Response({"error": "No student profile found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = self.get_serializer(student)

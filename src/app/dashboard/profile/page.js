@@ -202,15 +202,22 @@ export default function ProfilePage() {
         <div className={styles.heroInner}>
           <div className={styles.avatarWrap}>
             {photo ? (
-              <img src={photo} alt="Passport" className={styles.avatarImg} />
-            ) : (
-              <div className={styles.avatarInitials}>{initials}</div>
-            )}
-            <label className={styles.avatarOverlay} htmlFor="photo-upload" title="Change photo">
-              <Camera size={15} strokeWidth={2.2} />
-            </label>
-            <input id="photo-upload" type="file" accept="image/*"
-              className={styles.photoInput} onChange={handlePhotoChange} />
+              <img
+                src={photo}
+                alt="Passport"
+                className={styles.avatarImg}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div
+              className={styles.avatarInitials}
+              style={{ display: photo ? 'none' : 'flex' }}
+            >
+              {initials}
+            </div>
           </div>
           <div className={styles.heroMeta}>
             <h1 className={styles.heroName}>{form.first_name} {form.last_name}</h1>
@@ -228,27 +235,6 @@ export default function ProfilePage() {
           <div style={{ flex: 1 }}>
             <h2 className={styles.cardTitle}>Personal Information</h2>
             <p className={styles.cardSub}>Your registered profile details.</p>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            {editing && (
-              <button type="button" className={styles.btnCancel} onClick={handleCancel}>
-                <X size={13} strokeWidth={2} /> Cancel
-              </button>
-            )}
-            <button
-              type="button"
-              className={styles.btnEdit}
-              onClick={editing ? handleSave : handleEdit}
-              disabled={saving}
-            >
-              {saving ? (
-                <><Loader2 size={13} strokeWidth={2} className={styles.spin} /> Saving...</>
-              ) : editing ? (
-                <><Save size={13} strokeWidth={2} /> Update</>
-              ) : (
-                <><Pencil size={13} strokeWidth={2} /> Edit</>
-              )}
-            </button>
           </div>
         </div>
 

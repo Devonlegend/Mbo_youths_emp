@@ -12,6 +12,7 @@ from .services.eligibility import EligibilityEngine
 from schemes.models import ScholarshipScheme
 from accounts.permissions import IsAdmin, IsVerifier, IsStudent
 from audit.models import AuditLog
+from notifications.models import Notification
 
 
 class ApplicationViewSet(viewsets.ModelViewSet):
@@ -20,7 +21,6 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        # Students see only their own applications
         if user.role == 'student':
             student_profile = getattr(user, 'student_profile', None)
             if student_profile is None:
@@ -28,27 +28,10 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             return Application.objects.filter(
                 student=student_profile
             ).select_related('scheme', 'student')
-        # Admins see everything
         return Application.objects.all().select_related('scheme', 'student')
 
     @action(detail=False, methods=['post'], url_path='submit')
     def submit(self, request):
-        """
-        POST /applications/submit/
-        Body: {
-            "scheme_id": "uuid",
-            "details":   { ...fields specific to scheme.award_type... }
-        }
-
-        The shape of `details` depends on the scheme's award type:
-          * scholarship -> ScholarshipDetailsSerializer (academic + bank)
-          * empowerment -> EmpowermentDetailsSerializer (trade + bank)
-          * grant       -> GrantDetailsSerializer       (business + bank)
-
-        Details are validated BEFORE the Application is written, so an invalid
-        payload never creates an orphan application row. On success, the
-        Application and its detail row are persisted together in one transaction.
-        """
         scheme_id = request.data.get('scheme_id')
         if not scheme_id:
             return Response({"error": "scheme_id is required"}, status=400)
@@ -119,6 +102,29 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                 reason      = 'Auto-evaluated by EligibilityEngine on submission'
             )
 
+            # Notify student of submission result
+            if initial_status == ApplicationStatus.DOUBLE_DIP_FLAG:
+                Notification.objects.create(
+                    user    = request.user,
+                    type    = 'alert',
+                    title   = 'Application flagged — conflict detected',
+                    message = f'Your {scheme.name} application was flagged due to an existing award conflict. You may submit a waiver to resolve this.',
+                )
+            elif initial_status == ApplicationStatus.REJECTED:
+                Notification.objects.create(
+                    user    = request.user,
+                    type    = 'alert',
+                    title   = 'Application not eligible',
+                    message = f'Your {scheme.name} application did not meet the eligibility requirements for this cycle.',
+                )
+            else:
+                Notification.objects.create(
+                    user    = request.user,
+                    type    = 'application',
+                    title   = 'Application submitted successfully',
+                    message = f'Your {scheme.name} application has been received and is under review.',
+                )
+
         return Response({
             "application_id":   str(application.id),
             "status":           application.status,
@@ -134,27 +140,19 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     @staticmethod
     def _status_message(app_status):
         messages = {
-            ApplicationStatus.SUBMITTED:  "Application submitted successfully. Documents will be reviewed shortly.",
-            ApplicationStatus.REJECTED:  "Your application does not meet the eligibility requirements for this scheme.",
+            ApplicationStatus.SUBMITTED:       "Application submitted successfully. Documents will be reviewed shortly.",
+            ApplicationStatus.REJECTED:        "Your application does not meet the eligibility requirements for this scheme.",
             ApplicationStatus.DOUBLE_DIP_FLAG: "Conflict detected. You have an active award that conflicts with this scheme. You may submit a waiver to resolve this.",
         }
         return messages.get(app_status, "Application processed.")
 
     @action(detail=True, methods=['post'], url_path='waiver')
     def submit_waiver(self, request, pk=None):
-        """
-        POST /applications/{id}/waiver/
-        Student formally waives their conflicting award to clear the flag.
-        """
         application = self.get_object()
 
         if application.status != ApplicationStatus.DOUBLE_DIP_FLAG:
             return Response({"error": "This application does not have an active conflict flag"}, status=400)
 
-        # The waiver does NOT auto-resolve the conflict. We record that the student
-        # submitted it and move the application into admin review with the conflict
-        # data intact (has_conflict / conflict_scheme_ids / active_award untouched),
-        # so an admin decides how to handle the prior award. No silent state changes.
         application.waiver_submitted = True
         application.status           = ApplicationStatus.DOCUMENT_REVIEW
         application.save()
@@ -167,15 +165,17 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             reason      = 'Student submitted waiver — sent to admin for review'
         )
 
+        Notification.objects.create(
+            user    = request.user,
+            type    = 'application',
+            title   = 'Waiver submitted',
+            message = f'Your waiver for {application.scheme.name} has been submitted and is under admin review.',
+        )
+
         return Response({"message": "Waiver submitted. An administrator will review your application."})
 
     @action(detail=True, methods=['post'], url_path='review', permission_classes=[IsAuthenticated, IsAdmin | IsVerifier])
     def review(self, request, pk=None):
-        """
-        POST /applications/{id}/review/
-        Admin reviews the application and approves or rejects it.
-        Body: { "approve": true/false, "notes": "optional notes" }
-        """
         application = self.get_object()
 
         if application.status not in [
@@ -202,8 +202,6 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             application.rejection_reason = notes
         application.save()
 
-        # Approved Applications are the source of truth for "holds an award";
-        # keep the student's active_award label in sync with that.
         if approve:
             student = application.student
             student.active_award = application.scheme.name
@@ -224,6 +222,14 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                           f"— {application.scheme.name}. Note: {notes or 'None'}",
             entity_type = "Application",
             entity_id   = str(application.id),
+        )
+
+        # Notify the student of the decision
+        Notification.objects.create(
+            user    = application.student.user,
+            type    = 'application',
+            title   = f'Application {"approved" if approve else "rejected"}',
+            message = f'Your {application.scheme.name} application has been {"approved. Congratulations!" if approve else f"rejected. Reason: {notes or chr(8212)}"}',
         )
 
         return Response({

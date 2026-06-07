@@ -109,6 +109,18 @@
   scrollbar-width: none;
 }
 
+.navBadge {
+  margin-left: auto;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 6px;
+  min-width: 18px;
+  text-align: center;
+}
+
 .nav::-webkit-scrollbar { display: none; }
 
 .sectionLabel {

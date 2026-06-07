@@ -7,7 +7,9 @@ import {
   HelpCircle, Settings, LogOut, X,
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
+import { useState, useEffect } from "react";
 import { logout } from "@/services";
+import { getNotifications } from "@/services";
 
 const navMain = [
   { label: "Dashboard",       href: "/dashboard",              icon: LayoutDashboard },
@@ -27,7 +29,7 @@ const navInfo = [
   { label: "Settings",       href: "/dashboard/settings",  icon: Settings },
 ];
 
-function NavItem({ item, active, onClick }) {
+function NavItem({ item, active, onClick, badge }) {
   const Icon = item.icon;
   return (
     <Link
@@ -39,21 +41,35 @@ function NavItem({ item, active, onClick }) {
         <Icon size={15} strokeWidth={active ? 2.2 : 1.8} />
       </span>
       <span className={styles.navLabel}>{item.label}</span>
+      {badge > 0 && (
+        <span className={styles.navBadge}>{badge}</span>
+      )}
     </Link>
   );
 }
 
 export default function Sidebar({ isOpen, onClose }) {
   const pathname = usePathname();
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    async function loadUnread() {
+      try {
+        const res = await getNotifications();
+        const notifs = Array.isArray(res.data) ? res.data : [];
+        setUnread(notifs.filter((n) => !n.read).length);
+      } catch {}
+    }
+    loadUnread();
+  }, []);
 
   function isActive(href) {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   }
 
-  async function handleLogout() {
+  async function handleLogout() {    
     try {
-      // Tell backend to blacklist the refresh token + clear httpOnly cookies
       await logout();
     } catch (err) {
       // Even if the call fails, we still clear local state and redirect
@@ -91,8 +107,14 @@ export default function Sidebar({ isOpen, onClose }) {
 
           <div className={styles.sectionLabel}>Account</div>
           {navAccount.map((item) => (
-            <NavItem key={item.href} item={item} active={isActive(item.href)} onClick={onClose} />
-          ))}
+          <NavItem
+            key={item.href}
+            item={item}
+            active={isActive(item.href)}
+            onClick={onClose}
+            badge={item.label === "Notifications" ? unread : 0}
+          />
+        ))}
 
           <div className={styles.divider} />
 

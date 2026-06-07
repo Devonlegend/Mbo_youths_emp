@@ -1,117 +1,117 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  Bell, CheckCircle2, Clock, AlertTriangle, Search,
-  UserCircle, Megaphone, CheckCheck, Trash2,
+  Bell, Search, CheckCheck, Trash2,
   GraduationCap, FileText, ShieldAlert, CalendarClock, Sparkles,
+  UserCircle, Megaphone, AlertCircle, Loader2,
 } from "lucide-react";
 import styles from "./page.module.css";
-
-/* ── MOCK DATA ── */
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 0,
-    type: "welcome",
-    icon: Sparkles,
-    title: "Welcome to RMHCDT Youth Portal!",
-    message: "Your account has been created successfully. Complete your profile and explore available programmes this cycle.",
-    time: "Just now",
-    read: false,
-  },
-  {
-    id: 1,
-    type: "application",
-    icon: GraduationCap,
-    title: "Application status updated",
-    message: "Your 2026/2027 University Scholarship application has been approved.",
-    time: "2 hours ago",
-    read: false,
-  },
-  {
-    id: 2,
-    type: "deadline",
-    icon: CalendarClock,
-    title: "Deadline reminder",
-    message: "Document submission for the SME Business Startup Grant closes in 2 days.",
-    time: "5 hours ago",
-    read: false,
-  },
-  {
-    id: 3,
-    type: "programme",
-    icon: FileText,
-    title: "New programme available",
-    message: "The 2026 Youth Skills Training Programme is now open. Apply before slots run out.",
-    time: "Yesterday",
-    read: false,
-  },
-  {
-    id: 4,
-    type: "profile",
-    icon: UserCircle,
-    title: "Complete your profile",
-    message: "Your profile is missing a passport photo. Upload one to stay eligible this cycle.",
-    time: "2 days ago",
-    read: true,
-  },
-  {
-    id: 5,
-    type: "system",
-    icon: Megaphone,
-    title: "Cycle 2026–2027 is now active",
-    message: "The new programme cycle has officially opened. Log in to review your eligibility.",
-    time: "3 days ago",
-    read: true,
-  },
-  {
-    id: 6,
-    type: "alert",
-    icon: ShieldAlert,
-    title: "Action required on application",
-    message: "Your Empowerment Programme application has been flagged. Please review and resubmit.",
-    time: "4 days ago",
-    read: true,
-  },
-];
+import {
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  dismissNotification,
+  clearAllNotifications,
+} from "@/services";
 
 const TYPE_META = {
-  application: { color: "green",  bg: "#f0fdf4", border: "#bbf7d0", icon: "#15803d" },
-  deadline:    { color: "amber",  bg: "#fffbeb", border: "#fde68a", icon: "#d97706" },
-  programme:   { color: "blue",   bg: "#eff6ff", border: "#bfdbfe", icon: "#2563eb" },
-  profile:     { color: "slate",  bg: "#f8fafc", border: "#e2e8f0", icon: "#64748b" },
-  system:      { color: "green",  bg: "#f0fdf4", border: "#bbf7d0", icon: "#15803d" },
-  alert:       { color: "red",    bg: "#fef2f2", border: "#fecaca", icon: "#dc2626" },
-  welcome:     { color: "amber",  bg: "#fffbeb", border: "#fde68a", icon: "#d97706" },
+  application: { bg: "#f0fdf4", border: "#bbf7d0", icon: "#15803d" },
+  deadline:    { bg: "#fffbeb", border: "#fde68a", icon: "#d97706" },
+  programme:   { bg: "#eff6ff", border: "#bfdbfe", icon: "#2563eb" },
+  profile:     { bg: "#f8fafc", border: "#e2e8f0", icon: "#64748b" },
+  system:      { bg: "#f0fdf4", border: "#bbf7d0", icon: "#15803d" },
+  alert:       { bg: "#fef2f2", border: "#fecaca", icon: "#dc2626" },
+  welcome:     { bg: "#fffbeb", border: "#fde68a", icon: "#d97706" },
+};
+
+const TYPE_ICONS = {
+  application: GraduationCap,
+  deadline:    CalendarClock,
+  programme:   FileText,
+  profile:     UserCircle,
+  system:      Megaphone,
+  alert:       ShieldAlert,
+  welcome:     Sparkles,
 };
 
 const FILTERS = ["All", "Unread"];
 
+function formatTime(isoString) {
+  if (!isoString) return "—";
+  const diff = new Date() - new Date(isoString);
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins < 1)   return "Just now";
+  if (mins < 60)  return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return "Yesterday";
+  if (days < 7)   return `${days}d ago`;
+  return new Date(isoString).toLocaleDateString("en-GB", {
+    day: "numeric", month: "short", year: "numeric",
+  });
+}
+
 export default function NotificationsPage() {
-  const [notifs, setNotifs]       = useState(MOCK_NOTIFICATIONS);
-  const [activeFilter, setFilter] = useState("All");
-  const [search, setSearch] = useState("");
+  const [notifs,       setNotifs]       = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(null);
+  const [activeFilter, setFilter]       = useState("All");
+  const [search,       setSearch]       = useState("");
 
   const unreadCount = notifs.filter((n) => !n.read).length;
 
-  function markAllRead() {
-    setNotifs((n) => n.map((item) => ({ ...item, read: true })));
+  // ── FETCH ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  async function loadNotifications() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getNotifications();
+      setNotifs(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setError("Failed to load notifications.");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function markRead(id) {
+  // ── ACTIONS ────────────────────────────────────────────────────────
+  async function markRead(id) {
     setNotifs((n) => n.map((item) => item.id === id ? { ...item, read: true } : item));
+    try {
+      await markNotificationRead(id);
+    } catch {}
   }
 
-  function dismiss(id) {
+  async function markAllRead() {
+    setNotifs((n) => n.map((item) => ({ ...item, read: true })));
+    try {
+      await markAllNotificationsRead();
+    } catch {}
+  }
+
+  async function dismiss(id) {
     setNotifs((n) => n.filter((item) => item.id !== id));
+    try {
+      await dismissNotification(id);
+    } catch {}
   }
 
-  function clearAll() {
+  async function clearAll() {
     setNotifs([]);
+    try {
+      await clearAllNotifications();
+    } catch {}
   }
 
+  // ── FILTER ─────────────────────────────────────────────────────────
   const filtered = notifs.filter((n) => {
     const matchesFilter =
-      activeFilter === "All" ? true :
+      activeFilter === "All"    ? true :
       activeFilter === "Unread" ? !n.read : true;
     const matchesSearch = search.trim() === "" ? true :
       n.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -122,7 +122,7 @@ export default function NotificationsPage() {
   return (
     <div className={styles.page}>
 
-      {/* ── PAGE HEADER ── */}
+      {/* PAGE HEADER */}
       <div className={styles.pageHead}>
         <div className={styles.pageHeadLeft}>
           <div className={styles.pageHeadIcon}>
@@ -151,7 +151,7 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* ── SEARCH + FILTER ROW ── */}
+      {/* SEARCH + FILTER */}
       <div className={styles.searchRow}>
         <div className={styles.searchWrap}>
           <Search size={13} strokeWidth={2} className={styles.searchIcon} />
@@ -178,9 +178,27 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* ── NOTIFICATION LIST ── */}
+      {/* LIST */}
       <div className={styles.list}>
-        {filtered.length === 0 ? (
+
+        {loading && (
+          <div className={styles.empty}>
+            <Loader2 size={24} className={styles.spin} color="#94a3b8" />
+            <p className={styles.emptySub}>Loading notifications...</p>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className={styles.empty}>
+            <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
+            <p className={styles.emptyTitle} style={{ color: "#ef4444" }}>{error}</p>
+            <button className={styles.btnGhost} onClick={loadNotifications}>
+              Try again
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>
               <Bell size={28} strokeWidth={1.5} />
@@ -188,45 +206,43 @@ export default function NotificationsPage() {
             <p className={styles.emptyTitle}>No notifications here</p>
             <p className={styles.emptySub}>You're all caught up — check back later.</p>
           </div>
-        ) : (
-          filtered.map((notif) => {
-            const meta = TYPE_META[notif.type];
-            const Icon = notif.icon;
-            return (
-              <div
-                key={notif.id}
-                className={`${styles.notifCard} ${!notif.read ? styles.notifUnread : ""}`}
-                onClick={() => markRead(notif.id)}
-              >
-                {/* icon */}
-                <div
-                  className={styles.notifIconWrap}
-                  style={{ background: meta.bg, border: `1px solid ${meta.border}` }}
-                >
-                  <Icon size={15} strokeWidth={2} style={{ color: meta.icon }} />
-                </div>
-
-                {/* content */}
-                <div className={styles.notifBody}>
-                  <div className={styles.notifTop}>
-                    <span className={styles.notifTitle}>{notif.title}</span>
-                    <span className={styles.notifTime}>{notif.time}</span>
-                  </div>
-                  <p className={styles.notifMessage}>{notif.message}</p>
-                </div>
-
-                {/* dismiss */}
-                <button
-                  className={styles.dismissBtn}
-                  onClick={(e) => { e.stopPropagation(); dismiss(notif.id); }}
-                  title="Dismiss"
-                >
-                  <Trash2 size={13} strokeWidth={2} />
-                </button>
-              </div>
-            );
-          })
         )}
+
+        {!loading && !error && filtered.map((notif) => {
+          const meta = TYPE_META[notif.type] || TYPE_META.system;
+          const Icon = TYPE_ICONS[notif.type] || Bell;
+          return (
+            <div
+              key={notif.id}
+              className={`${styles.notifCard} ${!notif.read ? styles.notifUnread : ""}`}
+              onClick={() => markRead(notif.id)}
+            >
+              <div
+                className={styles.notifIconWrap}
+                style={{ background: meta.bg, border: `1px solid ${meta.border}` }}
+              >
+                <Icon size={15} strokeWidth={2} style={{ color: meta.icon }} />
+              </div>
+
+              <div className={styles.notifBody}>
+                <div className={styles.notifTop}>
+                  <span className={styles.notifTitle}>{notif.title}</span>
+                  <span className={styles.notifTime}>{formatTime(notif.time)}</span>
+                </div>
+                <p className={styles.notifMessage}>{notif.message}</p>
+              </div>
+
+              <button
+                className={styles.dismissBtn}
+                onClick={(e) => { e.stopPropagation(); dismiss(notif.id); }}
+                title="Dismiss"
+              >
+                <Trash2 size={13} strokeWidth={2} />
+              </button>
+            </div>
+          );
+        })}
+
       </div>
 
     </div>
