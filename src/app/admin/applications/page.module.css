@@ -24,7 +24,7 @@
   color: #0f172a;
   letter-spacing: -0.03em;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.5;
 }
 
 .sub {
@@ -347,9 +347,14 @@
   cursor: pointer;
   transition: background 0.15s;
   white-space: nowrap;
+  justify-self: end;
 }
 
-.viewBtn:hover { background: #dcfce7; }
+.viewBtn:hover { 
+  background: #15803d; 
+  color: #ffffff;
+  border-color: #15803d;
+}
 
 /* ── TABLE FOOTER ── */
 .tableFooter {

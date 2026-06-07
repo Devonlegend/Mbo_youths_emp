@@ -147,9 +147,14 @@ export default function ProgrammesPage() {
 
       {/* HEADER */}
       <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Programmes</h1>
-          <p className={styles.sub}>Browse and apply for open programmes this cycle.</p>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerIcon}>
+            <LayoutGrid size={20} color="#15803d" strokeWidth={1.8} />
+          </div>
+          <div>
+            <h1 className={styles.title}>Programmes</h1>
+            <p className={styles.sub}>Browse and apply for open programmes this cycle.</p>
+          </div>
         </div>
         <div className={styles.cyclePill}>
           <span className={styles.cycleDot} />

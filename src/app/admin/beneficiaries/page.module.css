@@ -1,0 +1,417 @@
+/* ══════════════════════════════════════════════
+   ADMIN BENEFICIARY REGISTER — RMHCDT Admin Portal
+══════════════════════════════════════════════ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* ── PAGE HEADER ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.headerIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #15803d;
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.sub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: -2px 0 0;
+}
+
+.countPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── INFO BANNER ── */
+.infoBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: #15803d;
+  line-height: 1.5;
+  width: fit-content;
+}
+
+/* ── MAIN CARD ── */
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOOLBAR ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+}
+
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.searchInput {
+  height: 36px;
+  padding: 0 12px 0 34px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+}
+
+.searchInput:focus {
+  border-color: #bbf7d0;
+  background: #ffffff;
+}
+
+.searchInput::placeholder { color: #cbd5e1; }
+
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.filterBtn:hover     { border-color: #bbf7d0; color: #15803d; }
+.filterBtnActive     { border-color: #bbf7d0; color: #15803d; background: #f0fdf4; }
+
+.filterDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  overflow: hidden;
+  z-index: 50;
+  min-width: 160px;
+}
+
+.filterOption {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.filterOption:hover         { background: #f8fafc; }
+.filterOptionActive         { background: #f0fdf4; color: #15803d; font-weight: 600; }
+
+/* ── TABLE ── */
+.tableRow {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1.2fr 1fr 90px;
+  gap: 12px;
+  padding: 0 20px;
+  align-items: center;
+  min-height: 48px;
+}
+
+.tableHeader {
+  border-bottom: 1px solid #f1f5f9;
+  min-height: 40px;
+}
+
+.tableHeader span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tableRowData {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1.2fr 1fr 90px;
+  gap: 12px;
+  padding: 0 20px;
+  align-items: center;
+  min-height: 68px;
+  border-bottom: 1px solid #f8fafc;
+  transition: background 0.12s;
+}
+
+.tableRowData:last-of-type { border-bottom: none; }
+.tableRowData:hover        { background: #fafafa; }
+
+/* ── TABLE CELLS ── */
+.tdStudent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.studentAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: #15803d;
+  flex-shrink: 0;
+}
+
+.studentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.studentName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.studentMeta {
+  font-size: 11.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tdScheme {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.schemeIconWrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.schemeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.schemeName {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.categoryChip {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.tdLocation {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lgaText  { font-size: 12.5px; font-weight: 500; color: #374151; }
+.wardText { font-size: 11.5px; color: #94a3b8; }
+
+.tdDate {
+  font-size: 12.5px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.viewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  justify-self: end;
+}
+
+.viewBtn:hover { background: #dcfce7; }
+
+/* ── TABLE FOOTER ── */
+.tableFooter {
+  padding: 12px 20px;
+  font-size: 12px;
+  color: #94a3b8;
+  border-top: 1px solid #f1f5f9;
+  text-align: right;
+}
+
+/* ── SKELETON ── */
+.skeletonCell {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+/* ── EMPTY STATE ── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 20px;
+  text-align: center;
+}
+
+.emptyTitle { font-size: 14px; font-weight: 700; color: #0f172a; margin: 0; }
+.emptySub   { font-size: 13px; color: #94a3b8; margin: 0; }
+
+/* ── SHIMMER ── */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — 1024px
+══════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .tableRow,
+  .tableRowData {
+    grid-template-columns: 1.8fr 1.8fr 1fr 90px;
+  }
+  .tdLocation { display: none; }
+  .tableHeader span:nth-child(3) { display: none; }
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — 768px
+══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .searchWrap { width: 100%; }
+
+  .tableRow,
+  .tableRowData {
+    grid-template-columns: 1fr 1fr 80px;
+    padding: 0 14px;
+  }
+
+  .tdDate { display: none; }
+  .tableHeader span:nth-child(4) { display: none; }
+
+  .title { font-size: 18px; }
+}

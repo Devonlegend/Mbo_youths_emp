@@ -7,14 +7,16 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import Application, ApplicationStatus, ApplicationStatusHistory
-from .serializers import DETAILS_SERIALIZER_BY_TYPE
+from .serializers import ApplicationSerializer, DETAILS_SERIALIZER_BY_TYPE, normalize_details_payload
 from .services.eligibility import EligibilityEngine
 from schemes.models import ScholarshipScheme
-from accounts.permissions import IsAdmin, IsStudent
+from accounts.permissions import IsAdmin, IsVerifier, IsStudent
+from audit.models import AuditLog
 
 
 class ApplicationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    serializer_class = ApplicationSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -70,7 +72,8 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                 status=400,
             )
 
-        details_payload = request.data.get('details')
+        raw_details_payload = request.data.get('details', request.data)
+        details_payload = normalize_details_payload(scheme.award_type, raw_details_payload)
         if not isinstance(details_payload, dict):
             return Response(
                 {"error": "details object is required for this award type",
@@ -166,7 +169,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
         return Response({"message": "Waiver submitted. An administrator will review your application."})
 
-    @action(detail=True, methods=['post'], url_path='review', permission_classes=[IsAuthenticated, IsAdmin])
+    @action(detail=True, methods=['post'], url_path='review', permission_classes=[IsAuthenticated, IsAdmin | IsVerifier])
     def review(self, request, pk=None):
         """
         POST /applications/{id}/review/
@@ -212,6 +215,15 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             to_status   = new_status,
             changed_by  = request.user,
             reason      = notes or ('Approved by reviewer' if approve else 'Rejected by reviewer'),
+        )
+
+        AuditLog.objects.create(
+            admin       = request.user,
+            action      = f"{'Approved' if approve else 'Rejected'} application for "
+                          f"{application.student.firstname} {application.student.lastname} "
+                          f"— {application.scheme.name}. Note: {notes or 'None'}",
+            entity_type = "Application",
+            entity_id   = str(application.id),
         )
 
         return Response({

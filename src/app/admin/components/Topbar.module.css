@@ -173,7 +173,7 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 230px;
+  width: 260px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
@@ -218,6 +218,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 160px;
 }
 
 .dropRoleBadge {

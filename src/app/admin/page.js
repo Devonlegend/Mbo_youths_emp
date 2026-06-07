@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import styles from "./page.module.css";
 import { getApplications, getSchemes } from "@/services";
+import { getMe } from "@/services/auth";
 
 // ── STAT CARD ─────────────────────────────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, iconBg, iconColor, loading }) {
@@ -79,6 +80,7 @@ export default function AdminOverviewPage() {
   const [chartData,   setChartData]   = useState([]);
   const [activity,    setActivity]    = useState([]);
   const [loading,     setLoading]     = useState(true);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,10 +88,15 @@ export default function AdminOverviewPage() {
     async function load() {
       try {
         // Run both calls in parallel
-        const [appsRes, schemesRes] = await Promise.allSettled([
+        const [appsRes, schemesRes, meRes] = await Promise.allSettled([
           getApplications(),
           getSchemes(),
+          getMe(),
         ]);
+
+        if (meRes.status === "fulfilled") {
+          setUser(meRes.value.data);
+        }
 
         if (cancelled) return;
 
@@ -289,13 +296,13 @@ export default function AdminOverviewPage() {
           </div>
           <div className={styles.quickList}>
             {[
-              { label: "Review pending applications", href: "/admin/applications", icon: ClipboardList, color: "#f59e0b", bg: "#fffbeb" },
-              { label: "View flagged applications",   href: "/admin/applications?tab=flagged", icon: AlertCircle, color: "#ef4444", bg: "#fef2f2" },
-              { label: "Manage students",             href: "/admin/students",     icon: Users,         color: "#3b82f6", bg: "#eff6ff" },
-              { label: "Manage schemes",              href: "/admin/schemes",      icon: BookOpen,      color: "#15803d", bg: "#f0fdf4" },
-              { label: "Beneficiary register",        href: "/admin/beneficiaries", icon: BadgeCheck,  color: "#15803d", bg: "#f0fdf4" },
-              { label: "Disqualification register",   href: "/admin/disqualifications", icon: ShieldAlert, color: "#ef4444", bg: "#fef2f2" },
-            ].map((q) => {
+                { label: "Review pending applications", href: "/admin/applications",           icon: ClipboardList, color: "#f59e0b", bg: "#fffbeb", roles: ["admin", "superadmin", "verifier"] },
+                { label: "View flagged applications",   href: "/admin/applications?tab=flagged", icon: AlertCircle, color: "#ef4444", bg: "#fef2f2", roles: ["admin", "superadmin", "verifier"] },
+                { label: "Manage students",             href: "/admin/students",               icon: Users,         color: "#3b82f6", bg: "#eff6ff", roles: ["admin", "superadmin"] },
+                { label: "Manage schemes",             href: "/admin/schemes",                icon: BookOpen,      color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin", "verifier"] },
+                { label: "Beneficiary register",        href: "/admin/beneficiaries",         icon: BadgeCheck,    color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin", "verifier"] },
+                { label: "Disqualification register",   href: "/admin/disqualifications",     icon: ShieldAlert,   color: "#ef4444", bg: "#fef2f2", roles: ["admin", "superadmin", "verifier"] },
+              ].filter(q => q.roles.includes(user?.role)).map((q) => {
               const Icon = q.icon;
               return (
                 <button

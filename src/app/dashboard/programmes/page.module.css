@@ -20,20 +20,38 @@
   flex-wrap: wrap;
 }
 
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.headerIcon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .title {
   font-family: var(--font-sora), 'Sora', sans-serif;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 600;
   color: #0f172a;
   letter-spacing: -0.03em;
-  margin: 0 0 4px;
+  margin: 0;
 }
 
 .sub {
   font-family: var(--font-dm), 'DM Sans', sans-serif;
   font-size: 13px;
   color: #64748b;
-  margin: 0;
+  margin: -2px 0 0;  
 }
 
 .cyclePill {

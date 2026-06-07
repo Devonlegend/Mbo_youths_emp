@@ -11,3 +11,12 @@ export const publishScheme = (id) =>
 
 export const closeScheme = (id) =>
   api.post(`/schemes/${id}/close/`);
+
+export const getScheme = (id) => 
+  api.get(`/schemes/${id}/`);
+
+export const updateScheme = (id, body) => 
+  api.patch(`/schemes/${id}/`, body);
+
+export const reopenScheme = (id) =>
+  api.post(`/schemes/${id}/reopen/`);

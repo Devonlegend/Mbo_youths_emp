@@ -15,6 +15,11 @@ from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.contrib.auth import get_user_model
 from accounts.models import EmailOTP, PasswordResetOTP, Role
 from students.models import Student
+# added for admin page stats and could be used for other purposes in the future, so imported here instead of in page.js
+from audit.models import AuditLog
+from .serializers import AuditLogSerializer
+from rest_framework.permissions import IsAuthenticated
+from accounts.permissions import IsAdmin, IsSuperAdmin
 
 from .authentication import ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME
 from .services import ApiException, send_otp_email, send_password_reset_email
@@ -65,7 +70,15 @@ def _clear_jwt_cookies(response):
 
 
 # ──────────────────────────── endpoints ────────────────────────────
+# Audit logs and admin users endpoints are added here since they are closely related to accounts and auth, and this avoids creating a new app just for them.
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsSuperAdmin])
+def audit_log_list(request):
+    logs = AuditLog.objects.all()[:100]
+    serializer = AuditLogSerializer(logs, many=True)
+    return Response(serializer.data)
+  
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
@@ -284,7 +297,6 @@ def otp_verify(request):
         return Response({"error": "Too many attempts. Request a new code."},
                         status=status.HTTP_429_TOO_MANY_REQUESTS)
 
-    # Atomic increment so concurrent verify attempts can't race past the cap.
     EmailOTP.objects.filter(pk=otp.pk).update(attempts=F('attempts') + 1)
 
     if not secrets.compare_digest(otp.code, code):
@@ -297,14 +309,16 @@ def otp_verify(request):
         user.email_verified = True
         user.save(update_fields=['email_verified'])
 
+         # Manually update last_login since we bypass Django's auth backend
+    user.last_login = timezone.now()
+    user.save(update_fields=['last_login'])
+
     refresh = RefreshToken.for_user(user)
     response = Response({"message": "Verified"})
     _set_jwt_cookies(response, refresh)
     return response
 
-
 # ──────────────────────────── identity ────────────────────────────
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def me(request):
@@ -312,13 +326,115 @@ def me(request):
     return Response({
         "id":           str(request.user.id),
         "email":        request.user.email,
-        # "passport":     request.user.passport,
         "firstname":    request.user.firstname,
         "lastname":     request.user.lastname,
+        # "passport":     request.user.passport,
         "phone_number": request.user.phone_number,
         "role":         request.user.role,
+         # Added last_login to response so frontend can display last login time
+        "last_login":   request.user.last_login,
     })
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsSuperAdmin])
+def admin_users_list(request):
+    users = User.objects.filter(role__in=['admin', 'verifier', 'superadmin'])
+    data = [
+        {
+            "id":         str(u.id),
+            "firstname":  u.firstname,
+            "lastname":   u.lastname,
+            "email":      u.email,
+            "role":       u.role,
+            "is_active":  u.is_active,
+        }
+        for u in users
+    ]
+    return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsSuperAdmin])
+def admin_user_create(request):
+    firstname    = request.data.get('firstname')
+    lastname     = request.data.get('lastname')
+    email        = request.data.get('email')
+    phone_number = request.data.get('phone_number')
+    nin_hash     = request.data.get('nin_hash')
+    password     = request.data.get('password')
+    role         = request.data.get('role', 'admin')
+
+    if not all([firstname, lastname, email, phone_number, nin_hash, password]):
+        return Response({"error": "All fields are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if role not in ['admin', 'verifier', 'superadmin']:
+        return Response({"error": "Invalid role"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(email=email).exists():
+        return Response({"error": "Email already registered"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects.filter(nin_hash=nin_hash).exists():
+        return Response({"error": "NIN already in use"}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.create_user(
+        email=email,
+        phone_number=phone_number,
+        role=role,
+        password=password,
+        firstname=firstname,
+        lastname=lastname,
+        nin_hash=nin_hash,
+    )
+    return Response({
+        "id":        str(user.id),
+        "firstname": user.firstname,
+        "lastname":  user.lastname,
+        "email":     user.email,
+        "role":      user.role,
+        "is_active": user.is_active,
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def admin_user_update_role(request, id):
+    try:
+        user = User.objects.get(id=id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    role = request.data.get('role')
+    if role not in ['admin', 'verifier', 'superadmin']:
+        return Response({"error": "Invalid role"}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.role = role
+    user.save(update_fields=['role'])
+    return Response({"id": str(user.id), "role": user.role})
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def admin_user_deactivate(request, id):
+    try:
+        user = User.objects.get(id=id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    user.is_active = False
+    user.save(update_fields=['is_active'])
+    return Response({"id": str(user.id), "is_active": False})
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated, IsSuperAdmin])
+def admin_user_reactivate(request, id):
+    try:
+        user = User.objects.get(id=id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    user.is_active = True
+    user.save(update_fields=['is_active'])
+    return Response({"id": str(user.id), "is_active": True})
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

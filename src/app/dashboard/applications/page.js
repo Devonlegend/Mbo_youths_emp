@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import {
   GraduationCap, Briefcase, Wrench, Banknote,
   CheckCircle2, Clock, XCircle, AlertCircle,
-  ArrowRight, Search, Filter, ChevronDown,
+  ArrowRight, Search, Filter, FolderOpen, ChevronDown,
 } from "lucide-react";
 import styles from "./page.module.css";
 import LoadingSpinner from "../components/LoadingSpinner";
@@ -118,15 +118,20 @@ export default function ApplicationsPage() {
     <div className={styles.page}>
 
       {/* HEADER */}
-      <div className={styles.header}>
-        <div>
-          <h1 className={styles.title}>My Applications</h1>
-          <p className={styles.sub}>Track the status of all your submitted applications.</p>
+        <div className={styles.header}>
+          <div className={styles.headerLeft}>
+            <div className={styles.headerIcon}>
+              <FolderOpen size={20} color="#15803d" strokeWidth={1.8} />
+            </div>
+            <div>
+              <h1 className={styles.title}>My Applications</h1>
+              <p className={styles.sub}>Track the status of all your submitted applications.</p>
+            </div>
+          </div>
+          {!loading && !error && (
+            <div className={styles.countPill}>{applications.length} total</div>
+          )}
         </div>
-        {!loading && !error && (
-          <div className={styles.countPill}>{applications.length} total</div>
-        )}
-      </div>
 
       {/* TOOLBAR */}
       <div className={styles.toolbar}>

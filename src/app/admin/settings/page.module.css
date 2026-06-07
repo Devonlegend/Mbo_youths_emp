@@ -1,0 +1,773 @@
+/* ══════════════════════════════════════════════
+   ADMIN SETTINGS PAGE — RMHCDT Admin Portal
+══════════════════════════════════════════════ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+/* ── CENTER STATE ── */
+.centerState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid #e2e8f0;
+  border-top-color: #15803d;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── PAGE HEADER ── */
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.sub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 2px 0 0;
+}
+
+/* ── SECTION ── */
+.section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.sectionHead {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sectionTitle {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.sectionSub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 4px 0 0;
+}
+
+.sectionBody {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── PROFILE CARD ── */
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.profileAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profileName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.profileEmail {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.profileLastLogin {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin: 0;
+}
+/* SYSTEM STATUS */
+.statusStrip {
+  display: flex;
+  gap: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.statusItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 16px 12px;
+  border-right: 1px solid #f1f5f9;
+}
+
+.statusItem:last-child { border-right: none; }
+
+.statusValue {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.statusLabel {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+/* ── ROLE BADGE ── */
+.roleBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+/* ── BANNERS ── */
+.successBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #15803d;
+}
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #dc2626;
+}
+
+/* ── FORM ── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.formLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.formInput {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.formInput:focus {
+  border-color: #bbf7d0;
+  background: #ffffff;
+}
+
+.formInputDisabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.formHint {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.formFoot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+/* ── SAVE BUTTON ── */
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background: #15803d;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.saveBtn:hover:not(:disabled) { background: #166534; }
+.saveBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── EDIT BUTTON ── */
+.editBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.editBtn:hover { background: #f1f5f9; }
+
+.cancelBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cancelBtn:hover { background: #f1f5f9; }
+
+.formFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+/* PASSWORD EMPTY STATE */
+.pwdEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.pwdEmptyIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #15803d;
+  flex-shrink: 0;
+}
+
+.pwdEmptyTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.pwdEmptySub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 2px 0 0;
+}
+
+/* ── PASSWORD FIELD ── */
+.pwdWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pwdWrap .formInput {
+  padding-right: 40px;
+}
+
+.eyeBtn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.eyeBtn:hover { color: #374151; }
+
+.matchHint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #15803d;
+  font-weight: 600;
+}
+
+/* ── PASSWORD STRENGTH ── */
+.strengthWrap {
+  margin-top: 4px;
+}
+
+.strengthBars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.strengthBar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.strengthLabel {
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+/* ── ADMIN USERS SECTION ── */
+.usersHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.usersCount {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.usersActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refreshUsersBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: background 0.15s;
+}
+
+.refreshUsersBtn:hover { background: #f1f5f9; }
+
+.createUserBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background: #15803d;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.createUserBtn:hover { background: #166534; }
+
+/* ── CREATE USER FORM ── */
+.createForm {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.createFormTitle {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* ── USERS TABLE ── */
+.usersLoading {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.usersEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.usersTable {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.usersTableHeader {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.usersTableHeader span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.userRow {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 14px 16px;
+  align-items: center;
+  border-bottom: 1px solid #f8fafc;
+  transition: background 0.12s;
+}
+
+.userRow:last-child { border-bottom: none; }
+.userRow:hover { background: #fafafa; }
+
+.userRowInactive { opacity: 0.6; }
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.userAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: #15803d;
+  flex-shrink: 0;
+}
+
+.userName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.userEmail {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.youBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.userRole {
+  display: flex;
+  align-items: center;
+}
+
+.roleSelect {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  font-size: 12px;
+  color: #374151;
+  background: #f8fafc;
+  outline: none;
+  cursor: pointer;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  transition: border-color 0.15s;
+}
+
+.roleSelect:focus { border-color: #bbf7d0; }
+.roleSelect:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.activeChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.inactiveChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f8fafc;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+}
+
+.userActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.deactivateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.deactivateBtn:hover:not(:disabled) { background: #fee2e2; }
+.deactivateBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.selfNote {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.reactivateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.reactivateBtn:hover:not(:disabled) { background: #dcfce7; }
+.reactivateBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ── SPIN ── */
+.spin { animation: spin 0.7s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — 768px
+══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  .sectionBody { padding: 16px; }
+  .sectionHead { padding: 16px; }
+
+  .formRow { grid-template-columns: 1fr; }
+
+  /* Hide the header entirely on mobile — layout speaks for itself */
+  .usersTableHeader { display: none; }
+
+  /* Each row becomes a single column flex stack */
+  .userRow {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 14px;
+  }
+
+  /* User info takes full width */
+  .userInfo {
+    width: 100%;
+  }
+
+  /* Email can wrap instead of truncating */
+  .userEmail {
+    white-space: normal;
+    word-break: break-all;
+  }
+
+  /* Role + status sit in a small row below */
+  .userRole {
+    width: 100%;
+  }
+
+  /* Show status on mobile again (was hidden) */
+  .userRow > div:nth-child(3) { display: flex; }
+
+  /* Hide actions on mobile to keep it clean */
+  .userRow > div:nth-child(4) { display: none; }
+
+  .title { font-size: 18px; }
+
+  .profileCard { flex-direction: column; align-items: flex-start; }
+}

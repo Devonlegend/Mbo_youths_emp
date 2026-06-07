@@ -19,6 +19,9 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.action in ['list', 'retrieve']:
+            # Authenticated admins see all, public sees only published @ Prince
+            if self.request.user.is_authenticated and hasattr(self.request.user, 'role') and self.request.user.role in ['admin', 'superadmin']:
+                return super().get_queryset()
             return ScholarshipScheme.objects.filter(is_published=True)
         return super().get_queryset()
 
@@ -39,3 +42,12 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
         scheme.is_active = False
         scheme.save()
         return Response({"message": "Scheme closed successfully."})
+    
+    @action(detail=True, methods=['post'], url_path='reopen')
+    def reopen(self, request, pk=None):
+        scheme = self.get_object()
+        if scheme.is_active:
+            return Response({"message": "Scheme is already open."}, status=status.HTTP_200_OK)
+        scheme.is_active = True
+        scheme.save()
+        return Response({"message": "Scheme reopened successfully."})

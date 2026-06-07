@@ -34,3 +34,21 @@ export const forgotPasswordVerifyOtp = (body) =>
 
 export const forgotPasswordReset = (body) =>
   api.post("/auth/password/reset/confirm/", body);
+
+export const getAuditLogs = () =>
+  api.get("/auth/audit-logs/");
+
+export const getAdminUsers = () =>
+  api.get("/auth/admin-users/");
+
+export const createAdminUser = (body) =>
+  api.post("/auth/admin-users/create/", body);
+
+export const updateUserRole = (id, body) =>
+  api.patch(`/auth/admin-users/${id}/role/`, body);
+
+export const deactivateUser = (id) =>
+  api.patch(`/auth/admin-users/${id}/deactivate/`);
+
+export const reactivateUser = (id) =>
+  api.patch(`/auth/admin-users/${id}/reactivate/`);
