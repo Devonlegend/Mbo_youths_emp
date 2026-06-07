@@ -9,7 +9,7 @@ import {
   Briefcase, Wrench, Banknote,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { getStudentById, getApplications } from "@/services";
+import { getStudentById, getApplications, verifyStudent } from "@/services";
 
 // ── STATUS CONFIG ─────────────────────────────────────────────────────────────
 const statusConfig = {
@@ -90,7 +90,7 @@ export default function StudentDetailPage() {
         if (appsRes.status === "fulfilled") {
           const allApps = Array.isArray(appsRes.value.data) ? appsRes.value.data : [];
           const studentApps = allApps.filter((a) =>
-            a.student?.id === params.id
+            String(a.student?.id) === String(params.id)
           );
           setApplications(studentApps);
         }
@@ -105,23 +105,19 @@ export default function StudentDetailPage() {
     return () => { cancelled = true; };
   }, [params.id]);
 
-  // ── TOGGLE VERIFICATION ───────────────────────────────────────────────────
-  // NOTE: Requires PATCH /students/{id}/ with { is_verified: true/false }
-  // Ask backend guy to add PATCH support to StudentViewSet if not available
-  async function handleToggleVerification() {
-    setVerifying(true);
-    setVerifyError("");
-    try {
-      // TODO: Replace with real API call when backend adds PATCH support
-      // await updateStudentById(params.id, { is_verified: !student.is_verified });
-      // For now — optimistic UI update only
-      setStudent((s) => ({ ...s, is_verified: !s.is_verified }));
-    } catch {
-      setVerifyError("Failed to update verification status.");
-    } finally {
-      setVerifying(false);
-    }
+  // ── TOGGLE VERIFICATION 
+async function handleToggleVerification() {
+  setVerifying(true);
+  setVerifyError("");
+  try {
+    const res = await verifyStudent(params.id);
+    setStudent((s) => ({ ...s, is_verified: res.data.is_verified }));
+  } catch {
+    setVerifyError("Failed to update verification status.");
+  } finally {
+    setVerifying(false);
   }
+}
 
   // ── LOADING ───────────────────────────────────────────────────────────────
   if (loading) {

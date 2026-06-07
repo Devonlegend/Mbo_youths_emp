@@ -97,3 +97,10 @@ class StudentViewSet(viewsets.ModelViewSet):
             return Response({"error": "No student profile found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = self.get_serializer(student)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'], url_path='verify')
+    def verify(self, request, pk=None):
+        student = self.get_object()
+        student.is_verified = not student.is_verified
+        student.save(update_fields=['is_verified'])
+        return Response({'is_verified': student.is_verified})

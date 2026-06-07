@@ -593,6 +593,125 @@
   line-height: 1.5;
 }
 
+/* ── CONFIRMATION MODAL ── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.modalIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.modalIconApprove {
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+}
+
+.modalIconReject {
+  background: #fef2f2;
+  border: 1.5px solid #fecaca;
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px;
+}
+
+.modalDesc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+.modalActions {
+  display: flex;
+  gap: 10px;
+}
+
+.modalCancel {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.modalCancel:hover:not(:disabled) { background: #f8fafc; }
+.modalCancel:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.modalConfirmApprove {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #15803d;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.modalConfirmApprove:hover:not(:disabled) { background: #166534; }
+.modalConfirmApprove:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.modalConfirmReject {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #ef4444;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.modalConfirmReject:hover:not(:disabled) { background: #dc2626; }
+.modalConfirmReject:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* ══════════════════════════════════════════════
    RESPONSIVE — 1024px
 ══════════════════════════════════════════════ */

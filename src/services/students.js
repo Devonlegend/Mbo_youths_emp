@@ -26,3 +26,6 @@ export const getBankDetail = () =>
 
 export const addBankDetail = (body) =>
   api.post("/students/bank-detail/", body);
+
+export const verifyStudent = (id) => 
+  api.post(`/students/${id}/verify/`);

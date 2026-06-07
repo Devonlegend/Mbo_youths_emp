@@ -210,8 +210,12 @@ export default function AdminStudentsPage() {
                     {student.firstname} {student.lastname}
                   </span>
                   <span className={styles.studentMeta}>
-                    {student.level ? `${student.level} Level` : "—"}
-                    {student.cgpa  ? ` · CGPA ${student.cgpa}` : ""}
+                    {student.level || student.cgpa ? (
+                      <>
+                        {student.level ? `${student.level} Level` : ""}
+                        {student.cgpa  ? ` · CGPA ${student.cgpa}` : ""}
+                      </>
+                    ) : null}
                   </span>
                 </div>
               </div>

@@ -195,6 +195,7 @@ export default function ApplicationDetailPage() {
   const [submitting,   setSubmitting]   = useState(false);
   const [actionError,  setActionError]  = useState("");
   const [decided,      setDecided]      = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   // ── FETCH APPLICATION ────────────────────────────────────────────────────
   useEffect(() => {
@@ -216,7 +217,6 @@ export default function ApplicationDetailPage() {
 
   // ── DECISION ACTION ──────────────────────────────────────────────────────
   async function handleDecision(approve) {
-    // Validate note — minimum 10 characters
     if (note.trim().length < 10) {
       setNoteError("Decision note must be at least 10 characters.");
       return;
@@ -232,7 +232,6 @@ export default function ApplicationDetailPage() {
         notes: note.trim(),
       });
       setDecided(true);
-      // Refresh the application data to show updated status
       const res = await getApplication(params.id);
       setApp(res.data);
     } catch (err) {
@@ -302,36 +301,36 @@ export default function ApplicationDetailPage() {
         <ArrowLeft size={14} strokeWidth={2} /> Back to Applications
       </button>
 
-
       {/* PAGE HEADER */}
-        <div className={styles.pageHeader}>
-          <div className={styles.headerLeft}>
-            <div
-              className={styles.schemeIcon}
-              style={{ background: category.bg, border: `1.5px solid ${category.color}30` }}
-            >
-              <Icon size={20} color={category.color} strokeWidth={1.8} />
-            </div>
-            <div>
-              <h1 className={styles.title}>{app.scheme_name || "Application"}</h1>
-              <p className={styles.sub}>Submitted {submissionDate}</p>
-            </div>
+      <div className={styles.pageHeader}>
+        <div className={styles.headerLeft}>
+          <div
+            className={styles.schemeIcon}
+            style={{ background: category.bg, border: `1.5px solid ${category.color}30` }}
+          >
+            <Icon size={20} color={category.color} strokeWidth={1.8} />
           </div>
-
-          <span
-            className={`${styles.statusBadge} ${styles.statusBadgeDesktop}`}
-            style={{ color: status.color, background: status.bg }}
-          >
-            {status.label}
-          </span>
-
-          <span
-            className={`${styles.statusBadge} ${styles.statusBadgeMobile}`}
-            style={{ color: status.color, background: status.bg }}
-          >
-            {status.label}
-          </span>
+          <div>
+            <h1 className={styles.title}>{app.scheme_name || "Application"}</h1>
+            <p className={styles.sub}>Submitted {submissionDate}</p>
+          </div>
         </div>
+
+        <span
+          className={`${styles.statusBadge} ${styles.statusBadgeDesktop}`}
+          style={{ color: status.color, background: status.bg }}
+        >
+          {status.label}
+        </span>
+
+        <span
+          className={`${styles.statusBadge} ${styles.statusBadgeMobile}`}
+          style={{ color: status.color, background: status.bg }}
+        >
+          {status.label}
+        </span>
+      </div>
+
       {/* STEPPER */}
       <Stepper step={step} uiStatus={uiStatus} />
 
@@ -538,7 +537,10 @@ export default function ApplicationDetailPage() {
                 <div className={styles.actions}>
                   <button
                     className={styles.approveBtn}
-                    onClick={() => handleDecision(true)}
+                    onClick={() => {
+                      if (note.trim().length < 10) { setNoteError("Decision note must be at least 10 characters."); return; }
+                      setConfirmModal('approve');
+                    }}
                     disabled={submitting}
                   >
                     {submitting
@@ -550,7 +552,10 @@ export default function ApplicationDetailPage() {
 
                   <button
                     className={styles.rejectBtn}
-                    onClick={() => handleDecision(false)}
+                    onClick={() => {
+                      if (note.trim().length < 10) { setNoteError("Decision note must be at least 10 characters."); return; }
+                      setConfirmModal('reject');
+                    }}
                     disabled={submitting}
                   >
                     {submitting
