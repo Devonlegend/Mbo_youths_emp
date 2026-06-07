@@ -45,6 +45,12 @@ class ApplicationViewSet(viewsets.ModelViewSet):
         except Exception:
             return Response({"error": "No student profile found. Complete your profile first."}, status=400)
 
+        if not student.is_verified:
+            return Response(
+                {"error": "Your account must be verified by an admin before you can apply for any scheme."},
+                status=403
+            )
+
         if Application.objects.filter(student=student, scheme=scheme).exists():
             return Response({"error": "You have already applied for this scheme"}, status=400)
 
@@ -102,7 +108,6 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                 reason      = 'Auto-evaluated by EligibilityEngine on submission'
             )
 
-            # Notify student of submission result
             if initial_status == ApplicationStatus.DOUBLE_DIP_FLAG:
                 Notification.objects.create(
                     user    = request.user,
@@ -224,7 +229,6 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             entity_id   = str(application.id),
         )
 
-        # Notify the student of the decision
         Notification.objects.create(
             user    = application.student.user,
             type    = 'application',

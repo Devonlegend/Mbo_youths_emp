@@ -4,13 +4,12 @@ import { useState, useEffect } from "react";
 import {
   GraduationCap, Briefcase, Wrench, Banknote,
   Clock, CheckCircle2, ArrowRight, Search, Filter,
-  AlertCircle, LayoutGrid,
+  AlertCircle, LayoutGrid, ShieldAlert,
 } from "lucide-react";
 import styles from "./page.module.css";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { getSchemes } from "@/services";
+import { getSchemes, getStudentProfile } from "@/services";
 
-// ── CATEGORY MAPPING ────────────────────────────────────────────────────────
 const categoryConfig = {
   scholarship: {
     label:    "Scholarship",
@@ -47,10 +46,8 @@ const colorMap = {
 
 const categories = ["All", "Scholarship", "Empowerment", "Training", "Grant"];
 
-// ── MAP BACKEND SCHEME → UI PROGRAMME SHAPE ─────────────────────────────────
 function mapScheme(scheme) {
   const config = categoryConfig[scheme.award_type] || categoryConfig.scholarship;
-
   const closeDate = new Date(scheme.application_close_date);
   const today     = new Date();
   const daysLeft  = Math.ceil((closeDate - today) / (1000 * 60 * 60 * 24));
@@ -79,7 +76,6 @@ function mapScheme(scheme) {
   };
 }
 
-// ── STATUS BADGE ─────────────────────────────────────────────────────────────
 function StatusBadge({ status, daysLeft }) {
   if (status === "awarded") return (
     <span className={`${styles.badge} ${styles.badgeAwarded}`}>
@@ -104,30 +100,35 @@ function StatusBadge({ status, daysLeft }) {
   );
 }
 
-// ── PAGE ─────────────────────────────────────────────────────────────────────
 export default function ProgrammesPage() {
   const router = useRouter();
 
-  const [programmes,    setProgrammes]   = useState([]);
-  const [loading,       setLoading]      = useState(true);
-  const [error,         setError]        = useState(null);
-  const [activeFilter,  setActiveFilter] = useState("All");
-  const [filterOpen,    setFilterOpen]   = useState(false);
-  const [search,        setSearch]       = useState("");
+  const [programmes,   setProgrammes]  = useState([]);
+  const [loading,      setLoading]     = useState(true);
+  const [error,        setError]       = useState(null);
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [filterOpen,   setFilterOpen]  = useState(false);
+  const [search,       setSearch]      = useState("");
+  const [isVerified,   setIsVerified]  = useState(null); // null = loading
 
+  // ── SINGLE useEffect — fetches both schemes and profile together
   useEffect(() => {
-    async function loadSchemes() {
+    async function load() {
       try {
-        const res = await getSchemes();
-        const mapped = (res.data || []).map(mapScheme);
+        const [schemesRes, profileRes] = await Promise.all([
+          getSchemes(),
+          getStudentProfile(),
+        ]);
+        const mapped = (schemesRes.data || []).map(mapScheme);
         setProgrammes(mapped);
-      } catch (err) {
+        setIsVerified(profileRes.data.is_verified);
+      } catch {
         setError("Failed to load programmes. Please try again.");
       } finally {
         setLoading(false);
       }
     }
-    loadSchemes();
+    load();
   }, []);
 
   const filtered = programmes.filter((p) => {
@@ -173,7 +174,6 @@ export default function ProgrammesPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-
         <div style={{ position: "relative" }}>
           <button
             className={`${styles.filterBtn} ${activeFilter !== "All" ? styles.filterActive : ""}`}
@@ -182,7 +182,6 @@ export default function ProgrammesPage() {
             <Filter size={14} strokeWidth={2} />
             {activeFilter === "All" ? "Filter" : activeFilter}
           </button>
-
           {filterOpen && (
             <div className={styles.filterDropdown}>
               {categories.map((cat) => (
@@ -219,88 +218,106 @@ export default function ProgrammesPage() {
         </div>
       )}
 
-      {/* EMPTY — no schemes from backend */}
-      {!loading && !error && programmes.length === 0 && (
+      {/* UNVERIFIED EMPTY STATE */}
+      {!loading && !error && isVerified === false && (
         <div className={styles.empty}>
-          <p style={{ color: "#94a3b8", fontWeight: 600 }}>No programmes available</p>
-          <p style={{ color: "#cbd5e1", fontSize: 13 }}>
-            Check back when the next cycle opens.
+          <div style={{
+            width: 56, height: 56, borderRadius: "50%",
+            background: "#fef9c3", display: "flex",
+            alignItems: "center", justifyContent: "center", marginBottom: 12,
+          }}>
+            <ShieldAlert size={28} color="#ca8a04" strokeWidth={1.5} />
+          </div>
+          <p style={{ color: "#92400e", fontWeight: 600, fontSize: 15 }}>
+            Account pending verification
+          </p>
+          <p style={{ color: "#a16207", fontSize: 13, textAlign: "center", maxWidth: 320 }}>
+            An admin needs to verify your account before you can apply for any programme.
+            Please check back soon.
           </p>
         </div>
       )}
 
-      {/* EMPTY — search/filter returned nothing */}
-      {!loading && !error && programmes.length > 0 && filtered.length === 0 && (
-        <div className={styles.empty}>
-          <p>No programmes match your search.</p>
-        </div>
-      )}
+      {/* Only show the rest if verified */}
+      {!loading && !error && isVerified === true && (
+        <>
+          {/* EMPTY — no schemes from backend */}
+          {programmes.length === 0 && (
+            <div className={styles.empty}>
+              <p style={{ color: "#94a3b8", fontWeight: 600 }}>No programmes available</p>
+              <p style={{ color: "#cbd5e1", fontSize: 13 }}>
+                Check back when the next cycle opens.
+              </p>
+            </div>
+          )}
 
-      {/* PROGRAMME CARDS */}
-      {!loading && !error && filtered.length > 0 && (
-        <div className={styles.grid}>
-          {filtered.map((prog) => {
-            const Icon     = prog.icon;
-            const c        = colorMap[prog.color];
-            const disabled = prog.status === "awarded" ||
-                             prog.status === "applied" ||
-                             prog.status === "closed";
+          {/* EMPTY — search/filter returned nothing */}
+          {programmes.length > 0 && filtered.length === 0 && (
+            <div className={styles.empty}>
+              <p>No programmes match your search.</p>
+            </div>
+          )}
 
-            return (
-              <div
-                key={prog.id}
-                className={styles.card}
-                style={{ borderColor: c.border }}
-              >
-                {/* CARD TOP */}
-                <div className={styles.cardTop} style={{ background: c.bg }}>
-                  <div className={styles.cardIconWrap} style={{ background: c.text }}>
-                    <Icon size={20} color="#fff" strokeWidth={2} />
-                  </div>
-                  <StatusBadge status={prog.status} daysLeft={prog.daysLeft} />
-                </div>
+          {/* PROGRAMME CARDS */}
+          {filtered.length > 0 && (
+            <div className={styles.grid}>
+              {filtered.map((prog) => {
+                const Icon     = prog.icon;
+                const c        = colorMap[prog.color];
+                const disabled = prog.status === "awarded" ||
+                                 prog.status === "applied" ||
+                                 prog.status === "closed";
 
-                {/* CARD BODY */}
-                <div className={styles.cardBody}>
+                return (
                   <div
-                    className={styles.catTag}
-                    style={{ background: c.bg, color: c.text, borderColor: c.border }}
+                    key={prog.id}
+                    className={styles.card}
+                    style={{ borderColor: c.border }}
                   >
-                    {prog.category}
+                    <div className={styles.cardTop} style={{ background: c.bg }}>
+                      <div className={styles.cardIconWrap} style={{ background: c.text }}>
+                        <Icon size={20} color="#fff" strokeWidth={2} />
+                      </div>
+                      <StatusBadge status={prog.status} daysLeft={prog.daysLeft} />
+                    </div>
+                    <div className={styles.cardBody}>
+                      <div
+                        className={styles.catTag}
+                        style={{ background: c.bg, color: c.text, borderColor: c.border }}
+                      >
+                        {prog.category}
+                      </div>
+                      <h2 className={styles.cardTitle}>{prog.title}</h2>
+                      <p className={styles.cardDesc}>{prog.desc}</p>
+                      <div className={styles.cardMeta}>
+                        <span className={styles.metaItem}>
+                          <Clock size={12} strokeWidth={2} />
+                          Closes {prog.deadline}
+                        </span>
+                        <span className={styles.metaItem}>
+                          {prog.slots} slots available
+                        </span>
+                      </div>
+                      <button
+                        className={`${styles.applyBtn} ${disabled ? styles.applyBtnDisabled : ""}`}
+                        style={!disabled ? { color: c.text, borderColor: c.border, background: c.bg } : {}}
+                        onClick={() => handleApply(prog)}
+                        disabled={disabled}
+                      >
+                        {prog.status === "awarded" && "Already Awarded"}
+                        {prog.status === "applied" && "Application Pending"}
+                        {prog.status === "closed"  && "Closed"}
+                        {prog.status === "open"    && (
+                          <>{`Apply for ${prog.category}`} <ArrowRight size={14} strokeWidth={2} /></>
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <h2 className={styles.cardTitle}>{prog.title}</h2>
-                  <p className={styles.cardDesc}>{prog.desc}</p>
-
-                  {/* META */}
-                  <div className={styles.cardMeta}>
-                    <span className={styles.metaItem}>
-                      <Clock size={12} strokeWidth={2} />
-                      Closes {prog.deadline}
-                    </span>
-                    <span className={styles.metaItem}>
-                      {prog.slots} slots available
-                    </span>
-                  </div>
-
-                  {/* APPLY BUTTON */}
-                  <button
-                    className={`${styles.applyBtn} ${disabled ? styles.applyBtnDisabled : ""}`}
-                    style={!disabled ? { color: c.text, borderColor: c.border, background: c.bg } : {}}
-                    onClick={() => handleApply(prog)}
-                    disabled={disabled}
-                  >
-                    {prog.status === "awarded" && "Already Awarded"}
-                    {prog.status === "applied" && "Application Pending"}
-                    {prog.status === "closed"  && "Closed"}
-                    {prog.status === "open"    && (
-                      <>{`Apply for ${prog.category}`} <ArrowRight size={14} strokeWidth={2} /></>
-                    )}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
     </div>

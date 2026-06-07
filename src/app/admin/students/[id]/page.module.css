@@ -147,7 +147,7 @@
 /* ── BODY ── */
 .body {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 1fr 480px;
   gap: 16px;
   align-items: start;
 }

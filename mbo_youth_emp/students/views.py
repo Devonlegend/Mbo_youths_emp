@@ -45,6 +45,8 @@ class StudentViewSet(viewsets.ModelViewSet):
             "account_number": student.account_number,
             "account_name":   student.account_name,
         })
+    
+    
 
     @action(detail=True, methods=['get'], url_path='eligibility-check')
     def eligibility_check(self, request, pk=None):
@@ -98,9 +100,19 @@ class StudentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(student)
         return Response(serializer.data)
     
-    @action(detail=True, methods=['post'], url_path='verify')
-    def verify(self, request, pk=None):
-        student = self.get_object()
-        student.is_verified = not student.is_verified
-        student.save(update_fields=['is_verified'])
-        return Response({'is_verified': student.is_verified})
+@action(detail=True, methods=['post'], url_path='verify')
+def verify(self, request, pk=None):
+    student = self.get_object()
+    student.is_verified = not student.is_verified
+    student.save(update_fields=['is_verified'])
+
+    from notifications.models import Notification
+    if student.is_verified:
+        Notification.objects.create(
+            user    = student.user,
+            type    = 'alert',
+            title   = 'Account verified',
+            message = 'Your account has been verified by an admin. You can now apply for available schemes.',
+        )
+
+    return Response({'is_verified': student.is_verified})

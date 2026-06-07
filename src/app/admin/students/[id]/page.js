@@ -90,7 +90,7 @@ export default function StudentDetailPage() {
         if (appsRes.status === "fulfilled") {
           const allApps = Array.isArray(appsRes.value.data) ? appsRes.value.data : [];
           const studentApps = allApps.filter((a) =>
-            String(a.student?.id) === String(params.id)
+          String(a.student?.user_id) === String(params.id)
           );
           setApplications(studentApps);
         }
@@ -211,18 +211,12 @@ async function handleToggleVerification() {
             </div>
           </div>
 
-          {/* Academic Info Card */}
+          {/* Status Card */}
           <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Academic Information</h2>
+            <h2 className={styles.cardTitle}>Account Status</h2>
             <div className={styles.infoGrid}>
-              <InfoRow icon={GraduationCap} label="Current Level" value={
-                student.level ? `${student.level} Level` : "—"
-              } />
-              <InfoRow icon={GraduationCap} label="CGPA" value={
-                student.cgpa ? String(student.cgpa) : "—"
-              } />
               <InfoRow icon={Shield} label="Active Award" value={
-                student.has_active_award ? "Yes" : "None"
+                student.has_active_award ? student.active_award : "None"
               } />
               <InfoRow icon={ShieldCheck} label="Verification Status" value={
                 student.is_verified ? "Verified" : "Not Verified"
