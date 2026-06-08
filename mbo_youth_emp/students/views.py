@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-
+from accounts.services import send_account_verified_email
 from .models import Student, AcademicRecord
 from .serializers import StudentSerializer, StudentCreateSerializer, AcademicRecordSerializer
 from accounts.permissions import IsAdmin, IsStudent, IsVerifier
@@ -108,11 +108,21 @@ def verify(self, request, pk=None):
 
     from notifications.models import Notification
     if student.is_verified:
+        # Send in-app notification
         Notification.objects.create(
             user    = student.user,
             type    = 'alert',
             title   = 'Account verified',
             message = 'Your account has been verified by an admin. You can now apply for available schemes.',
         )
+
+        # Send verification email via Brevo
+        try:
+            send_account_verified_email(student.user.email, student.firstname)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "Failed to send account verified email to %s", student.user.email
+            )
 
     return Response({'is_verified': student.is_verified})

@@ -385,12 +385,11 @@
 .rightCol { 
   position: sticky; 
   top: 76px; 
-  height: 100%;
+  height: fit-content;
 }
 
 .decisionCard { 
   gap: 14px;
-  height: 100%; 
 }
 
 /* Already decided */

@@ -22,7 +22,8 @@ from rest_framework.permissions import IsAuthenticated
 from accounts.permissions import IsAdmin, IsSuperAdmin
 
 from .authentication import ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME
-from .services import ApiException, send_otp_email, send_password_reset_email
+from .services import ApiException, send_otp_email, send_password_reset_email, send_welcome_email, send_email_verified_email
+from notifications.models import Notification
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -146,6 +147,21 @@ def register(request):
 
     # No JWT cookies here — the client must complete the OTP flow
     # (/auth/otp/send/ → /auth/otp/verify/) before being logged in.
+
+    # Send welcome in-app notification
+    Notification.objects.create(
+        user    = user,
+        type    = 'alert',
+        title   = 'Welcome to RMHCDT Youth Portal',
+        message = 'Your account has been created successfully. Please verify your email to continue.',
+    )
+
+    # Send welcome email via Brevo
+    try:
+        send_welcome_email(user.email, user.firstname)
+    except Exception:
+        logger.exception("Failed to send welcome email to %s", user.email)
+
     return Response(
         {"message": "Account created. Please verify your email.", "email": user.email},
         status=status.HTTP_201_CREATED,
@@ -309,10 +325,23 @@ def otp_verify(request):
         user.email_verified = True
         user.save(update_fields=['email_verified'])
 
-         # Manually update last_login since we bypass Django's auth backend
+        # Notify student that email is verified and account is pending admin verification
+        Notification.objects.create(
+            user    = user,
+            type    = 'alert',
+            title   = 'Email verified successfully',
+            message = 'Your email has been verified. Your account is now pending verification by an admin before you can apply for any scheme.',
+        )
+
+        # Send email verified notification via Brevo
+        try:
+            send_email_verified_email(user.email, user.firstname)
+        except Exception:
+            logger.exception("Failed to send email verified email to %s", user.email)
+
+    # Manually update last_login since we bypass Django's auth backend
     user.last_login = timezone.now()
     user.save(update_fields=['last_login'])
-
     refresh = RefreshToken.for_user(user)
     response = Response({"message": "Verified"})
     _set_jwt_cookies(response, refresh)

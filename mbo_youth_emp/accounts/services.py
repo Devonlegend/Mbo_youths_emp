@@ -63,6 +63,93 @@ def send_password_reset_email(to_email: str, code: str) -> None:
             f"If you didn't request a password reset, you can ignore this email."
         ),
     ))
+def send_welcome_email(to_email: str, firstname: str) -> None:
+    """Send a welcome email after successful account registration."""
+    cfg = sib_api_v3_sdk.Configuration()
+    cfg.api_key['api-key'] = settings.BREVO_API_KEY
+    api = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(cfg))
+
+    api.send_transac_email(sib_api_v3_sdk.SendSmtpEmail(
+        sender={"email": settings.BREVO_SENDER_EMAIL, "name": settings.BREVO_SENDER_NAME},
+        to=[{"email": to_email}],
+        subject="Welcome to RMHCDT Youth Portal",
+        html_content=(
+            f"<p>Dear {firstname},</p>"
+            f"<p>Welcome to the RMHCDT Youth Empowerment Portal. Your account has been created successfully.</p>"
+            f"<p>Please verify your email address to activate your account. "
+            f"Once verified, your account will be reviewed by an admin before you can apply for any scheme.</p>"
+            f"<p>Thank you for registering.</p>"
+            f"<p><strong>RMHCDT Team</strong></p>"
+        ),
+        text_content=(
+            f"Dear {firstname},\n\n"
+            f"Welcome to the RMHCDT Youth Empowerment Portal. Your account has been created successfully.\n\n"
+            f"Please verify your email address to activate your account. "
+            f"Once verified, your account will be reviewed by an admin before you can apply for any scheme.\n\n"
+            f"Thank you for registering.\n\n"
+            f"RMHCDT Team"
+        ),
+    ))
 
 
-__all__ = ['send_otp_email', 'send_password_reset_email', 'ApiException']
+def send_email_verified_email(to_email: str, firstname: str) -> None:
+    """Send an email after the user successfully verifies their email address."""
+    cfg = sib_api_v3_sdk.Configuration()
+    cfg.api_key['api-key'] = settings.BREVO_API_KEY
+    api = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(cfg))
+
+    api.send_transac_email(sib_api_v3_sdk.SendSmtpEmail(
+        sender={"email": settings.BREVO_SENDER_EMAIL, "name": settings.BREVO_SENDER_NAME},
+        to=[{"email": to_email}],
+        subject="Email verified — account pending admin approval",
+        html_content=(
+            f"<p>Dear {firstname},</p>"
+            f"<p>Your email address has been verified successfully.</p>"
+            f"<p>Your account is now <strong>pending verification by an admin</strong>. "
+            f"You will be notified once your account is approved and you can start applying for available schemes.</p>"
+            f"<p>Thank you for your patience.</p>"
+            f"<p><strong>RMHCDT Team</strong></p>"
+        ),
+        text_content=(
+            f"Dear {firstname},\n\n"
+            f"Your email address has been verified successfully.\n\n"
+            f"Your account is now pending verification by an admin. "
+            f"You will be notified once your account is approved and you can start applying for available schemes.\n\n"
+            f"Thank you for your patience.\n\n"
+            f"RMHCDT Team"
+        ),
+    ))
+def send_account_verified_email(to_email: str, firstname: str) -> None:
+    """Send an email when admin verifies a student's account."""
+    cfg = sib_api_v3_sdk.Configuration()
+    cfg.api_key['api-key'] = settings.BREVO_API_KEY
+    api = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(cfg))
+
+    api.send_transac_email(sib_api_v3_sdk.SendSmtpEmail(
+        sender={"email": settings.BREVO_SENDER_EMAIL, "name": settings.BREVO_SENDER_NAME},
+        to=[{"email": to_email}],
+        subject="Your account has been verified — you can now apply",
+        html_content=(
+            f"<p>Dear {firstname},</p>"
+            f"<p>Great news! Your account has been <strong>verified</strong> by an RMHCDT admin.</p>"
+            f"<p>You can now log in and apply for available schemes and programmes.</p>"
+            f"<p>Visit the portal to get started.</p>"
+            f"<p><strong>RMHCDT Team</strong></p>"
+        ),
+        text_content=(
+            f"Dear {firstname},\n\n"
+            f"Great news! Your account has been verified by an RMHCDT admin.\n\n"
+            f"You can now log in and apply for available schemes and programmes.\n\n"
+            f"Visit the portal to get started.\n\n"
+            f"RMHCDT Team"
+        ),
+    ))
+
+__all__ = [
+    'send_otp_email',
+    'send_password_reset_email',
+    'send_welcome_email',
+    'send_email_verified_email',
+    'send_account_verified_email',
+    'ApiException',
+]
