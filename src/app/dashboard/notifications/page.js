@@ -4,7 +4,7 @@ import {
   Bell, Search, CheckCheck, Trash2,
   CheckCircle2, XCircle, ShieldCheck,
   FileText, ShieldAlert, CalendarClock, Sparkles,
-  UserCircle, Megaphone, AlertCircle, Loader2,
+  UserCircle, Megaphone, AlertCircle, Loader2, GraduationCap,
 } from "lucide-react";
 import styles from "./page.module.css";
 import {

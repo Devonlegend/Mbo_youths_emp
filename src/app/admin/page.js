@@ -298,8 +298,8 @@ export default function AdminOverviewPage() {
             {[
                 { label: "Review pending applications", href: "/admin/applications",           icon: ClipboardList, color: "#f59e0b", bg: "#fffbeb", roles: ["admin", "superadmin", "verifier"] },
                 { label: "View flagged applications",   href: "/admin/applications?tab=flagged", icon: AlertCircle, color: "#ef4444", bg: "#fef2f2", roles: ["admin", "superadmin", "verifier"] },
-                { label: "Manage students",             href: "/admin/students",               icon: Users,         color: "#3b82f6", bg: "#eff6ff", roles: ["admin", "superadmin"] },
-                { label: "Manage schemes",             href: "/admin/schemes",                icon: BookOpen,      color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin", "verifier"] },
+                { label: "Manage students", href: "/admin/students", icon: Users,    color: "#3b82f6", bg: "#eff6ff", roles: ["admin", "superadmin", "verifier"] },
+                { label: "Manage schemes",  href: "/admin/schemes",  icon: BookOpen, color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin"] },
                 { label: "Beneficiary register",        href: "/admin/beneficiaries",         icon: BadgeCheck,    color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin", "verifier"] },
                 { label: "Disqualification register",   href: "/admin/disqualifications",     icon: ShieldAlert,   color: "#ef4444", bg: "#fef2f2", roles: ["admin", "superadmin", "verifier"] },
               ].filter(q => q.roles.includes(user?.role)).map((q) => {

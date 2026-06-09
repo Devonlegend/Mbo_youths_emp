@@ -10,12 +10,11 @@ import styles from "./Sidebar.module.css";
 import { logout } from "@/services";
 
 // ── NAV STRUCTURE ─────────────────────────────────────────────────────────────
-// ── NAV STRUCTURE ─────────────────────────────────────────────────────────────
 const navMain = [
   { label: "Overview",      href: "/admin",              icon: LayoutDashboard, roles: ["admin", "superadmin", "verifier"] },
   { label: "Applications",  href: "/admin/applications", icon: ClipboardList,   roles: ["admin", "superadmin", "verifier"] },
-  { label: "Students",      href: "/admin/students",     icon: Users,           roles: ["admin", "superadmin"] },
-  { label: "Schemes",       href: "/admin/schemes",      icon: BookOpen,        roles: ["admin", "superadmin", "verifier"] },
+  { label: "Students",      href: "/admin/students",     icon: Users,           roles: ["admin", "superadmin", "verifier"] },
+  { label: "Schemes",       href: "/admin/schemes",      icon: BookOpen,        roles: ["admin", "superadmin"] },
 ];
 
 const navRecords = [

@@ -19,8 +19,10 @@ class StudentViewSet(viewsets.ModelViewSet):
         return StudentSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'destroy']:
+        if self.action == 'destroy':
             return [IsAdmin()]
+        if self.action == 'list':
+            return [IsAuthenticated()]
         return [IsAuthenticated()]
     
     def get_serializer_context(self):

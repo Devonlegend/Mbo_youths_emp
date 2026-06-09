@@ -39,6 +39,7 @@ function SkeletonCard() {
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function AdminSchemesPage() {
   const router = useRouter();
+  const [user, setUser] = useState(null);
 
   const [schemes,  setSchemes]  = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -58,7 +59,23 @@ export default function AdminSchemesPage() {
     }
   }
 
-  useEffect(() => { loadSchemes(); }, []);
+  useEffect(() => {
+  async function checkRole() {
+    try {
+      const { getMe } = await import("@/services/auth");
+      const res = await getMe();
+      if (res.data.role === "verifier") {
+        router.replace("/admin");
+      } else {
+        setUser(res.data);
+      }
+    } catch {
+      router.replace("/login");
+    }
+  }
+  checkRole();
+  loadSchemes();
+}, []);
 
   // ── FILTER ────────────────────────────────────────────────────────────────
   const filtered = schemes.filter((s) =>

@@ -18,10 +18,13 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'form_fields']:
-            return [AllowAny()]
+            return [IsAuthenticated()]
         return [IsAuthenticated(), IsAdmin()]
 
     def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated and hasattr(user, 'role') and user.role == 'verifier':
+            return ScholarshipScheme.objects.none()
         if self.action in ['list', 'retrieve']:
             if self.request.user.is_authenticated and hasattr(self.request.user, 'role') and self.request.user.role in ['admin', 'superadmin']:
                 return super().get_queryset()

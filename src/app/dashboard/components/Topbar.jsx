@@ -12,6 +12,16 @@ import {
   markNotificationRead,
 } from "@/services";
 
+const TYPE_META = {
+  application: { bg: "#f0fdf4", border: "#bbf7d0", icon: "#15803d" },
+  deadline:    { bg: "#fffbeb", border: "#fde68a", icon: "#d97706" },
+  programme:   { bg: "#eff6ff", border: "#bfdbfe", icon: "#2563eb" },
+  profile:     { bg: "#f8fafc", border: "#e2e8f0", icon: "#64748b" },
+  system:      { bg: "#f0fdf4", border: "#bbf7d0", icon: "#15803d" },
+  alert:       { bg: "#fef2f2", border: "#fecaca", icon: "#dc2626" },
+  welcome:     { bg: "#fffbeb", border: "#fde68a", icon: "#d97706" },
+};
+
 const TYPE_ICONS = {
   application: GraduationCap,
   deadline:    CalendarClock,
@@ -20,16 +30,6 @@ const TYPE_ICONS = {
   system:      Megaphone,
   alert:       ShieldAlert,
   welcome:     Sparkles,
-};
-
-const TYPE_COLORS = {
-  application: { bg: "#f0fdf4", border: "#bbf7d0", icon: "#15803d" },
-  deadline:    { bg: "#fffbeb", border: "#fde68a", icon: "#d97706" },
-  programme:   { bg: "#eff6ff", border: "#bfdbfe", icon: "#2563eb" },
-  profile:     { bg: "#f8fafc", border: "#e2e8f0", icon: "#64748b" },
-  system:      { bg: "#f0fdf4", border: "#bbf7d0", icon: "#15803d" },
-  alert:       { bg: "#fef2f2", border: "#fecaca", icon: "#dc2626" },
-  welcome:     { bg: "#fffbeb", border: "#fde68a", icon: "#d97706" },
 };
 
 function formatTime(isoString) {
@@ -170,8 +170,8 @@ export default function Topbar({ user, onMenuOpen }) {
                   </div>
                 )}
                 {!loading && preview.map((n) => {
-                  const Icon   = TYPE_ICONS[n.type]  || Bell;
-                  const colors = TYPE_COLORS[n.type] || TYPE_COLORS.system;
+                  const Icon   = TYPE_ICONS[n.type] || Bell;
+                  const colors = TYPE_META[n.type] || TYPE_META.system;
                   return (
                     <div
                       key={n.id}
@@ -188,7 +188,7 @@ export default function Topbar({ user, onMenuOpen }) {
                       <div className={styles.bellItemBody}>
                         <span className={styles.bellItemTitle}>{n.title}</span>
                         <span className={styles.bellItemMsg}>{n.message}</span>
-                        <span className={styles.bellItemTime}>{formatTime(n.time)}</span>
+                        <span className={styles.bellItemTime}>{formatTime(n.created_at)}</span>
                       </div>
                     </div>
                   );
