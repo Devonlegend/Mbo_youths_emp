@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
-  GraduationCap, Briefcase, Wrench, Banknote,
+  GraduationCap, Briefcase, Banknote,
   Clock, CheckCircle2, ArrowRight, Search, Filter,
   AlertCircle, LayoutGrid, ShieldAlert,
 } from "lucide-react";
@@ -15,36 +15,29 @@ const categoryConfig = {
     label:    "Scholarship",
     color:    "green",
     icon:     GraduationCap,
-    applyPath: "/dashboard/programmes/apply/scholarship",
-  },
-  vocational: {
-    label:    "Training",
-    color:    "blue",
-    icon:     Wrench,
-    applyPath: "/dashboard/programmes/apply/training",
+    applyPath: "/dashboard/programmes/apply",
   },
   empowerment: {
     label:    "Empowerment",
     color:    "amber",
     icon:     Briefcase,
-    applyPath: "/dashboard/programmes/apply/empowerment",
+    applyPath: "/dashboard/programmes/apply",
   },
   grant: {
     label:    "Grant",
     color:    "purple",
     icon:     Banknote,
-    applyPath: "/dashboard/programmes/apply/grant",
+    applyPath: "/dashboard/programmes/apply",
   },
 };
 
 const colorMap = {
   green:  { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
   amber:  { bg: "#fffbeb", border: "#fde68a", text: "#b45309" },
-  blue:   { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8" },
   purple: { bg: "#faf5ff", border: "#e9d5ff", text: "#7e22ce" },
 };
 
-const categories = ["All", "Scholarship", "Empowerment", "Training", "Grant"];
+const categories = ["All", "Scholarship", "Empowerment", "Grant"];
 
 function mapScheme(scheme) {
   const config = categoryConfig[scheme.award_type] || categoryConfig.scholarship;
@@ -109,9 +102,8 @@ export default function ProgrammesPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [filterOpen,   setFilterOpen]  = useState(false);
   const [search,       setSearch]      = useState("");
-  const [isVerified,   setIsVerified]  = useState(null); // null = loading
+  const [isVerified,   setIsVerified]  = useState(null);
 
-  // ── SINGLE useEffect — fetches both schemes and profile together
   useEffect(() => {
     async function load() {
       try {
@@ -218,7 +210,7 @@ export default function ProgrammesPage() {
         </div>
       )}
 
-      {/* UNVERIFIED EMPTY STATE */}
+      {/* UNVERIFIED */}
       {!loading && !error && isVerified === false && (
         <div className={styles.empty}>
           <div style={{
@@ -238,10 +230,9 @@ export default function ProgrammesPage() {
         </div>
       )}
 
-      {/* Only show the rest if verified */}
+      {/* VERIFIED — show programmes */}
       {!loading && !error && isVerified === true && (
         <>
-          {/* EMPTY — no schemes from backend */}
           {programmes.length === 0 && (
             <div className={styles.empty}>
               <p style={{ color: "#94a3b8", fontWeight: 600 }}>No programmes available</p>
@@ -251,14 +242,12 @@ export default function ProgrammesPage() {
             </div>
           )}
 
-          {/* EMPTY — search/filter returned nothing */}
           {programmes.length > 0 && filtered.length === 0 && (
             <div className={styles.empty}>
               <p>No programmes match your search.</p>
             </div>
           )}
 
-          {/* PROGRAMME CARDS */}
           {filtered.length > 0 && (
             <div className={styles.grid}>
               {filtered.map((prog) => {

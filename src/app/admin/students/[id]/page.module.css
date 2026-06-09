@@ -93,7 +93,19 @@
   color: #94a3b8;
   margin: 3px 0 0;
 }
+/* Document Link */
+.docLink {
+  font-size: 13px;
+  font-weight: 500;
+  color: #15803d;
+  text-decoration: none;
+  transition: color 0.15s;
+}
 
+.docLink:hover {
+  color: #166534;
+  text-decoration: underline;
+}
 /* ── VERIFY BUTTON ── */
 .verifyWrap {
   display: flex;

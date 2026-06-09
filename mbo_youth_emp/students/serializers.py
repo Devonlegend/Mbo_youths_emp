@@ -19,18 +19,20 @@ class StudentSerializer(serializers.ModelSerializer):
     phone_number = serializers.SerializerMethodField()
     gender       = serializers.SerializerMethodField()
 
+    passport    = serializers.FileField(use_url=True, read_only=True)
+    certificate = serializers.FileField(use_url=True, read_only=True)
+
     class Meta:
         model  = Student
         fields = [
             'user_id', 'firstname', 'lastname', 'ward', 'lga', 'level', 'cgpa',
             'is_verified', 'active_award', 'has_active_award', 'academic_records',
-            'date_of_birth', 'passport', 'nin_hash',
-            'email', 'phone_number', 'gender', 
+            'date_of_birth', 'passport', 'certificate', 'nin_hash',
+            'email', 'phone_number', 'gender',
         ]
 
     def get_has_active_award(self, obj):
         return obj.has_active_award()
-
 
     def get_email(self, obj):
         return getattr(obj.user, 'email', None)

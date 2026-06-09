@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from django.db import transaction
 from django.utils import timezone
+from django.db import models
 
 from .models import Application, ApplicationStatus, ApplicationStatusHistory
 from .serializers import ApplicationSerializer, DETAILS_SERIALIZER_BY_TYPE, normalize_details_payload
@@ -12,6 +13,7 @@ from .services.eligibility import EligibilityEngine
 from schemes.models import ScholarshipScheme
 from accounts.permissions import IsAdmin, IsVerifier, IsStudent
 from audit.models import AuditLog
+from accounts.services import send_application_submitted_email
 from notifications.models import Notification
 
 
@@ -71,6 +73,13 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                 status=400,
             )
 
+        allowed_fields = set(details_serializer_cls().get_fields().keys())
+        details_payload = {
+            key: value
+            for key, value in details_payload.items()
+            if key in allowed_fields
+        }
+
         details_serializer = details_serializer_cls(data=details_payload)
         if not details_serializer.is_valid():
             return Response(
@@ -99,6 +108,12 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                 has_conflict        = result['has_conflict'],
                 conflict_scheme_ids = result['conflict_scheme_ids'],
             )
+            # ── Decrement remaining slots ──────────────────────────────
+            if initial_status == ApplicationStatus.SUBMITTED:
+                ScholarshipScheme.objects.filter(id=scheme.id).update(
+                    remaining_slots=models.F('remaining_slots') - 1
+                )
+
             details_serializer.save(application=application)
             ApplicationStatusHistory.objects.create(
                 application = application,
@@ -129,6 +144,18 @@ class ApplicationViewSet(viewsets.ModelViewSet):
                     title   = 'Application submitted successfully',
                     message = f'Your {scheme.name} application has been received and is under review.',
                 )
+        if initial_status == ApplicationStatus.SUBMITTED:
+            try:
+                send_application_submitted_email(
+                    to_email    = request.user.email,
+                    firstname   = student.firstname,
+                    scheme_name = scheme.name,
+                )
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception(
+                "Failed to send application submitted email to %s", request.user.email
+            )                
 
         return Response({
             "application_id":   str(application.id),

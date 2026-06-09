@@ -83,3 +83,34 @@ class ScholarshipScheme(models.Model):
 
     def has_slots(self):
         return self.remaining_slots > 0
+    
+class FieldType(models.TextChoices):
+    TEXT     = 'text',     'Text Input'
+    TEXTAREA = 'textarea', 'Text Area'
+    SELECT   = 'select',   'Dropdown Select'
+    RADIO    = 'radio',    'Radio Buttons'
+    FILE     = 'file',     'File Upload'
+    CHECKBOX = 'checkbox', 'Checkbox'
+    NUMBER   = 'number',   'Number Input'
+
+
+class SchemeFormField(models.Model):
+    id          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    scheme      = models.ForeignKey(ScholarshipScheme, on_delete=models.CASCADE, related_name='form_fields')
+    field_name  = models.CharField(max_length=100)
+    field_label = models.CharField(max_length=200)
+    field_type  = models.CharField(max_length=20, choices=FieldType.choices)
+    placeholder = models.CharField(max_length=200, blank=True)
+    is_required = models.BooleanField(default=True)
+    options     = models.JSONField(default=list, blank=True)
+    # e.g. ["Option 1", "Option 2"] for select/radio
+    order       = models.PositiveIntegerField(default=0)
+    section     = models.CharField(max_length=100, blank=True)
+    # groups fields under a section heading
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.scheme.name} — {self.field_label}"    

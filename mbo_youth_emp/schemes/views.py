@@ -3,12 +3,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .models import ScholarshipScheme
-from .serializers import ScholarshipSchemeSerializer
+from .models import SchemeProvider, ScholarshipScheme, SchemeFormField
+from .serializers import ScholarshipSchemeSerializer, SchemeFormFieldSerializer
 from accounts.permissions import IsAdmin
 from audit.models import AuditLog
 from notifications.models import Notification
 from students.models import Student
+from .models import SchemeProvider
 
 
 class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
@@ -16,7 +17,7 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
     serializer_class = ScholarshipSchemeSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'form_fields']:
             return [AllowAny()]
         return [IsAuthenticated(), IsAdmin()]
 
@@ -28,7 +29,15 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
         return super().get_queryset()
 
     def perform_create(self, serializer):
-        scheme = serializer.save()
+        print("VALIDATED DATA:", serializer.validated_data)
+        provider, created = SchemeProvider.objects.get_or_create(
+            name="RMHCDT",
+            defaults={
+                'provider_type': 'ngo',
+            }
+        )
+        total = serializer.validated_data.get('total_slots', 0)
+        scheme = serializer.save(provider=provider, remaining_slots=total)
         AuditLog.objects.create(
             admin       = self.request.user,
             action      = f"Created new scheme: {scheme.name} (type: {scheme.award_type})",
@@ -67,7 +76,6 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
             entity_type = "Scheme",
             entity_id   = str(scheme.id),
         )
-        # Notify all students
         students = Student.objects.select_related('user').all()
         Notification.objects.bulk_create([
             Notification(
@@ -93,7 +101,6 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
             entity_type = "Scheme",
             entity_id   = str(scheme.id),
         )
-        # Notify all students
         students = Student.objects.select_related('user').all()
         Notification.objects.bulk_create([
             Notification(
@@ -119,7 +126,6 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
             entity_type = "Scheme",
             entity_id   = str(scheme.id),
         )
-        # Notify all students
         students = Student.objects.select_related('user').all()
         Notification.objects.bulk_create([
             Notification(
@@ -131,3 +137,24 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
             for s in students
         ])
         return Response({"message": "Scheme reopened successfully."})
+
+    @action(detail=True, methods=['get', 'post'], url_path='fields')
+    def form_fields(self, request, pk=None):
+        scheme = self.get_object()
+
+        if request.method == 'GET':
+            fields = scheme.form_fields.all()
+            return Response(SchemeFormFieldSerializer(fields, many=True).data)
+
+        if request.method == 'POST':
+            scheme.form_fields.all().delete()
+            fields_data = request.data if isinstance(request.data, list) else []
+            for i, field in enumerate(fields_data):
+                field['order'] = i
+                serializer = SchemeFormFieldSerializer(data=field)
+                if serializer.is_valid():
+                    serializer.save(scheme=scheme)
+            return Response(
+                SchemeFormFieldSerializer(scheme.form_fields.all(), many=True).data,
+                status=status.HTTP_201_CREATED
+            )

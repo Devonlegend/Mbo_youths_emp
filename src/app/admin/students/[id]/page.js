@@ -6,7 +6,8 @@ import {
   Calendar, Shield, ShieldCheck, ShieldAlert,
   ClipboardList, CheckCircle2, Clock, XCircle,
   AlertCircle, ArrowRight, Loader2, GraduationCap,
-  Briefcase, Wrench, Banknote,
+  Briefcase, Wrench, Banknote, Fingerprint, 
+  FileText, Image as ImageIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getStudentById, getApplications, verifyStudent } from "@/services";
@@ -31,6 +32,12 @@ const categoryIcons = {
   empowerment: Briefcase,
   grant:       Banknote,
 };
+
+function getFileUrl(path) {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  return `${process.env.NEXT_PUBLIC_API_URL}${path}`;
+}
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
@@ -208,8 +215,49 @@ async function handleToggleVerification() {
                   ? student.gender.charAt(0).toUpperCase() + student.gender.slice(1)
                   : "—"
               } />
+              <InfoRow icon={Fingerprint} label="NIN" value={student.nin_hash || "—"} />
             </div>
           </div>
+
+          {/* Documents Card */}
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Documents</h2>
+              <div className={styles.infoGrid}>
+
+                <div className={styles.infoRow}>
+                  <div className={styles.infoIcon}>
+                    <FileText size={14} strokeWidth={1.8} />
+                  </div>
+                  <div className={styles.infoContent}>
+                    <span className={styles.infoLabel}>Certificate</span>
+                    {student.certificate ? (
+                      <a href={getFileUrl(student.certificate)} target="_blank" rel="noopener noreferrer" className={styles.docLink}>
+                        View Certificate
+                      </a>
+                    ) : (
+                      <span className={styles.infoValue}>—</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className={styles.infoRow}>
+                  <div className={styles.infoIcon}>
+                    <ImageIcon size={14} strokeWidth={1.8} />
+                  </div>
+                  <div className={styles.infoContent}>
+                    <span className={styles.infoLabel}>Passport Photo</span>
+                    {student.passport ? (
+                      <a href={getFileUrl(student.passport)} target="_blank" rel="noopener noreferrer" className={styles.docLink}>
+                        View Passport
+                      </a>
+                    ) : (
+                      <span className={styles.infoValue}>—</span>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            </div>
 
           {/* Status Card */}
           <div className={styles.card}>

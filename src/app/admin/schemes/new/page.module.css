@@ -372,6 +372,248 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── CARD HEAD ROW (Form Builder card header) ── */
+.cardHeadRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardSub {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 3px 0 0;
+}
+
+.formBuilderIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── FIELDS LIST ── */
+.fieldsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── ADD FIELD BUTTON ── */
+.addFieldBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1.5px dashed #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+}
+
+.addFieldBtn:hover {
+  background: #dcfce7;
+  border-color: #15803d;
+}
+
+/* ── FIELD ROW ── */
+.fieldRow {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.fieldRowTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fieldRowDrag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  cursor: grab;
+  padding-top: 2px;
+}
+
+.fieldRowNum {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.fieldRowMain {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fieldInput {
+  flex: 1;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  transition: border-color 0.15s;
+  min-width: 0;
+}
+
+.fieldInput:focus {
+  border-color: #bbf7d0;
+}
+
+.fieldSelect {
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #374151;
+  background: #ffffff;
+  outline: none;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s;
+}
+
+.fieldSelect:focus {
+  border-color: #bbf7d0;
+}
+
+.fieldRequired {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.fieldRowActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.fieldExpandBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.fieldExpandBtn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.fieldRemoveBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.fieldRemoveBtn:hover {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+/* ── FIELD ROW EXPANDED ── */
+.fieldRowExtra {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fieldExtraRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.fieldExtraItem {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fieldExtraLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fieldTextarea {
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  resize: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+.fieldTextarea:focus {
+  border-color: #bbf7d0;
+}
+
 /* ══════════════════════════════════════════════
    RESPONSIVE — 1024px
 ══════════════════════════════════════════════ */
@@ -405,4 +647,11 @@
   .card { padding: 18px 16px; }
 
   .title { font-size: 17px; }
+   .fieldExtraRow {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldRowMain {
+    flex-wrap: wrap;
+  }
 }

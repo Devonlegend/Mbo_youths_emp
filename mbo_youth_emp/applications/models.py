@@ -97,6 +97,8 @@ class EmpowermentDetails(_BankDetailsMixin):
     training_provider        = models.CharField(max_length=200, blank=True)
     training_duration_months = models.PositiveSmallIntegerField(null=True, blank=True)
     prior_experience         = models.TextField(blank=True)
+    equipment                = models.CharField(max_length=300, blank=True)
+    business_location        = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
         return f"EmpowermentDetails({self.application_id})"

@@ -144,6 +144,31 @@ def send_account_verified_email(to_email: str, firstname: str) -> None:
             f"RMHCDT Team"
         ),
     ))
+def send_application_submitted_email(to_email: str, firstname: str, scheme_name: str) -> None:
+    """Send a confirmation email when a student submits an application."""
+    cfg = sib_api_v3_sdk.Configuration()
+    cfg.api_key['api-key'] = settings.BREVO_API_KEY
+    api = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(cfg))
+
+    api.send_transac_email(sib_api_v3_sdk.SendSmtpEmail(
+        sender={"email": settings.BREVO_SENDER_EMAIL, "name": settings.BREVO_SENDER_NAME},
+        to=[{"email": to_email}],
+        subject=f"Application received — {scheme_name}",
+        html_content=(
+            f"<p>Dear {firstname},</p>"
+            f"<p>Your application for <strong>{scheme_name}</strong> has been received and is currently under review.</p>"
+            f"<p>You will be notified once a decision has been made on your application.</p>"
+            f"<p>Thank you for applying.</p>"
+            f"<p><strong>RMHCDT Team</strong></p>"
+        ),
+        text_content=(
+            f"Dear {firstname},\n\n"
+            f"Your application for {scheme_name} has been received and is currently under review.\n\n"
+            f"You will be notified once a decision has been made on your application.\n\n"
+            f"Thank you for applying.\n\n"
+            f"RMHCDT Team"
+        ),
+    ))    
 
 __all__ = [
     'send_otp_email',
@@ -151,5 +176,6 @@ __all__ = [
     'send_welcome_email',
     'send_email_verified_email',
     'send_account_verified_email',
+    'send_application_submitted_email',
     'ApiException',
 ]

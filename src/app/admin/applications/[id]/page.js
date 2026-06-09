@@ -582,6 +582,46 @@ export default function ApplicationDetailPage() {
 
       </div>
 
+      {confirmModal && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999,
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: 16, padding: 32, maxWidth: 400, width: "90%",
+          }}>
+            <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
+              {confirmModal === "approve" ? "Approve Application?" : "Reject Application?"}
+            </h3>
+            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>
+              This action is permanent and cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setConfirmModal(null)}
+                style={{
+                  flex: 1, padding: "10px 0", borderRadius: 8,
+                  border: "1px solid #e2e8f0", background: "#fff",
+                  fontSize: 13, cursor: "pointer", color: "#374151",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setConfirmModal(null); handleDecision(confirmModal === "approve"); }}
+                style={{
+                  flex: 1, padding: "10px 0", borderRadius: 8, border: "none",
+                  background: confirmModal === "approve" ? "#15803d" : "#ef4444",
+                  fontSize: 13, cursor: "pointer", color: "#fff", fontWeight: 600,
+                }}
+              >
+                {confirmModal === "approve" ? "Yes, Approve" : "Yes, Reject"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

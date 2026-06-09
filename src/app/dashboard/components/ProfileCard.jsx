@@ -16,7 +16,20 @@ export default function ProfileCard({ user, onEdit }) {
       {/* AVATAR */}
       <div className={styles.avatarWrap}>
         {user?.passport_photo ? (
-          <img src={user.passport_photo} alt={fullName} className={styles.avatarImg} />
+          <>
+            <img
+              src={user.passport_photo}
+              alt={fullName}
+              className={styles.avatarImg}
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+            <div className={styles.avatarInitials} style={{ display: 'none' }}>
+              {initials}
+            </div>
+          </>
         ) : (
           <div className={styles.avatarInitials}>{initials}</div>
         )}

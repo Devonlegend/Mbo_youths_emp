@@ -22,6 +22,11 @@ class StudentViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'destroy']:
             return [IsAdmin()]
         return [IsAuthenticated()]
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     @action(detail=False, methods=['get', 'post'], url_path='bank-detail')
     def bank_detail(self, request):
@@ -45,8 +50,6 @@ class StudentViewSet(viewsets.ModelViewSet):
             "account_number": student.account_number,
             "account_name":   student.account_name,
         })
-    
-    
 
     @action(detail=True, methods=['get'], url_path='eligibility-check')
     def eligibility_check(self, request, pk=None):
@@ -99,30 +102,28 @@ class StudentViewSet(viewsets.ModelViewSet):
             return Response({"error": "No student profile found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = self.get_serializer(student)
         return Response(serializer.data)
-    
-@action(detail=True, methods=['post'], url_path='verify')
-def verify(self, request, pk=None):
-    student = self.get_object()
-    student.is_verified = not student.is_verified
-    student.save(update_fields=['is_verified'])
 
-    from notifications.models import Notification
-    if student.is_verified:
-        # Send in-app notification
-        Notification.objects.create(
-            user    = student.user,
-            type    = 'alert',
-            title   = 'Account verified',
-            message = 'Your account has been verified by an admin. You can now apply for available schemes.',
-        )
+    # ✅ NOW INSIDE THE CLASS — indented to match the other actions
+    @action(detail=True, methods=['post'], url_path='verify')
+    def verify(self, request, pk=None):
+        student = self.get_object()
+        student.is_verified = not student.is_verified
+        student.save(update_fields=['is_verified'])
 
-        # Send verification email via Brevo
-        try:
-            send_account_verified_email(student.user.email, student.firstname)
-        except Exception:
-            import logging
-            logging.getLogger(__name__).exception(
-                "Failed to send account verified email to %s", student.user.email
+        from notifications.models import Notification
+        if student.is_verified:
+            Notification.objects.create(
+                user    = student.user,
+                type    = 'alert',
+                title   = 'Account verified',
+                message = 'Your account has been verified by an admin. You can now apply for available schemes.',
             )
+            try:
+                send_account_verified_email(student.user.email, student.firstname)
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception(
+                    "Failed to send account verified email to %s", student.user.email
+                )
 
-    return Response({'is_verified': student.is_verified})
+        return Response({'is_verified': student.is_verified})

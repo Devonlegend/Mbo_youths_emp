@@ -1,9 +1,7 @@
 import api from "./axiosInstance";
 
 export const register = (formData) =>
-  api.post("/auth/register/", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  api.post("/auth/register/", formData);
 
 export const login = (body) =>
   api.post("/auth/login/", body);

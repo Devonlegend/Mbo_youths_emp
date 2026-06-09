@@ -20,3 +20,6 @@ export const updateScheme = (id, body) =>
 
 export const reopenScheme = (id) =>
   api.post(`/schemes/${id}/reopen/`);
+
+export const getSchemeFields = (id) =>
+  api.get(`/schemes/${id}/fields/`);

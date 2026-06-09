@@ -227,7 +227,7 @@ export default function NotificationsPage() {
               <div className={styles.notifBody}>
                 <div className={styles.notifTop}>
                   <span className={styles.notifTitle}>{notif.title}</span>
-                  <span className={styles.notifTime}>{formatTime(notif.time)}</span>
+                  <span className={styles.notifTime}>{formatTime(notif.created_at)}</span>
                 </div>
                 <p className={styles.notifMessage}>{notif.message}</p>
               </div>

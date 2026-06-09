@@ -176,6 +176,8 @@ STATIC_URL = 'static/'
 
 # ──────────────────────────── Brevo / OTP ────────────────────────────
 # Loaded from .env (see .env.example for the full list).
+MEDIA_URL  = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 BREVO_API_KEY      = os.getenv('BREVO_API_KEY', '')
 BREVO_SENDER_EMAIL = os.getenv('BREVO_SENDER_EMAIL', 'no-reply@example.com')

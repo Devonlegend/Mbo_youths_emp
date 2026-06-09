@@ -45,15 +45,18 @@ class ApplicationSerializer(serializers.ModelSerializer):
             if not detail:
                 return {}
             return {
-                'training_name':    detail.trade_or_skill,
-                'education_level':  detail.training_provider,
-                'prior_experience': detail.prior_experience,
-                'trade':            detail.trade_or_skill,
-                'current_status':   detail.training_provider,
-                'bank_name':        detail.bank_name,
-                'account_number':   detail.account_number,
-                'account_name':     detail.account_name,
-            }
+            'training_name':    detail.trade_or_skill,
+            'education_level':  detail.training_provider,
+            'prior_experience': detail.prior_experience,
+            'trade':            detail.trade_or_skill,
+            'current_status':   detail.training_provider,
+            'support_needed':   detail.prior_experience,
+            'equipment':        detail.equipment,
+            'business_location': detail.business_location,
+            'bank_name':        detail.bank_name,
+            'account_number':   detail.account_number,
+            'account_name':     detail.account_name,
+        }
 
         if award_type == 'scholarship':
             detail = getattr(obj, 'scholarship_details', None)
@@ -97,13 +100,17 @@ def normalize_details_payload(award_type, payload):
     else:
         normalized = dict(payload)
 
-    for key in ('scheme_id', 'details', 'category', 'result_document', 'admission_letter', 'business_plan'):
+    for key in (
+        'scheme_id', 'details', 'category', 'result_document', 'admission_letter',
+        'business_plan', 'result', 'admission', 'declared_external',
+        'declaration_details', 'attested',
+    ):
         normalized.pop(key, None)
 
     if award_type == 'scholarship':
         normalized.setdefault('institution_name', normalized.pop('institution', None) or normalized.get('institution_name'))
         normalized.setdefault('course_of_study', normalized.pop('department', None) or normalized.get('course_of_study'))
-        normalized.setdefault('current_level', normalized.get('current_level'))
+        normalized.setdefault('current_level', normalized.pop('level', None) or normalized.get('current_level'))
         normalized.setdefault('cgpa', normalized.get('cgpa'))
         normalized.setdefault('matric_number', normalized.get('matric_number'))
         normalized.setdefault('admission_year', normalized.get('admission_year') or datetime.now().year)
@@ -112,10 +119,10 @@ def normalize_details_payload(award_type, payload):
         normalized.setdefault('account_name', normalized.get('account_name', ''))
 
     elif award_type == 'empowerment':
-        normalized.setdefault('trade_or_skill', normalized.pop('training_name', None) or normalized.get('trade_or_skill'))
-        normalized.setdefault('training_provider', normalized.get('training_provider') or normalized.get('education_level') or '')
+        normalized.setdefault('trade_or_skill', normalized.pop('trade', None) or normalized.pop('training_name', None) or normalized.get('trade_or_skill'))
+        normalized.setdefault('training_provider', normalized.pop('current_status', None) or normalized.get('training_provider') or normalized.get('education_level') or '')
         normalized.setdefault('training_duration_months', normalized.get('training_duration_months'))
-        normalized.setdefault('prior_experience', normalized.get('prior_experience', ''))
+        normalized.setdefault('prior_experience', normalized.pop('support_needed', None) or normalized.get('prior_experience', ''))
         normalized.setdefault('bank_name', normalized.get('bank_name', ''))
         normalized.setdefault('account_number', normalized.get('account_number', ''))
         normalized.setdefault('account_name', normalized.get('account_name', ''))
@@ -129,6 +136,8 @@ def normalize_details_payload(award_type, payload):
         normalized.setdefault('bank_name', normalized.get('bank_name', ''))
         normalized.setdefault('account_number', normalized.get('account_number', ''))
         normalized.setdefault('account_name', normalized.get('account_name', ''))
+        normalized.setdefault('equipment', normalized.get('equipment', ''))
+        normalized.setdefault('business_location', normalized.get('business_location', ''))
 
     return normalized
 
@@ -153,6 +162,7 @@ class EmpowermentDetailsSerializer(serializers.ModelSerializer):
         fields = (
             'trade_or_skill', 'training_provider',
             'training_duration_months', 'prior_experience',
+            'equipment', 'business_location',
         ) + _BANK_FIELDS
         extra_kwargs = {
             'bank_name':      {'required': False, 'allow_blank': True},

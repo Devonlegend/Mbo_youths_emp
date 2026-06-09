@@ -1,9 +1,7 @@
 import api from "./axiosInstance";
 
 export const submitApplication = (body) =>
-  api.post("/applications/submit/", body, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+  api.post("/applications/submit/", body);
 
 export const getApplications = () =>
   api.get("/applications/");
