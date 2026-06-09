@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import {
   Bell, Search, CheckCheck, Trash2,
-  GraduationCap, FileText, ShieldAlert, CalendarClock, Sparkles,
+  CheckCircle2, XCircle, ShieldCheck,
+  FileText, ShieldAlert, CalendarClock, Sparkles,
   UserCircle, Megaphone, AlertCircle, Loader2,
 } from "lucide-react";
 import styles from "./page.module.css";
@@ -209,8 +210,28 @@ export default function NotificationsPage() {
         )}
 
         {!loading && !error && filtered.map((notif) => {
-          const meta = TYPE_META[notif.type] || TYPE_META.system;
-          const Icon = TYPE_ICONS[notif.type] || Bell;
+          const title = notif.title.toLowerCase();
+
+          const metaKey =
+            title.includes("approved")  ? "application" :
+            title.includes("rejected")  ? "alert"       :
+            title.includes("submitted") ? "application" :
+            title.includes("verified")  ? "system"      :
+            title.includes("eligible")  ? "alert"       :
+            title.includes("programme") ? "programme"   :
+            title.includes("waiver")    ? "deadline"    :
+            notif.type;
+          const meta = TYPE_META[metaKey] || TYPE_META.system;
+
+          const Icon =
+            title.includes("approved")  ? CheckCircle2  :
+            title.includes("rejected")  ? XCircle       :
+            title.includes("submitted") ? FileText       :
+            title.includes("verified")  ? ShieldCheck    :
+            title.includes("eligible")  ? ShieldAlert    :
+            title.includes("programme") ? CalendarClock  :
+            title.includes("waiver")    ? FileText       :
+            TYPE_ICONS[notif.type]      || Bell;
           return (
             <div
               key={notif.id}
