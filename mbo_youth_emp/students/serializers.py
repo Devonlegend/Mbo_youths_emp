@@ -18,7 +18,7 @@ class StudentSerializer(serializers.ModelSerializer):
     email        = serializers.SerializerMethodField()
     phone_number = serializers.SerializerMethodField()
     gender       = serializers.SerializerMethodField()
-
+    nin_last4    = serializers.SerializerMethodField()
     passport    = serializers.FileField(use_url=True, read_only=True)
     certificate = serializers.FileField(use_url=True, read_only=True)
 
@@ -27,7 +27,7 @@ class StudentSerializer(serializers.ModelSerializer):
         fields = [
             'user_id', 'firstname', 'lastname', 'ward', 'lga', 'level', 'cgpa',
             'is_verified', 'active_award', 'has_active_award', 'academic_records',
-            'date_of_birth', 'passport', 'certificate', 'nin_hash',
+            'date_of_birth', 'passport', 'certificate', 'nin_last4',
             'email', 'phone_number', 'gender',
         ]
 
@@ -42,6 +42,10 @@ class StudentSerializer(serializers.ModelSerializer):
 
     def get_gender(self, obj):
         return getattr(obj.user, 'gender', None)
+    
+    def get_nin_last4(self, obj):
+        nin = obj.nin_hash or ""
+        return nin[-4:] if len(nin) >= 4 else None
 
 
 class StudentCreateSerializer(serializers.ModelSerializer):

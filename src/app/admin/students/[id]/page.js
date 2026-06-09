@@ -215,7 +215,7 @@ async function handleToggleVerification() {
                   ? student.gender.charAt(0).toUpperCase() + student.gender.slice(1)
                   : "—"
               } />
-              <InfoRow icon={Fingerprint} label="NIN" value={student.nin_hash || "—"} />
+              <InfoRow icon={Fingerprint} label="NIN" value={student.nin_last4 ? `****-***-${student.nin_last4}` : "—"} />
             </div>
           </div>
 

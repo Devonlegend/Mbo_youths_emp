@@ -65,6 +65,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def full_name(self):
         return f"{self.firstname} {self.lastname}"
+    
+    @property
+    def nin_last4(self):
+        if self.nin_hash and len(self.nin_hash) >= 4:
+            return self.nin_hash[-4:]
+        return None
 
     @property
     def student_profile(self):
