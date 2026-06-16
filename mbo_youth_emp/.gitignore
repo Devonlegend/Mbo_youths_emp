@@ -1,0 +1,39 @@
+# ──────────────── Secrets / environment ────────────────
+.env
+.env.*
+!.env.example
+
+# ──────────────── Python ────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# ──────────────── Django ────────────────
+*.log
+db.sqlite3
+db.sqlite3.*
+staticfiles/
+media/
+local_settings.py
+
+# ──────────────── Stray uploads / dev artifacts ────────────────
+# Local-filesystem upload leftovers (real uploads go to Cloudinary).
+/passport_*.jpg
+/passport_*.png
+/akirs*.png
+/22_SC_CO_*.pdf
+/_verify_typed.py
+
+# ──────────────── Editors / OS ────────────────
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

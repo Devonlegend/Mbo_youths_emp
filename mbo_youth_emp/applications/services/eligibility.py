@@ -102,8 +102,6 @@ class EligibilityEngine:
             allowed_wards=restricted
         )
 
-    # _check_host_community removed — host-community gating is deprecated.
-    # Any 'host_community_only' key in scheme.eligibility_criteria is now ignored.
 
     @classmethod
     def _check_cgpa(cls, student, scheme, details=None):
@@ -194,16 +192,18 @@ class EligibilityEngine:
 
     @classmethod
     def _check_prior_awards(cls, student, scheme) -> CheckResult:
-        from applications.models import Application, ApplicationStatus
+        from applications.dynamic import get_application_model
+        from applications.models import ApplicationStatus
 
         max_prior = scheme.eligibility_criteria.get('max_prior_awards')
         if max_prior is None:
             return CheckResult(True, note="No prior award limit")
 
-        prior_count = Application.objects.filter(
+        # Prior awards for THIS scheme = approved rows in this scheme's own table.
+        model = get_application_model(scheme)
+        prior_count = model.objects.filter(
             student=student,
-            scheme=scheme,
-            status=ApplicationStatus.APPROVED
+            status=ApplicationStatus.APPROVED,
         ).count()
 
         passed = prior_count < max_prior
@@ -215,57 +215,62 @@ class EligibilityEngine:
 
     @classmethod
     def _check_double_dip(cls, student, scheme) -> CheckResult:
-     
-        from applications.models import Application, ApplicationStatus
+        # Applications live in per-scheme tables, so a same-academic-year scan is a
+        # UNION over every scheme's table.
+        from applications.dynamic import iter_application_models
+        from applications.models import ApplicationStatus
 
-        active_awards = Application.objects.filter(
-            student=student,
-            scheme__academic_year=scheme.academic_year,
-            status=ApplicationStatus.APPROVED
-        ).select_related('scheme')
+        conflicting_ids  = []
+        conflict_details = []
+        active_count     = 0
 
-        if not active_awards.exists():
-            return CheckResult(True, conflicting_ids=[], note="No active awards found")
+        for existing_scheme, model in iter_application_models():
+            if existing_scheme.academic_year != scheme.academic_year:
+                continue
 
-        conflicting_ids     = []
-        conflict_details    = []
+            approved = model.objects.filter(
+                student=student,
+                status=ApplicationStatus.APPROVED,
+            )
+            for _existing in approved:
+                active_count += 1
 
-        for existing in active_awards:
-            existing_scheme = existing.scheme
+                is_cross_type = scheme.award_type != existing_scheme.award_type
 
-            is_cross_type = scheme.award_type != existing_scheme.award_type
-
-            # RULE 2: Same-type conflicts depend on stacking policy
-            is_same_type_conflict = (
-                not is_cross_type and (
-                    scheme.stacking_policy == 'exclusive' or
-                    existing_scheme.stacking_policy == 'exclusive' or
-                    (
-                        scheme.stacking_policy == 'major_only' and
-                        existing_scheme.stacking_policy == 'major_only' and
-                        scheme.award_amount     >= 50000 and
-                        existing_scheme.award_amount >= 50000
+                # RULE 2: Same-type conflicts depend on stacking policy
+                is_same_type_conflict = (
+                    not is_cross_type and (
+                        scheme.stacking_policy == 'exclusive' or
+                        existing_scheme.stacking_policy == 'exclusive' or
+                        (
+                            scheme.stacking_policy == 'major_only' and
+                            existing_scheme.stacking_policy == 'major_only' and
+                            scheme.award_amount     >= 50000 and
+                            existing_scheme.award_amount >= 50000
+                        )
                     )
                 )
-            )
 
-            if is_cross_type or is_same_type_conflict:
-                conflicting_ids.append(str(existing_scheme.id))
-                conflict_details.append({
-                    "scheme_id":   str(existing_scheme.id),
-                    "scheme_name": existing_scheme.name,
-                    "award_type":  existing_scheme.award_type,
-                    "reason": (
-                        "Cross-type conflict: cannot hold awards of different types simultaneously"
-                        if is_cross_type else
-                        "Stacking policy conflict: award amounts exceed major threshold"
-                    )
-                })
+                if is_cross_type or is_same_type_conflict:
+                    conflicting_ids.append(str(existing_scheme.id))
+                    conflict_details.append({
+                        "scheme_id":   str(existing_scheme.id),
+                        "scheme_name": existing_scheme.name,
+                        "award_type":  existing_scheme.award_type,
+                        "reason": (
+                            "Cross-type conflict: cannot hold awards of different types simultaneously"
+                            if is_cross_type else
+                            "Stacking policy conflict: award amounts exceed major threshold"
+                        )
+                    })
+
+        if active_count == 0:
+            return CheckResult(True, conflicting_ids=[], note="No active awards found")
 
         passed = len(conflicting_ids) == 0
         return CheckResult(
             passed,
             conflicting_ids=conflicting_ids,
             conflict_details=conflict_details,
-            active_awards_count=active_awards.count()
+            active_awards_count=active_count
         )

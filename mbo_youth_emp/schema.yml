@@ -1,0 +1,1998 @@
+openapi: 3.0.3
+info:
+  title: Mbo Youth Empowerment API
+  version: 1.0.0
+  description: Backend API for the Mbo LGA youth scholarship / grant / empowerment
+    portal. Auth is cookie-based JWT (httpOnly access_token / refresh_token) with
+    an email-OTP step on login and registration. See FRONTEND_GUIDE.md in the repo
+    root for the screen-by-screen integration guide.
+paths:
+  /applications/:
+    get:
+      operationId: applications_list
+      description: Students receive only their own applications. Staff (verifier/admin/superadmin)
+        receive every application across all scheme tables. Paginated.
+      summary: List applications
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: scheme
+        schema:
+          type: string
+        description: Filter to one scheme id (staff only).
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Filter by application status (staff only).
+      tags:
+      - applications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Paginated list of application summaries.
+  /applications/{id}/:
+    get:
+      operationId: applications_retrieve
+      description: Full application detail. Students may only read their own.
+      summary: Retrieve one application
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - applications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Full application object (see FRONTEND_GUIDE.md for the shape).
+  /applications/{id}/history/:
+    get:
+      operationId: applications_history_list
+      description: Audit trail of status transitions for one application.
+      summary: Application status history
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - applications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApplicationStatusHistoryList'
+          description: ''
+  /applications/{id}/review/:
+    post:
+      operationId: applications_review_create
+      description: Approve / reject / shortlist a reviewable application. `notes`
+        is required when rejecting. Approval sets the student's active award and decrements
+        the scheme's remaining slots. Verifier/admin only.
+      summary: Review an application (verifier decision)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - applications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationReview'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ApplicationReview'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApplicationReview'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ message, status }'
+  /applications/{id}/waiver/:
+    post:
+      operationId: applications_waiver_create
+      description: 'For an application in double_dip_flag: records the waiver and
+        moves it to document_review for manual admin decision. No request body.'
+      summary: Submit a double-dip waiver
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - applications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ message }'
+  /applications/by-scheme/{scheme_id}/:
+    get:
+      operationId: applications_by_scheme_retrieve
+      description: All applications in ONE scheme table, full detail. Verifier/admin
+        only.
+      summary: Applications by scheme
+      parameters:
+      - in: path
+        name: scheme_id
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Filter to one status.
+      tags:
+      - applications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ scheme: {...}, applications: [...] }'
+  /applications/flagged/:
+    get:
+      operationId: applications_flagged_retrieve
+      description: Applications in the double_dip_flag state. Verifier/admin only.
+      summary: Flagged (double-dip) applications
+      tags:
+      - applications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Paginated list of flagged application summaries.
+  /applications/mine/:
+    get:
+      operationId: applications_mine_retrieve
+      description: The current student's own applications. Paginated.
+      summary: My applications
+      tags:
+      - applications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Paginated list of the student's application summaries.
+  /applications/queue/:
+    get:
+      operationId: applications_queue_retrieve
+      description: Every application in a reviewable state across all schemes. Verifier/admin
+        only.
+      summary: Verifier review queue
+      parameters:
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Narrow to one reviewable status.
+      tags:
+      - applications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Paginated list of application summaries.
+  /applications/submit/:
+    post:
+      operationId: applications_submit_create
+      description: Validates the scheme is open/has slots, runs the EligibilityEngine,
+        and creates the row in the scheme's table. A conflict routes to the double_dip_flag
+        waiver flow.
+      summary: Submit an application
+      tags:
+      - applications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationSubmit'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ApplicationSubmit'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApplicationSubmit'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          description: '{ application_id, status, eligible, has_conflict, conflict_details,
+            checks, message }'
+  /audit/:
+    get:
+      operationId: audit_list
+      description: The 100 most recent admin actions. Admin/superadmin only.
+      summary: Audit log
+      tags:
+      - audit
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditLog'
+          description: ''
+  /auth/login/:
+    post:
+      operationId: auth_login_create
+      description: 'Validates credentials only. Returns { otp_required: true }; the
+        client then sends + verifies an OTP to receive cookies.'
+      summary: Login (step 1 of 2)
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: '{ otp_required, email }'
+  /auth/logout/:
+    post:
+      operationId: auth_logout_create
+      description: Blacklists the refresh token and clears both cookies. No request
+        body.
+      summary: Logout
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ message }'
+  /auth/me/:
+    get:
+      operationId: auth_me_retrieve
+      description: GET /auth/me/ — who am I?
+      summary: Current user identity
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ id, email, firstname, lastname, phone_number, role, passport
+            }'
+  /auth/otp/resend/:
+    post:
+      operationId: auth_otp_resend_create
+      description: 'POST /auth/otp/resend/  Body: { email }'
+      summary: Resend login/verification OTP
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpResendRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OtpResendRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OtpResendRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: '{ message } — or 429 { error, retry_after_seconds } during
+            cooldown.'
+  /auth/otp/send/:
+    post:
+      operationId: auth_otp_send_create
+      description: 'POST /auth/otp/send/  Body: { email }'
+      summary: Send login/verification OTP
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpSendRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OtpSendRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OtpSendRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: '{ message } — or 429 { error, retry_after_seconds } during
+            cooldown.'
+  /auth/otp/verify/:
+    post:
+      operationId: auth_otp_verify_create
+      description: On success marks the email verified and sets the httpOnly JWT cookies.
+      summary: Verify OTP (step 2 of 2 — sets cookies)
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: '{ message } with Set-Cookie: access_token, refresh_token.'
+  /auth/password/reset/confirm/:
+    post:
+      operationId: auth_password_reset_confirm_create
+      description: Sets the new password, deletes the code, and invalidates all other
+        sessions.
+      summary: Confirm password reset
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: '{ message }'
+  /auth/password/reset/request/:
+    post:
+      operationId: auth_password_reset_request_create
+      description: Always returns 200 (no account enumeration). Emails a 6-digit reset
+        code.
+      summary: Request a password reset code
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: '{ message }'
+  /auth/password/reset/verify/:
+    post:
+      operationId: auth_password_reset_verify_create
+      description: Validates the code without consuming it — gates the "enter new
+        password" step.
+      summary: Verify a password reset code
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetVerify'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetVerify'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetVerify'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: '{ message }'
+  /auth/register/:
+    post:
+      operationId: auth_register_create
+      description: Creates a User + Student (multipart/form-data for the passport/certificate
+        files). NIN must be pre-hashed client-side. Does NOT log in — the client must
+        complete the OTP flow next.
+      summary: Register a new account
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          description: '{ message, email }'
+  /auth/token/refresh/:
+    post:
+      operationId: auth_token_refresh_create
+      description: Reads refresh_token from the cookie and rotates the access cookie.
+        No request body.
+      summary: Refresh access token
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: '{ message } with refreshed Set-Cookie.'
+  /notifications/:
+    get:
+      operationId: notifications_retrieve
+      description: The current user's notifications, newest first.
+      summary: List notifications
+      tags:
+      - notifications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '[{ id, type, title, message, read, time }]'
+  /notifications/{id}/:
+    delete:
+      operationId: notifications_destroy
+      summary: Dismiss a notification
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /notifications/{id}/read/:
+    post:
+      operationId: notifications_read_create
+      summary: Mark notification as read
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ message }'
+  /notifications/clear/:
+    delete:
+      operationId: notifications_clear_destroy
+      summary: Clear all notifications
+      tags:
+      - notifications
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /notifications/read-all/:
+    post:
+      operationId: notifications_read_all_create
+      summary: Mark all notifications as read
+      tags:
+      - notifications
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ message }'
+  /schemes/:
+    get:
+      operationId: schemes_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - schemes
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedScholarshipSchemeList'
+          description: ''
+    post:
+      operationId: schemes_create
+      tags:
+      - schemes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScholarshipScheme'
+          description: ''
+  /schemes/{id}/:
+    get:
+      operationId: schemes_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scholarship scheme.
+        required: true
+      tags:
+      - schemes
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScholarshipScheme'
+          description: ''
+    put:
+      operationId: schemes_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scholarship scheme.
+        required: true
+      tags:
+      - schemes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScholarshipScheme'
+          description: ''
+    patch:
+      operationId: schemes_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scholarship scheme.
+        required: true
+      tags:
+      - schemes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedScholarshipScheme'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedScholarshipScheme'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedScholarshipScheme'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScholarshipScheme'
+          description: ''
+    delete:
+      operationId: schemes_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scholarship scheme.
+        required: true
+      tags:
+      - schemes
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /schemes/{id}/close/:
+    post:
+      operationId: schemes_close_create
+      description: POST /schemes/{id}/close/
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scholarship scheme.
+        required: true
+      tags:
+      - schemes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScholarshipScheme'
+          description: ''
+  /schemes/{id}/publish/:
+    post:
+      operationId: schemes_publish_create
+      description: POST /schemes/{id}/publish/
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this scholarship scheme.
+        required: true
+      tags:
+      - schemes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ScholarshipScheme'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScholarshipScheme'
+          description: ''
+  /schemes/cycles/:
+    get:
+      operationId: schemes_cycles_list
+      description: |-
+        CRUD for programme cycles.
+        Admin-only for write operations; anyone can read.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - schemes
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCycleList'
+          description: ''
+    post:
+      operationId: schemes_cycles_create
+      description: |-
+        CRUD for programme cycles.
+        Admin-only for write operations; anyone can read.
+      tags:
+      - schemes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Cycle'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Cycle'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Cycle'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cycle'
+          description: ''
+  /schemes/cycles/{id}/:
+    get:
+      operationId: schemes_cycles_retrieve
+      description: |-
+        CRUD for programme cycles.
+        Admin-only for write operations; anyone can read.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cycle.
+        required: true
+      tags:
+      - schemes
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cycle'
+          description: ''
+    put:
+      operationId: schemes_cycles_update
+      description: |-
+        CRUD for programme cycles.
+        Admin-only for write operations; anyone can read.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cycle.
+        required: true
+      tags:
+      - schemes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Cycle'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Cycle'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Cycle'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cycle'
+          description: ''
+    patch:
+      operationId: schemes_cycles_partial_update
+      description: |-
+        CRUD for programme cycles.
+        Admin-only for write operations; anyone can read.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cycle.
+        required: true
+      tags:
+      - schemes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCycle'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCycle'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCycle'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cycle'
+          description: ''
+    delete:
+      operationId: schemes_cycles_destroy
+      description: |-
+        CRUD for programme cycles.
+        Admin-only for write operations; anyone can read.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cycle.
+        required: true
+      tags:
+      - schemes
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /schemes/cycles/{id}/activate/:
+    post:
+      operationId: schemes_cycles_activate_create
+      description: POST /schemes/cycles/{id}/activate/ — make this the active cycle.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this cycle.
+        required: true
+      tags:
+      - schemes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Cycle'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Cycle'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Cycle'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cycle'
+          description: ''
+  /students/:
+    get:
+      operationId: students_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - students
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStudentList'
+          description: ''
+    post:
+      operationId: students_create
+      tags:
+      - students
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StudentCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StudentCreate'
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentCreate'
+          description: ''
+  /students/{user}/:
+    get:
+      operationId: students_retrieve
+      parameters:
+      - in: path
+        name: user
+        schema:
+          type: string
+          format: uuid
+        description: A unique value identifying this student.
+        required: true
+      tags:
+      - students
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+          description: ''
+    put:
+      operationId: students_update
+      parameters:
+      - in: path
+        name: user
+        schema:
+          type: string
+          format: uuid
+        description: A unique value identifying this student.
+        required: true
+      tags:
+      - students
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Student'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Student'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Student'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+          description: ''
+    patch:
+      operationId: students_partial_update
+      parameters:
+      - in: path
+        name: user
+        schema:
+          type: string
+          format: uuid
+        description: A unique value identifying this student.
+        required: true
+      tags:
+      - students
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedStudent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedStudent'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedStudent'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+          description: ''
+    delete:
+      operationId: students_destroy
+      parameters:
+      - in: path
+        name: user
+        schema:
+          type: string
+          format: uuid
+        description: A unique value identifying this student.
+        required: true
+      tags:
+      - students
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /students/{user}/eligibility-check/:
+    get:
+      operationId: students_eligibility_check_retrieve
+      description: Label-based pre-check using the student's active_award flag. The
+        authoritative check runs at submit time via the EligibilityEngine.
+      summary: Quick eligibility pre-check
+      parameters:
+      - in: query
+        name: level
+        schema:
+          type: string
+        description: Required level (optional).
+      - in: query
+        name: min_cgpa
+        schema:
+          type: number
+          format: double
+        description: Default 2.20.
+      - in: path
+        name: user
+        schema:
+          type: string
+          format: uuid
+        description: A unique value identifying this student.
+        required: true
+      tags:
+      - students
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ student, eligible, checks: {cgpa, level, conflict} }'
+  /students/me/:
+    get:
+      operationId: students_me_retrieve
+      description: The current user's student profile.
+      summary: My student profile
+      tags:
+      - students
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+          description: ''
+  /students/stats/:
+    get:
+      operationId: students_stats_retrieve
+      description: 'Aggregate counts: totals, verified, active awards, and a by-ward
+        breakdown.'
+      summary: Student statistics
+      tags:
+      - students
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ total_students, verified, unverified, with_active_award,
+            by_ward }'
+  /verification/bank/:
+    post:
+      operationId: verification_bank_create
+      description: Resolves an account name via Paystack and fuzzy-matches it against
+        the student's registered name. Call before submitting an application.
+      summary: Resolve a bank account
+      tags:
+      - verification
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveBankRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResolveBankRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResolveBankRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ success, account_name, account_number, name_match: {passed,
+            score, overlap_tokens, detail}, warning }'
+  /verification/banks/:
+    get:
+      operationId: verification_banks_retrieve
+      description: Nigerian banks for the account dropdown.
+      summary: List banks
+      tags:
+      - verification
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: '{ banks: [{ name, code }] }'
+components:
+  schemas:
+    AcademicRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        institution_name:
+          type: string
+          maxLength: 100
+        course_of_study:
+          type: string
+          maxLength: 100
+        current_level:
+          type: string
+          maxLength: 100
+        cgpa:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          nullable: true
+        admission_year:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+      required:
+      - course_of_study
+      - current_level
+      - id
+      - institution_name
+    ApplicationReview:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+        notes:
+          type: string
+          default: ''
+      required:
+      - decision
+    ApplicationStatusHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        application_id:
+          type: string
+          format: uuid
+        from_status:
+          type: string
+          maxLength: 30
+        to_status:
+          type: string
+          maxLength: 30
+        reason:
+          type: string
+        changed_by_email:
+          type: string
+          readOnly: true
+        changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - application_id
+      - changed_at
+      - changed_by_email
+      - from_status
+      - id
+      - to_status
+    ApplicationSubmit:
+      type: object
+      description: |-
+        POST /applications/submit/
+
+        Fields:
+          - scheme_id  (required)
+          - programme_answers  (required — dict, validated per award_type on the view)
+          - bank_* (resolved bank snapshot)
+          - self_declaration_received_support  (required bool)
+          - self_declaration_details  (required list if received_support=True)
+          - attestation_agreed  (must be True)
+          - documents  (optional dict of Cloudinary URLs)
+      properties:
+        scheme_id:
+          type: string
+          format: uuid
+        programme_answers:
+          type: object
+          additionalProperties: {}
+        bank_account_number:
+          type: string
+          maxLength: 10
+        bank_code:
+          type: string
+          maxLength: 10
+        bank_name:
+          type: string
+          maxLength: 100
+        bank_account_name:
+          type: string
+          maxLength: 200
+        bank_name_match_passed:
+          type: boolean
+          default: false
+        self_declaration_received_support:
+          type: boolean
+        self_declaration_details:
+          type: array
+          items:
+            $ref: '#/components/schemas/SelfDeclarationDetail'
+        attestation_agreed:
+          type: boolean
+        documents:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - attestation_agreed
+      - bank_account_name
+      - bank_account_number
+      - bank_code
+      - bank_name
+      - programme_answers
+      - scheme_id
+      - self_declaration_received_support
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        admin_name:
+          type: string
+          readOnly: true
+        action:
+          type: string
+        entity_type:
+          type: string
+          maxLength: 50
+        entity_id:
+          type: string
+          maxLength: 100
+        timestamp:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - admin_name
+      - entity_type
+      - id
+      - timestamp
+    AwardTypeEnum:
+      enum:
+      - scholarship
+      - empowerment
+      - grant
+      type: string
+      description: |-
+        * `scholarship` - Scholarship (Academic)
+        * `empowerment` - Empowerment / Vocational Training
+        * `grant` - Grant
+    Cycle:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 20
+        start_year:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        end_year:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        is_active:
+          type: boolean
+      required:
+      - end_year
+      - id
+      - name
+      - start_year
+    DecisionEnum:
+      enum:
+      - approved
+      - rejected
+      - shortlisted
+      type: string
+      description: |-
+        * `approved` - approved
+        * `rejected` - rejected
+        * `shortlisted` - shortlisted
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+      - email
+      - password
+    OtpResendRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    OtpSendRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    OtpVerifyRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+      required:
+      - code
+      - email
+    PaginatedApplicationStatusHistoryList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationStatusHistory'
+    PaginatedCycleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Cycle'
+    PaginatedScholarshipSchemeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScholarshipScheme'
+    PaginatedStudentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Student'
+    PasswordResetConfirm:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+        new_password:
+          type: string
+      required:
+      - code
+      - email
+      - new_password
+    PasswordResetRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    PasswordResetVerify:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+      required:
+      - code
+      - email
+    PatchedCycle:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 20
+        start_year:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        end_year:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        is_active:
+          type: boolean
+    PatchedScholarshipScheme:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider:
+          allOf:
+          - $ref: '#/components/schemas/SchemeProvider'
+          readOnly: true
+        cycle:
+          allOf:
+          - $ref: '#/components/schemas/Cycle'
+          readOnly: true
+        cycle_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        name:
+          type: string
+          maxLength: 300
+        award_type:
+          $ref: '#/components/schemas/AwardTypeEnum'
+        award_type_display:
+          type: string
+          readOnly: true
+        description:
+          type: string
+        academic_year:
+          type: string
+          maxLength: 9
+        award_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        total_slots:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        remaining_slots:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        stacking_policy:
+          $ref: '#/components/schemas/StackingPolicyEnum'
+        eligibility_criteria: {}
+        application_open_date:
+          type: string
+          format: date
+        application_close_date:
+          type: string
+          format: date
+        is_active:
+          type: boolean
+        is_published:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedStudent:
+      type: object
+      properties:
+        firstname:
+          type: string
+          maxLength: 50
+        lastname:
+          type: string
+          maxLength: 50
+        ward:
+          type: string
+          maxLength: 40
+        lga:
+          type: string
+          maxLength: 80
+        level:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        cgpa:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          nullable: true
+        is_verified:
+          type: boolean
+        active_award:
+          type: string
+          maxLength: 300
+        has_active_award:
+          type: boolean
+          readOnly: true
+        academic_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicRecord'
+          readOnly: true
+    ProviderTypeEnum:
+      enum:
+      - lga
+      - state
+      - corporate
+      - ngo
+      - federal
+      type: string
+      description: |-
+        * `lga` - LGA Council
+        * `state` - State Government
+        * `corporate` - Corporate / CSR
+        * `ngo` - NGO / Foundation
+        * `federal` - Federal Government
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        firstname:
+          type: string
+        lastname:
+          type: string
+        phone_number:
+          type: string
+        password:
+          type: string
+        nin_hash:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          type: string
+        ward:
+          type: string
+        lga:
+          type: string
+        passport:
+          type: string
+          format: uri
+        certificate:
+          type: string
+          format: uri
+      required:
+      - email
+      - firstname
+      - lastname
+      - nin_hash
+      - passport
+      - password
+      - phone_number
+    ResolveBankRequest:
+      type: object
+      properties:
+        account_number:
+          type: string
+          description: Exactly 10 digits.
+        bank_code:
+          type: string
+      required:
+      - account_number
+      - bank_code
+    SchemeProvider:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        provider_type:
+          $ref: '#/components/schemas/ProviderTypeEnum'
+      required:
+      - id
+      - name
+      - provider_type
+    ScholarshipScheme:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        provider:
+          allOf:
+          - $ref: '#/components/schemas/SchemeProvider'
+          readOnly: true
+        cycle:
+          allOf:
+          - $ref: '#/components/schemas/Cycle'
+          readOnly: true
+        cycle_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        name:
+          type: string
+          maxLength: 300
+        award_type:
+          $ref: '#/components/schemas/AwardTypeEnum'
+        award_type_display:
+          type: string
+          readOnly: true
+        description:
+          type: string
+        academic_year:
+          type: string
+          maxLength: 9
+        award_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        total_slots:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        remaining_slots:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        stacking_policy:
+          $ref: '#/components/schemas/StackingPolicyEnum'
+        eligibility_criteria: {}
+        application_open_date:
+          type: string
+          format: date
+        application_close_date:
+          type: string
+          format: date
+        is_active:
+          type: boolean
+        is_published:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - academic_year
+      - application_close_date
+      - application_open_date
+      - award_amount
+      - award_type_display
+      - created_at
+      - cycle
+      - description
+      - id
+      - name
+      - provider
+      - remaining_slots
+      - total_slots
+      - updated_at
+    SelfDeclarationDetail:
+      type: object
+      description: One row in the prior-support list.
+      properties:
+        organisation:
+          type: string
+        category:
+          type: string
+        year:
+          type: integer
+      required:
+      - category
+      - organisation
+      - year
+    StackingPolicyEnum:
+      enum:
+      - exclusive
+      - major_only
+      - open
+      type: string
+      description: |-
+        * `exclusive` - Exclusive — no other active awards allowed
+        * `major_only` - Cannot stack with other major awards
+        * `open` - Open — can stack with any award
+    Student:
+      type: object
+      properties:
+        firstname:
+          type: string
+          maxLength: 50
+        lastname:
+          type: string
+          maxLength: 50
+        ward:
+          type: string
+          maxLength: 40
+        lga:
+          type: string
+          maxLength: 80
+        level:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        cgpa:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          nullable: true
+        is_verified:
+          type: boolean
+        active_award:
+          type: string
+          maxLength: 300
+        has_active_award:
+          type: boolean
+          readOnly: true
+        academic_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcademicRecord'
+          readOnly: true
+      required:
+      - academic_records
+      - has_active_award
+    StudentCreate:
+      type: object
+      description: Used only when creating a new student profile.
+      properties:
+        firstname:
+          type: string
+          maxLength: 50
+        lastname:
+          type: string
+          maxLength: 50
+        ward:
+          type: string
+          maxLength: 40
+        lga:
+          type: string
+          maxLength: 80
+        level:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          nullable: true
+        cgpa:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          nullable: true
+        nin_hash:
+          type: string
+          maxLength: 20
+        active_award:
+          type: string
+          maxLength: 300
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: 'JWT access token stored in an httpOnly cookie. Obtained via the
+        login + OTP flow (POST /auth/login/ then /auth/otp/verify/). Browsers send
+        it automatically; for tooling you may instead pass `Authorization: Bearer
+        <token>`.'

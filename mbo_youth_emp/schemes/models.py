@@ -14,6 +14,29 @@ class StackingPolicy(models.TextChoices):
     OPEN        = 'open',        'Open — can stack with any award'
 
 
+class Cycle(models.Model):
+    """
+    An academic/programme cycle, e.g. "2026/2027".
+    Schemes belong to a cycle. Double-dip checks are scoped per cycle.
+    """
+    id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name       = models.CharField(max_length=20, unique=True)  # e.g. "2026/2027"
+    start_year = models.IntegerField()
+    end_year   = models.IntegerField()
+    is_active  = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-start_year']
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def get_active(cls):
+        return cls.objects.filter(is_active=True).first()
+
+
 class SchemeProvider(models.Model):
     id           = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name         = models.CharField(max_length=200)
@@ -33,6 +56,13 @@ class SchemeProvider(models.Model):
 class ScholarshipScheme(models.Model):
     id               = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     provider         = models.ForeignKey(SchemeProvider, on_delete=models.CASCADE, related_name='schemes')
+    cycle            = models.ForeignKey(
+                           Cycle,
+                           on_delete=models.SET_NULL,
+                           related_name='schemes',
+                           null=True,
+                           blank=True,
+                       )
     name             = models.CharField(max_length=300)
     award_type       = models.CharField(max_length=20, choices=AwardType.choices, default=AwardType.SCHOLARSHIP)
     description      = models.TextField()
@@ -73,6 +103,19 @@ class ScholarshipScheme(models.Model):
     created_at   = models.DateTimeField(auto_now_add=True)
     updated_at   = models.DateTimeField(auto_now=True)
 
+    # Name of THIS scheme's dedicated application table. Each scheme owns its own
+    # physical table (created at save-time by a post_save signal); applications
+    # live there rather than in a shared table. Derived once from the id and never
+    # changed. See applications/dynamic.py for the table machinery.
+    table_name   = models.CharField(max_length=63, blank=True, default='', editable=False)
+
+    def save(self, *args, **kwargs):
+        # `id` is populated by its uuid4 default before the first save, so the
+        # table name is stable from creation onward.
+        if not self.table_name:
+            self.table_name = f"app_{self.id.hex}"
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.name} ({self.academic_year})"
 
@@ -83,34 +126,3 @@ class ScholarshipScheme(models.Model):
 
     def has_slots(self):
         return self.remaining_slots > 0
-    
-class FieldType(models.TextChoices):
-    TEXT     = 'text',     'Text Input'
-    TEXTAREA = 'textarea', 'Text Area'
-    SELECT   = 'select',   'Dropdown Select'
-    RADIO    = 'radio',    'Radio Buttons'
-    FILE     = 'file',     'File Upload'
-    CHECKBOX = 'checkbox', 'Checkbox'
-    NUMBER   = 'number',   'Number Input'
-
-
-class SchemeFormField(models.Model):
-    id          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    scheme      = models.ForeignKey(ScholarshipScheme, on_delete=models.CASCADE, related_name='form_fields')
-    field_name  = models.CharField(max_length=100)
-    field_label = models.CharField(max_length=200)
-    field_type  = models.CharField(max_length=20, choices=FieldType.choices)
-    placeholder = models.CharField(max_length=200, blank=True)
-    is_required = models.BooleanField(default=True)
-    options     = models.JSONField(default=list, blank=True)
-    # e.g. ["Option 1", "Option 2"] for select/radio
-    order       = models.PositiveIntegerField(default=0)
-    section     = models.CharField(max_length=100, blank=True)
-    # groups fields under a section heading
-    created_at  = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['order']
-
-    def __str__(self):
-        return f"{self.scheme.name} — {self.field_label}"    

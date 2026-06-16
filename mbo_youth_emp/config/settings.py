@@ -10,8 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-import os
 from datetime import timedelta
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -22,16 +22,31 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
 
+def _env_bool(name, default='False'):
+    return os.getenv(name, default).lower() in ('true', '1', 'yes')
+
+
+def _env_list(name, default=''):
+    return [item.strip() for item in os.getenv(name, default).split(',') if item.strip()]
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# Must be provided via the environment in production. The insecure default only
+# applies when DEBUG is on so local development still works out of the box.
+DEBUG = _env_bool('DEBUG', 'False')
 
-SECRET_KEY = 'django-insecure-k0pmo$!l*p=9^83v3f*l&u7mrs#3k%di^j9^0b$^-v39rjad1j'
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = os.getenv('SECRET_KEY', '')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-k0pmo$!l*p=9^83v3f*l&u7mrs#3k%di^j9^0b$^-v39rjad1j'
+    else:
+        raise RuntimeError('SECRET_KEY environment variable is required when DEBUG is off.')
 
-ALLOWED_HOSTS = ['*']
+# Comma-separated list, e.g. ALLOWED_HOSTS=api.example.com,example.com
+ALLOWED_HOSTS = _env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1' if DEBUG else '')
 
 
 # Application definition
@@ -45,18 +60,21 @@ INSTALLED_APPS = [
     'cloudinary_storage',
     'django.contrib.staticfiles',
     'cloudinary',
-    'audit', 
-    'notifications',
    
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist' ,
+    'drf_spectacular',
     'corsheaders',
     'schemes',
     'applications',
     'accounts',
     'students',
-    
+    'verification',
+    'audit',
+    'notifications',
+    'django_celery_results',
+
 ]
 
 MIDDLEWARE = [
@@ -77,14 +95,42 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': int(os.getenv('API_PAGE_SIZE', '50')),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': os.getenv('THROTTLE_ANON', '60/min'),
+        'user': os.getenv('THROTTLE_USER', '1000/day'),
+        'otp':  os.getenv('THROTTLE_OTP', '5/min'),
+        'auth': os.getenv('THROTTLE_AUTH', '10/min'),
+    },
+}
+
+# ── OpenAPI schema (drf-spectacular) ───────────────────────────────────────
+# Powers the interactive API docs at /api/docs/ (Swagger) and /api/redoc/.
+# The schema itself is served at /api/schema/. See accounts/schema.py for the
+# cookie-auth security scheme used by CookieJWTAuthentication.
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Mbo Youth Empowerment API',
+    'DESCRIPTION': (
+        'Backend API for the Mbo LGA youth scholarship / grant / empowerment '
+        'portal. Auth is cookie-based JWT (httpOnly access_token / refresh_token) '
+        'with an email-OTP step on login and registration. See FRONTEND_GUIDE.md '
+        'in the repo root for the screen-by-screen integration guide.'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 # JWT cookie behaviour. In DEBUG we relax `Secure` so localhost (http) works;
-# in production set JWT_COOKIE_SECURE=True and tighten JWT_COOKIE_SAMESITE.
-JWT_COOKIE_SECURE   = None 
-JWT_COOKIE_SAMESITE = 'Lax'
+# in production default to secure cookies. Override with JWT_COOKIE_SECURE.
+JWT_COOKIE_SECURE   = _env_bool('JWT_COOKIE_SECURE', str(not DEBUG))
+JWT_COOKIE_SAMESITE = os.getenv('JWT_COOKIE_SAMESITE', 'Lax')
 
-# JWT settings - adjust token lifetimes and rotation as needed. fix by me @Prince
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -93,19 +139,33 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+
 # Required so the browser will send the cookie cross-origin to the API.
+# Provide production origins via CORS_ALLOWED_ORIGINS (comma-separated).
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
+CORS_ALLOWED_ORIGINS = _env_list('CORS_ALLOWED_ORIGINS', 'http://localhost:3000' if DEBUG else '')
+CSRF_TRUSTED_ORIGINS = _env_list('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000' if DEBUG else '')
 ROOT_URLCONF = 'config.urls'
 
 AUTH_USER_MODEL = 'accounts.User'
-#DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+# ── Cloudinary (media storage) ─────────────────────────────────────────────
+# Credentials come from .env (see .env.example). FileField/ImageField uploads
+# (user passports, certificates, application documents) are stored on Cloudinary.
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'your_cloud_name',
-    'API_KEY': 'your_api_key',
-    'API_SECRET': 'your_api_secret',
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME', ''),
+    'API_KEY':    os.getenv('CLOUDINARY_API_KEY', ''),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET', ''),
+}
+
+# Django 6.0 uses the STORAGES setting (DEFAULT_FILE_STORAGE was removed in 5.1).
+STORAGES = {
+    'default': {
+        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
 }
 
 TEMPLATES = [
@@ -131,10 +191,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME', 'mbo_portal_v2'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
     }
 }
+
+
 
 
 # Password validation
@@ -174,15 +241,87 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 
-# ──────────────────────────── Brevo / OTP ────────────────────────────
-# Loaded from .env (see .env.example for the full list).
-MEDIA_URL  = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
-BREVO_API_KEY      = os.getenv('BREVO_API_KEY', '')
-BREVO_SENDER_EMAIL = os.getenv('BREVO_SENDER_EMAIL', 'no-reply@example.com')
-BREVO_SENDER_NAME  = os.getenv('BREVO_SENDER_NAME', 'Mbo Youth Empowerment')
 
 OTP_TTL_SECONDS             = int(os.getenv('OTP_TTL_SECONDS', '600'))
 OTP_MAX_ATTEMPTS            = int(os.getenv('OTP_MAX_ATTEMPTS', '5'))
 OTP_RESEND_COOLDOWN_SECONDS = int(os.getenv('OTP_RESEND_COOLDOWN_SECONDS', '60'))
+
+# ── Paystack ──────────────────────────────────────────────────────────────
+# Mock mode defaults to on in DEBUG, off in production, so a missing env var
+# never silently mocks a live deployment. Override explicitly with the env var.
+PAYSTACK_MOCK_MODE   = _env_bool('PAYSTACK_MOCK_MODE', str(DEBUG))
+PAYSTACK_SECRET_KEY  = os.getenv('PAYSTACK_SECRET_KEY', '')
+
+# ── Brevo (email) ─────────────────────────────────────────────────────────
+BREVO_MOCK_MODE  = _env_bool('BREVO_MOCK_MODE', str(DEBUG))
+BREVO_API_KEY    = os.getenv('BREVO_API_KEY', '')
+BREVO_SENDER_EMAIL = os.getenv('BREVO_SENDER_EMAIL', 'no-reply@mboempowerment.com')
+BREVO_SENDER_NAME  = os.getenv('BREVO_SENDER_NAME', 'Mbo Youth Empowerment')
+
+# ── Celery ────────────────────────────────────────────────────────────────
+# Eager mode runs tasks in-process (no broker). Defaults on in DEBUG, off in
+# production where a real broker/worker is expected.
+CELERY_BROKER_URL        = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND    = 'django-db'
+CELERY_ACCEPT_CONTENT    = ['json']
+CELERY_TASK_SERIALIZER   = 'json'
+CELERY_TASK_ALWAYS_EAGER = _env_bool('CELERY_TASK_ALWAYS_EAGER', str(DEBUG))
+
+PORTAL_URL = os.getenv('PORTAL_URL', 'http://localhost:3000')
+
+
+# ──────────────────────────── Security ────────────────────────────
+# HTTPS/cookie hardening. Active when DEBUG is off; relaxed locally so http
+# development keeps working. Individual flags can be overridden via env.
+SESSION_COOKIE_SECURE = _env_bool('SESSION_COOKIE_SECURE', str(not DEBUG))
+CSRF_COOKIE_SECURE    = _env_bool('CSRF_COOKIE_SECURE', str(not DEBUG))
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+X_FRAME_OPTIONS = 'DENY'
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = _env_bool('SECURE_SSL_REDIRECT', 'True')
+    # Trust the proxy's X-Forwarded-Proto header (set by most PaaS load balancers).
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+
+# ──────────────────────────── Logging ────────────────────────────
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO' if not DEBUG else 'DEBUG')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': LOG_LEVEL,
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}

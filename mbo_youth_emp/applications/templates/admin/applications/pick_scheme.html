@@ -1,0 +1,22 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Create application — choose a scheme</h1>
+<p>Pick the scheme this application belongs to. The next step shows the fields for
+that scheme's award type.</p>
+<form method="get" action="">
+  <p>
+    <label for="scheme">Scheme:</label>
+    <select name="scheme" id="scheme" required>
+      <option value="">---------</option>
+      {% for s in schemes %}
+        <option value="{{ s.id }}">{{ s.name }} — {{ s.get_award_type_display }} ({{ s.academic_year }})</option>
+      {% endfor %}
+    </select>
+  </p>
+  <input type="submit" value="Continue" class="default">
+</form>
+{% if not schemes %}
+  <p><strong>No schemes with an application table exist yet.</strong>
+  Create a scheme first.</p>
+{% endif %}
+{% endblock %}

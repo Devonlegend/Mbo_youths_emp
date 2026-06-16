@@ -7,23 +7,21 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
+from rest_framework import serializers as drf_serializers
 from accounts.models import EmailOTP, PasswordResetOTP, Role
 from students.models import Student
-# added for admin page stats and could be used for other purposes in the future, so imported here instead of in page.js
-from audit.models import AuditLog
-from .serializers import AuditLogSerializer
-from rest_framework.permissions import IsAuthenticated
-from accounts.permissions import IsAdmin, IsSuperAdmin
 
 from .authentication import ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME
-from .services import ApiException, send_otp_email, send_password_reset_email, send_welcome_email, send_email_verified_email
-from notifications.models import Notification
+from .services import ApiException, send_otp_email, send_password_reset_email
+from .validators import validate_upload, FileValidationError
+from .throttles import OTPThrottle, AuthThrottle
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -71,17 +69,36 @@ def _clear_jwt_cookies(response):
 
 
 # ──────────────────────────── endpoints ────────────────────────────
-# Audit logs and admin users endpoints are added here since they are closely related to accounts and auth, and this avoids creating a new app just for them.
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated, IsSuperAdmin])
-def audit_log_list(request):
-    logs = AuditLog.objects.all()[:100]
-    serializer = AuditLogSerializer(logs, many=True)
-    return Response(serializer.data)
-  
+@extend_schema(
+    summary="Register a new account",
+    description=(
+        "Creates a User + Student (multipart/form-data for the passport/certificate "
+        "files). NIN must be pre-hashed client-side. Does NOT log in — the client "
+        "must complete the OTP flow next."
+    ),
+    request=inline_serializer(
+        name='RegisterRequest',
+        fields={
+            'email': drf_serializers.EmailField(),
+            'firstname': drf_serializers.CharField(),
+            'lastname': drf_serializers.CharField(),
+            'phone_number': drf_serializers.CharField(),
+            'password': drf_serializers.CharField(),
+            'nin_hash': drf_serializers.CharField(),
+            'date_of_birth': drf_serializers.DateField(required=False),
+            'gender': drf_serializers.CharField(required=False),
+            'ward': drf_serializers.CharField(required=False),
+            'lga': drf_serializers.CharField(required=False),
+            'passport': drf_serializers.FileField(),
+            'certificate': drf_serializers.FileField(required=False),
+        },
+    ),
+    responses={201: OpenApiResponse(description='{ message, email }')},
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthThrottle])
 def register(request):
     """
     POST /auth/register/
@@ -109,6 +126,12 @@ def register(request):
         return Response({"error": "All fields are required"},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    try:
+        validate_upload(passport, 'Passport photo', required=True)
+        validate_upload(certificate, 'Certificate', required=False)
+    except FileValidationError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
     if User.objects.filter(email=email).exists():
         return Response({"error": "Email already registered"},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -132,6 +155,7 @@ def register(request):
             nin_hash=nin_hash,
             date_of_birth=date_of_birth,
             gender=gender,
+            passport=passport,
         )
         Student.objects.create(
             user=user,
@@ -147,29 +171,27 @@ def register(request):
 
     # No JWT cookies here — the client must complete the OTP flow
     # (/auth/otp/send/ → /auth/otp/verify/) before being logged in.
-
-    # Send welcome in-app notification
-    Notification.objects.create(
-        user    = user,
-        type    = 'alert',
-        title   = 'Welcome to RMHCDT Youth Portal',
-        message = 'Your account has been created successfully. Please verify your email to continue.',
-    )
-
-    # Send welcome email via Brevo
-    try:
-        send_welcome_email(user.email, user.firstname)
-    except Exception:
-        logger.exception("Failed to send welcome email to %s", user.email)
-
     return Response(
         {"message": "Account created. Please verify your email.", "email": user.email},
         status=status.HTTP_201_CREATED,
     )
 
 
+@extend_schema(
+    summary="Login (step 1 of 2)",
+    description="Validates credentials only. Returns { otp_required: true }; the client then sends + verifies an OTP to receive cookies.",
+    request=inline_serializer(
+        name='LoginRequest',
+        fields={
+            'email': drf_serializers.EmailField(),
+            'password': drf_serializers.CharField(),
+        },
+    ),
+    responses=OpenApiResponse(description='{ otp_required, email }'),
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthThrottle])
 def login(request):
     """
     POST /auth/login/
@@ -256,8 +278,14 @@ def _issue_otp(email):
     return None, status.HTTP_200_OK
 
 
+@extend_schema(
+    summary="Send login/verification OTP",
+    request=inline_serializer(name='OtpSendRequest', fields={'email': drf_serializers.EmailField()}),
+    responses=OpenApiResponse(description='{ message } — or 429 { error, retry_after_seconds } during cooldown.'),
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([OTPThrottle])
 def otp_send(request):
     """POST /auth/otp/send/  Body: { email }"""
     payload, http_status = _issue_otp(request.data.get('email'))
@@ -266,8 +294,14 @@ def otp_send(request):
     return Response({"message": "OTP sent"})
 
 
+@extend_schema(
+    summary="Resend login/verification OTP",
+    request=inline_serializer(name='OtpResendRequest', fields={'email': drf_serializers.EmailField()}),
+    responses=OpenApiResponse(description='{ message } — or 429 { error, retry_after_seconds } during cooldown.'),
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([OTPThrottle])
 def otp_resend(request):
     """POST /auth/otp/resend/  Body: { email }"""
     payload, http_status = _issue_otp(request.data.get('email'))
@@ -276,8 +310,18 @@ def otp_resend(request):
     return Response({"message": "OTP resent"})
 
 
+@extend_schema(
+    summary="Verify OTP (step 2 of 2 — sets cookies)",
+    description='On success marks the email verified and sets the httpOnly JWT cookies.',
+    request=inline_serializer(
+        name='OtpVerifyRequest',
+        fields={'email': drf_serializers.EmailField(), 'code': drf_serializers.CharField()},
+    ),
+    responses=OpenApiResponse(description='{ message } with Set-Cookie: access_token, refresh_token.'),
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([OTPThrottle])
 def otp_verify(request):
     """
     POST /auth/otp/verify/  Body: { email, code }
@@ -313,6 +357,7 @@ def otp_verify(request):
         return Response({"error": "Too many attempts. Request a new code."},
                         status=status.HTTP_429_TOO_MANY_REQUESTS)
 
+    # Atomic increment so concurrent verify attempts can't race past the cap.
     EmailOTP.objects.filter(pk=otp.pk).update(attempts=F('attempts') + 1)
 
     if not secrets.compare_digest(otp.code, code):
@@ -325,149 +370,40 @@ def otp_verify(request):
         user.email_verified = True
         user.save(update_fields=['email_verified'])
 
-        # Notify student that email is verified and account is pending admin verification
-        Notification.objects.create(
-            user    = user,
-            type    = 'alert',
-            title   = 'Email verified successfully',
-            message = 'Your email has been verified. Your account is now pending verification by an admin before you can apply for any scheme.',
-        )
-
-        # Send email verified notification via Brevo
-        try:
-            send_email_verified_email(user.email, user.firstname)
-        except Exception:
-            logger.exception("Failed to send email verified email to %s", user.email)
-
-    # Manually update last_login since we bypass Django's auth backend
-    user.last_login = timezone.now()
-    user.save(update_fields=['last_login'])
     refresh = RefreshToken.for_user(user)
     response = Response({"message": "Verified"})
     _set_jwt_cookies(response, refresh)
     return response
 
+
 # ──────────────────────────── identity ────────────────────────────
+
+@extend_schema(
+    summary="Current user identity",
+    responses=OpenApiResponse(description='{ id, email, firstname, lastname, phone_number, role, passport }'),
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def me(request):
     """GET /auth/me/ — who am I?"""
-    nin = request.user.nin_hash or ""
+    passport_url =request.user.passport.url if request.user.passport else None
     return Response({
-        "id":            str(request.user.id),
-        "email":         request.user.email,
-        "firstname":     request.user.firstname,
-        "lastname":      request.user.lastname,
-        "phone_number":  request.user.phone_number,
-        "role":          request.user.role,
-        "last_login":    request.user.last_login,
-        # "passport":      request.user.student_profile.passport.url if hasattr(request.user, 'student_profile') and request.user.student_profile.passport else "",
-        "date_of_birth": str(request.user.date_of_birth) if request.user.date_of_birth else "",
-        "gender":        request.user.gender or "",
-        "nin_last4":     nin[-4:] if len(nin) >= 4 else nin,
+        "id":           str(request.user.id),
+        "email":        request.user.email,
+        "firstname":    request.user.firstname,
+        "lastname":     request.user.lastname,
+        "phone_number": request.user.phone_number,
+        "role":         request.user.role,
+        "passport":     passport_url,
     })
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated, IsSuperAdmin])
-def admin_users_list(request):
-    users = User.objects.filter(role__in=['admin', 'verifier', 'superadmin'])
-    data = [
-        {
-            "id":         str(u.id),
-            "firstname":  u.firstname,
-            "lastname":   u.lastname,
-            "email":      u.email,
-            "role":       u.role,
-            "is_active":  u.is_active,
-        }
-        for u in users
-    ]
-    return Response(data)
 
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated, IsSuperAdmin])
-def admin_user_create(request):
-    firstname    = request.data.get('firstname')
-    lastname     = request.data.get('lastname')
-    email        = request.data.get('email')
-    phone_number = request.data.get('phone_number')
-    nin_hash     = request.data.get('nin_hash')
-    password     = request.data.get('password')
-    role         = request.data.get('role', 'admin')
-
-    if not all([firstname, lastname, email, phone_number, nin_hash, password]):
-        return Response({"error": "All fields are required"}, status=status.HTTP_400_BAD_REQUEST)
-
-    if role not in ['admin', 'verifier', 'superadmin']:
-        return Response({"error": "Invalid role"}, status=status.HTTP_400_BAD_REQUEST)
-
-    if User.objects.filter(email=email).exists():
-        return Response({"error": "Email already registered"}, status=status.HTTP_400_BAD_REQUEST)
-
-    if User.objects.filter(nin_hash=nin_hash).exists():
-        return Response({"error": "NIN already in use"}, status=status.HTTP_400_BAD_REQUEST)
-
-    user = User.objects.create_user(
-        email=email,
-        phone_number=phone_number,
-        role=role,
-        password=password,
-        firstname=firstname,
-        lastname=lastname,
-        nin_hash=nin_hash,
-    )
-    return Response({
-        "id":        str(user.id),
-        "firstname": user.firstname,
-        "lastname":  user.lastname,
-        "email":     user.email,
-        "role":      user.role,
-        "is_active": user.is_active,
-    }, status=status.HTTP_201_CREATED)
-
-
-@api_view(['PATCH'])
-@permission_classes([IsAuthenticated, IsAdmin])
-def admin_user_update_role(request, id):
-    try:
-        user = User.objects.get(id=id)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    role = request.data.get('role')
-    if role not in ['admin', 'verifier', 'superadmin']:
-        return Response({"error": "Invalid role"}, status=status.HTTP_400_BAD_REQUEST)
-
-    user.role = role
-    user.save(update_fields=['role'])
-    return Response({"id": str(user.id), "role": user.role})
-
-
-@api_view(['PATCH'])
-@permission_classes([IsAuthenticated, IsAdmin])
-def admin_user_deactivate(request, id):
-    try:
-        user = User.objects.get(id=id)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    user.is_active = False
-    user.save(update_fields=['is_active'])
-    return Response({"id": str(user.id), "is_active": False})
-
-@api_view(['PATCH'])
-@permission_classes([IsAuthenticated, IsSuperAdmin])
-def admin_user_reactivate(request, id):
-    try:
-        user = User.objects.get(id=id)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    user.is_active = True
-    user.save(update_fields=['is_active'])
-    return Response({"id": str(user.id), "is_active": True})
-
+@extend_schema(
+    summary="Refresh access token",
+    description='Reads refresh_token from the cookie and rotates the access cookie. No request body.',
+    request=None,
+    responses=OpenApiResponse(description='{ message } with refreshed Set-Cookie.'),
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def refresh_token(request):
@@ -492,6 +428,12 @@ def refresh_token(request):
     return response
 
 
+@extend_schema(
+    summary="Logout",
+    description='Blacklists the refresh token and clears both cookies. No request body.',
+    request=None,
+    responses=OpenApiResponse(description='{ message }'),
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
@@ -518,8 +460,15 @@ def logout(request):
 _RESET_GENERIC_OK = {"message": "If that email is registered, a reset code has been sent."}
 
 
+@extend_schema(
+    summary="Request a password reset code",
+    description='Always returns 200 (no account enumeration). Emails a 6-digit reset code.',
+    request=inline_serializer(name='PasswordResetRequest', fields={'email': drf_serializers.EmailField()}),
+    responses=OpenApiResponse(description='{ message }'),
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthThrottle])
 def password_reset_request(request):
     """
     POST /auth/password/reset/request/  Body: { email }
@@ -604,8 +553,18 @@ def _find_valid_reset_otp(email, code):
     return otp, None, status.HTTP_200_OK
 
 
+@extend_schema(
+    summary="Verify a password reset code",
+    description='Validates the code without consuming it — gates the "enter new password" step.',
+    request=inline_serializer(
+        name='PasswordResetVerify',
+        fields={'email': drf_serializers.EmailField(), 'code': drf_serializers.CharField()},
+    ),
+    responses=OpenApiResponse(description='{ message }'),
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthThrottle])
 def password_reset_verify(request):
     """
     POST /auth/password/reset/verify/  Body: { email, code }
@@ -621,8 +580,22 @@ def password_reset_verify(request):
     return Response({"message": "Code verified"})
 
 
+@extend_schema(
+    summary="Confirm password reset",
+    description='Sets the new password, deletes the code, and invalidates all other sessions.',
+    request=inline_serializer(
+        name='PasswordResetConfirm',
+        fields={
+            'email': drf_serializers.EmailField(),
+            'code': drf_serializers.CharField(),
+            'new_password': drf_serializers.CharField(),
+        },
+    ),
+    responses=OpenApiResponse(description='{ message }'),
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([AuthThrottle])
 def password_reset_confirm(request):
     """
     POST /auth/password/reset/confirm/  Body: { email, code, new_password }

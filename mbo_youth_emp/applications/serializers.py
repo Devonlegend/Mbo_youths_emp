@@ -1,192 +1,268 @@
-"""Serializers for per-award-type submission details."""
-from datetime import datetime
+# applications/serializers.py
 
 from rest_framework import serializers
 
-from .models import Application, ScholarshipDetails, EmpowermentDetails, GrantDetails
-from accounts.models import User
-from students.models import Student
+from .models import ApplicationStatus, ApplicationStatusHistory, REVIEWABLE_STATUSES
 
 
-_BANK_FIELDS = ('bank_name', 'account_number', 'account_name')
+# ── Nested serializers ────────────────────────────────────────────────────────
+
+class SchemeProviderNestedSerializer(serializers.Serializer):
+    id            = serializers.UUIDField()
+    name          = serializers.CharField()
+    provider_type = serializers.CharField()
 
 
-class StudentNestedSerializer(serializers.ModelSerializer):
-    email = serializers.CharField(source='user.email', read_only=True)
+class SchemeNestedSerializer(serializers.Serializer):
+    id                     = serializers.UUIDField()
+    name                   = serializers.CharField()
+    award_type             = serializers.CharField()
+    award_type_display     = serializers.SerializerMethodField()
+    award_amount           = serializers.DecimalField(max_digits=12, decimal_places=2)
+    academic_year          = serializers.CharField()
+    application_open_date  = serializers.DateField()
+    application_close_date = serializers.DateField()
+    provider               = SchemeProviderNestedSerializer()
 
-    class Meta:
-        model = Student
-        fields = ('user_id', 'firstname', 'lastname', 'email', 'lga', 'ward', 'is_verified')
-
-
-class ApplicationSerializer(serializers.ModelSerializer):
-    student         = StudentNestedSerializer(read_only=True)
-    scheme_category = serializers.CharField(source='scheme.award_type', read_only=True)
-    scheme_name     = serializers.CharField(source='scheme.name',       read_only=True)
-    award_type      = serializers.CharField(source='scheme.award_type', read_only=True)
-    form_data       = serializers.SerializerMethodField()
-
-    class Meta:
-        model  = Application
-        fields = (
-            'id', 'student', 'scheme', 'scheme_name', 'scheme_category',
-            'award_type', 'status', 'submission_date', 'eligibility_passed',
-            'eligibility_details', 'has_conflict', 'conflict_scheme_ids',
-            'waiver_submitted', 'reviewed_by', 'reviewed_at', 'reviewer_notes',
-            'rejection_reason', 'created_at', 'updated_at',
-            'form_data',
-        )
-
-    def get_form_data(self, obj):
-        award_type = obj.scheme.award_type
-
-        if award_type in ('empowerment', 'vocational'):
-            detail = getattr(obj, 'empowerment_details', None)
-            if not detail:
-                return {}
-            return {
-            'training_name':    detail.trade_or_skill,
-            'education_level':  detail.training_provider,
-            'prior_experience': detail.prior_experience,
-            'trade':            detail.trade_or_skill,
-            'current_status':   detail.training_provider,
-            'support_needed':   detail.prior_experience,
-            'equipment':        detail.equipment,
-            'business_location': detail.business_location,
-            'bank_name':        detail.bank_name,
-            'account_number':   detail.account_number,
-            'account_name':     detail.account_name,
-        }
-
-        if award_type == 'scholarship':
-            detail = getattr(obj, 'scholarship_details', None)
-            if not detail:
-                return {}
-            return {
-                'institution':    detail.institution_name,
-                'department':     detail.course_of_study,
-                'current_level':  detail.current_level,
-                'cgpa':           str(detail.cgpa) if detail.cgpa else '—',
-                'matric_number':  detail.matric_number,
-                'bank_name':      detail.bank_name,
-                'account_number': detail.account_number,
-                'account_name':   detail.account_name,
-            }
-
-        if award_type == 'grant':
-            detail = getattr(obj, 'grant_details', None)
-            if not detail:
-                return {}
-            return {
-                'grant_purpose':          detail.business_name,
-                'business_plan_desc':     detail.business_description,
-                'amount_requested':       str(detail.requested_amount) if detail.requested_amount else '—',
-                'expected_beneficiaries': detail.intended_use,
-                'bank_name':              detail.bank_name,
-                'account_number':         detail.account_number,
-                'account_name':           detail.account_name,
-            }
-
-        return {}
+    def get_award_type_display(self, obj):
+        return obj.get_award_type_display() if hasattr(obj, 'get_award_type_display') else obj.award_type
 
 
-def normalize_details_payload(award_type, payload):
-    """Accept both the new `details` contract and the legacy flat form payload."""
-    if not isinstance(payload, dict):
-        return payload
-
-    if isinstance(payload.get('details'), dict):
-        normalized = dict(payload['details'])
-    else:
-        normalized = dict(payload)
-
-    for key in (
-        'scheme_id', 'details', 'category', 'result_document', 'admission_letter',
-        'business_plan', 'result', 'admission', 'declared_external',
-        'declaration_details', 'attested',
-    ):
-        normalized.pop(key, None)
-
-    if award_type == 'scholarship':
-        normalized.setdefault('institution_name', normalized.pop('institution', None) or normalized.get('institution_name'))
-        normalized.setdefault('course_of_study', normalized.pop('department', None) or normalized.get('course_of_study'))
-        normalized.setdefault('current_level', normalized.pop('level', None) or normalized.get('current_level'))
-        normalized.setdefault('cgpa', normalized.get('cgpa'))
-        normalized.setdefault('matric_number', normalized.get('matric_number'))
-        normalized.setdefault('admission_year', normalized.get('admission_year') or datetime.now().year)
-        normalized.setdefault('bank_name', normalized.get('bank_name', ''))
-        normalized.setdefault('account_number', normalized.get('account_number', ''))
-        normalized.setdefault('account_name', normalized.get('account_name', ''))
-
-    elif award_type == 'empowerment':
-        normalized.setdefault('trade_or_skill', normalized.pop('trade', None) or normalized.pop('training_name', None) or normalized.get('trade_or_skill'))
-        normalized.setdefault('training_provider', normalized.pop('current_status', None) or normalized.get('training_provider') or normalized.get('education_level') or '')
-        normalized.setdefault('training_duration_months', normalized.get('training_duration_months'))
-        normalized.setdefault('prior_experience', normalized.pop('support_needed', None) or normalized.get('prior_experience', ''))
-        normalized.setdefault('bank_name', normalized.get('bank_name', ''))
-        normalized.setdefault('account_number', normalized.get('account_number', ''))
-        normalized.setdefault('account_name', normalized.get('account_name', ''))
-
-    elif award_type == 'grant':
-        normalized.setdefault('business_name', normalized.pop('grant_purpose', None) or normalized.get('business_name'))
-        normalized.setdefault('business_stage', normalized.get('business_stage', 'idea'))
-        normalized.setdefault('business_description', normalized.pop('business_plan_desc', None) or normalized.get('business_description', ''))
-        normalized.setdefault('requested_amount', normalized.pop('amount_requested', None) or normalized.get('requested_amount'))
-        normalized.setdefault('intended_use', normalized.pop('expected_beneficiaries', None) or normalized.get('intended_use', ''))
-        normalized.setdefault('bank_name', normalized.get('bank_name', ''))
-        normalized.setdefault('account_number', normalized.get('account_number', ''))
-        normalized.setdefault('account_name', normalized.get('account_name', ''))
-        normalized.setdefault('equipment', normalized.get('equipment', ''))
-        normalized.setdefault('business_location', normalized.get('business_location', ''))
-
-    return normalized
+class StudentNestedSerializer(serializers.Serializer):
+    id                = serializers.UUIDField(source='user_id')
+    full_name         = serializers.CharField()
+    ward              = serializers.CharField()
+    level             = serializers.CharField(allow_null=True)
+    cgpa              = serializers.DecimalField(max_digits=4, decimal_places=2, allow_null=True)
+    nimc_verified     = serializers.BooleanField(source='is_verified')
 
 
-class ScholarshipDetailsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model  = ScholarshipDetails
-        fields = (
-            'institution_name', 'course_of_study', 'current_level',
-            'cgpa', 'admission_year', 'matric_number',
-        ) + _BANK_FIELDS
-        extra_kwargs = {
-            'bank_name':      {'required': False, 'allow_blank': True},
-            'account_number': {'required': False, 'allow_blank': True},
-            'account_name':   {'required': False, 'allow_blank': True},
-        }
+# ── Per-award-type programme-answer serializers ───────────────────────────────
+# Plain serializers (not model-bound — applications live in dynamic per-scheme
+# tables). Field names match the dynamic model fields exactly, so validated_data
+# can be splatted straight into Model.objects.create(**answers). The same dict is
+# handed to EligibilityEngine (keys cgpa / current_level / trade_or_skill line up).
+
+class ScholarshipAnswersSerializer(serializers.Serializer):
+    institution_name = serializers.CharField(max_length=200)
+    course_of_study  = serializers.CharField(max_length=200)
+    current_level    = serializers.CharField(max_length=20)
+    cgpa             = serializers.DecimalField(max_digits=4, decimal_places=2)
+    admission_year   = serializers.IntegerField()
+    matric_number    = serializers.CharField(max_length=50)
 
 
-class EmpowermentDetailsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model  = EmpowermentDetails
-        fields = (
-            'trade_or_skill', 'training_provider',
-            'training_duration_months', 'prior_experience',
-            'equipment', 'business_location',
-        ) + _BANK_FIELDS
-        extra_kwargs = {
-            'bank_name':      {'required': False, 'allow_blank': True},
-            'account_number': {'required': False, 'allow_blank': True},
-            'account_name':   {'required': False, 'allow_blank': True},
-        }
+class EmpowermentAnswersSerializer(serializers.Serializer):
+    trade_or_skill           = serializers.CharField(max_length=120)
+    training_provider        = serializers.CharField(max_length=200, required=False,
+                                                     allow_blank=True, default='')
+    training_duration_months = serializers.IntegerField(required=False, allow_null=True)
+    prior_experience         = serializers.CharField(required=False, allow_blank=True, default='')
 
 
-class GrantDetailsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model  = GrantDetails
-        fields = (
-            'business_name', 'business_stage', 'business_description',
-            'requested_amount', 'intended_use',
-        ) + _BANK_FIELDS
-        extra_kwargs = {
-            'bank_name':      {'required': False, 'allow_blank': True},
-            'account_number': {'required': False, 'allow_blank': True},
-            'account_name':   {'required': False, 'allow_blank': True},
-        }
+class GrantAnswersSerializer(serializers.Serializer):
+    business_name        = serializers.CharField(max_length=200)
+    business_stage       = serializers.ChoiceField(
+        choices=['idea', 'startup', 'growth', 'mature'])
+    business_description = serializers.CharField()
+    requested_amount     = serializers.DecimalField(max_digits=12, decimal_places=2)
+    intended_use         = serializers.CharField()
 
 
-DETAILS_SERIALIZER_BY_TYPE = {
-    'scholarship': ScholarshipDetailsSerializer,
-    'empowerment': EmpowermentDetailsSerializer,
-    'grant':       GrantDetailsSerializer,
+# award_type → answers serializer for its programme_answers payload
+PROGRAMME_ANSWER_SERIALIZERS = {
+    'scholarship': ScholarshipAnswersSerializer,
+    'empowerment': EmpowermentAnswersSerializer,
+    'grant':       GrantAnswersSerializer,
 }
+
+# award_type → document keys (Cloudinary URLs) that must be present & non-blank.
+REQUIRED_DOCUMENTS = {
+    'scholarship': [
+        ('admission_letter', 'admission letter'),
+        ('last_result',      'latest result'),
+    ],
+}
+
+
+# ── Read serialization of a dynamic application row ───────────────────────────
+# Each row IS the full application (no separate detail table). These functions
+# build plain dicts; DRF's JSON renderer handles Decimal/UUID/datetime values.
+
+BANK_FIELDS = ['bank_name', 'bank_code', 'account_number', 'account_name', 'name_match_passed']
+
+
+def _can_waive(row):
+    return row.status == ApplicationStatus.DOUBLE_DIP_FLAG and not row.waiver_submitted
+
+
+def _can_review(row):
+    return row.status in REVIEWABLE_STATUSES
+
+
+def _details_block(row):
+    """The award-specific answers + bank snapshot for this application row."""
+    from .dynamic import ANSWER_FIELDS
+    fields = ANSWER_FIELDS.get(row.scheme.award_type, []) + BANK_FIELDS
+    return {f: getattr(row, f, None) for f in fields}
+
+
+def serialize_application(row):
+    """Full detail shape for a single application row."""
+    return {
+        'id':              str(row.id),
+        'student':         StudentNestedSerializer(row.student).data,
+        'scheme':          SchemeNestedSerializer(row.scheme).data,
+        'status':          row.status,
+        'status_display':  row.get_status_display(),
+        'submission_date': row.submission_date,
+        # Programme-specific answers + bank snapshot
+        'details':         _details_block(row),
+        # Self-declaration
+        'self_declaration_received_support': row.self_declaration_received_support,
+        'self_declaration_details':          row.self_declaration_details,
+        # Attestation
+        'attestation_agreed': row.attestation_agreed,
+        'attestation_at':     row.attestation_at,
+        # Documents
+        'documents': row.documents,
+        # Eligibility
+        'eligibility_passed':  row.eligibility_passed,
+        'eligibility_details': row.eligibility_details,
+        # Conflict
+        'has_conflict':        row.has_conflict,
+        'conflict_scheme_ids': row.conflict_scheme_ids,
+        # Waiver
+        'waiver_submitted': row.waiver_submitted,
+        # Review
+        'reviewer_notes':   row.reviewer_notes,
+        'rejection_reason': row.rejection_reason,
+        'reviewed_at':      row.reviewed_at,
+        # Computed
+        'can_waive':  _can_waive(row),
+        'can_review': _can_review(row),
+        'created_at': row.created_at,
+        'updated_at': row.updated_at,
+    }
+
+
+def serialize_application_list(row):
+    """Compact shape for list views (mine / flagged / admin list)."""
+    return {
+        'id':                 str(row.id),
+        'student':            StudentNestedSerializer(row.student).data,
+        'scheme':             SchemeNestedSerializer(row.scheme).data,
+        'status':             row.status,
+        'status_display':     row.get_status_display(),
+        'submission_date':    row.submission_date,
+        'eligibility_passed': row.eligibility_passed,
+        'has_conflict':       row.has_conflict,
+        'waiver_submitted':   row.waiver_submitted,
+        'can_waive':          _can_waive(row),
+        'created_at':         row.created_at,
+    }
+
+
+# ── Status history ────────────────────────────────────────────────────────────
+
+class ApplicationStatusHistorySerializer(serializers.ModelSerializer):
+    changed_by_email = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = ApplicationStatusHistory
+        fields = ['id', 'application_id', 'from_status', 'to_status',
+                  'reason', 'changed_by_email', 'changed_at']
+
+    def get_changed_by_email(self, obj) -> str:
+        return obj.changed_by.email if obj.changed_by else 'System'
+
+
+# ── Submit serializer ─────────────────────────────────────────────────────────
+
+class SelfDeclarationDetailSerializer(serializers.Serializer):
+    """One row in the prior-support list."""
+    organisation = serializers.CharField()
+    category     = serializers.CharField()
+    year         = serializers.IntegerField()
+
+
+class ApplicationSubmitSerializer(serializers.Serializer):
+    """
+    POST /applications/submit/
+
+    Fields:
+      - scheme_id  (required)
+      - programme_answers  (required — dict, validated per award_type on the view)
+      - bank_* (resolved bank snapshot)
+      - self_declaration_received_support  (required bool)
+      - self_declaration_details  (required list if received_support=True)
+      - attestation_agreed  (must be True)
+      - documents  (optional dict of Cloudinary URLs)
+    """
+    scheme_id = serializers.UUIDField()
+
+    programme_answers = serializers.DictField(
+        child=serializers.JSONField(),
+        required=True,
+        allow_empty=False,
+    )
+
+    # Bank snapshot — collected fresh per application
+    bank_account_number = serializers.CharField(max_length=10)
+    bank_code           = serializers.CharField(max_length=10)
+    bank_name           = serializers.CharField(max_length=100)
+    bank_account_name   = serializers.CharField(max_length=200)
+    bank_name_match_passed = serializers.BooleanField(default=False)
+
+    # Self-declaration
+    self_declaration_received_support = serializers.BooleanField()
+    self_declaration_details          = serializers.ListField(
+        child=SelfDeclarationDetailSerializer(),
+        required=False,
+        default=list,
+    )
+
+    # Attestation — MUST be True
+    attestation_agreed = serializers.BooleanField()
+
+    # Cloudinary document URLs (optional at submit; may be provided later)
+    documents = serializers.DictField(
+        child=serializers.CharField(allow_blank=True),
+        required=False,
+        default=dict,
+    )
+
+    def validate_attestation_agreed(self, value):
+        if not value:
+            raise serializers.ValidationError(
+                "You must agree to the attestation to submit your application."
+            )
+        return value
+
+    def validate(self, data):
+        if data.get('self_declaration_received_support') is True:
+            details = data.get('self_declaration_details', [])
+            if not details:
+                raise serializers.ValidationError({
+                    'self_declaration_details': (
+                        "You indicated you received prior support. "
+                        "Please list each organisation, category, and year."
+                    )
+                })
+        return data
+
+
+# ── Review serializer ─────────────────────────────────────────────────────────
+
+class ApplicationReviewSerializer(serializers.Serializer):
+    DECISION_CHOICES = ['approved', 'rejected', 'shortlisted']
+
+    decision = serializers.ChoiceField(choices=DECISION_CHOICES)
+    notes    = serializers.CharField(required=False, allow_blank=True, default='')
+
+    def validate(self, data):
+        if data.get('decision') == 'rejected' and not data.get('notes', '').strip():
+            raise serializers.ValidationError(
+                {'notes': 'A reason is required when rejecting an application.'}
+            )
+        return data

@@ -2,7 +2,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from accounts.services import send_account_verified_email
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+
 from .models import Student, AcademicRecord
 from .serializers import StudentSerializer, StudentCreateSerializer, AcademicRecordSerializer
 from accounts.permissions import IsAdmin, IsStudent, IsVerifier
@@ -19,48 +20,41 @@ class StudentViewSet(viewsets.ModelViewSet):
         return StudentSerializer
 
     def get_permissions(self):
-        if self.action == 'destroy':
+        """
+        Different actions need different permissions.
+        Students can only see their own profile.
+        Admins can see everyone.
+        """
+        if self.action in ['list', 'destroy']:
             return [IsAdmin()]
-        if self.action == 'list':
-            return [IsAuthenticated()]
         return [IsAuthenticated()]
-    
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['request'] = self.request
-        return context
 
-    @action(detail=False, methods=['get', 'post'], url_path='bank-detail')
-    def bank_detail(self, request):
-        student = getattr(request.user, 'student_profile', None)
-        if student is None:
-            return Response({"error": "No student profile found"}, status=status.HTTP_404_NOT_FOUND)
-
-        if request.method == 'GET':
-            return Response({
-                "bank_name":      student.bank_name      or "",
-                "account_number": student.account_number or "",
-                "account_name":   student.account_name   or "",
-            })
-
-        student.bank_name      = request.data.get('bank_name', '')
-        student.account_number = request.data.get('account_number', '')
-        student.account_name   = request.data.get('account_name', '')
-        student.save(update_fields=['bank_name', 'account_number', 'account_name'])
-        return Response({
-            "bank_name":      student.bank_name,
-            "account_number": student.account_number,
-            "account_name":   student.account_name,
-        })
-
+    @extend_schema(
+        summary="Quick eligibility pre-check",
+        description=(
+            "Label-based pre-check using the student's active_award flag. The "
+            "authoritative check runs at submit time via the EligibilityEngine."
+        ),
+        parameters=[
+            OpenApiParameter('min_cgpa', float, description='Default 2.20.'),
+            OpenApiParameter('level', str, description='Required level (optional).'),
+        ],
+        responses=OpenApiResponse(description='{ student, eligible, checks: {cgpa, level, conflict} }'),
+    )
     @action(detail=True, methods=['get'], url_path='eligibility-check')
     def eligibility_check(self, request, pk=None):
+        # Simplified, label-based pre-check (uses the student's active_award flag).
+        # The authoritative conflict evaluation happens at submit time via
+        # EligibilityEngine, which inspects approved Application rows.
         student = self.get_object()
+
         try:
             min_cgpa       = float(request.query_params.get('min_cgpa', 2.20))
             required_level = request.query_params.get('level', '')
         except ValueError:
             return Response({"error": "Invalid parameters"}, status=400)
+
+        
 
         student_cgpa = float(student.cgpa) if student.cgpa else 0.0
         cgpa_ok      = student_cgpa >= min_cgpa
@@ -77,13 +71,19 @@ class StudentViewSet(viewsets.ModelViewSet):
             }
         })
 
+    @extend_schema(
+        summary="Student statistics",
+        description='Aggregate counts: totals, verified, active awards, and a by-ward breakdown.',
+        responses=OpenApiResponse(description='{ total_students, verified, unverified, with_active_award, by_ward }'),
+    )
     @action(detail=False, methods=['get'], url_path='stats')
     def stats(self, request):
+        """GET /students/stats/"""
         from django.db.models import Count
 
-        total      = Student.objects.count()
-        verified   = Student.objects.filter(is_verified=True).count()
-        with_award = Student.objects.exclude(active_award='').count()
+        total        = Student.objects.count()
+        verified     = Student.objects.filter(is_verified=True).count()
+        with_award   = Student.objects.exclude(active_award='').count()
 
         by_ward = {}
         for student in Student.objects.values('ward').annotate(count=Count('id')):
@@ -97,35 +97,17 @@ class StudentViewSet(viewsets.ModelViewSet):
             "by_ward":           by_ward,
         })
 
+    @extend_schema(
+        summary="My student profile",
+        description="The current user's student profile.",
+        responses=StudentSerializer,
+    )
     @action(detail=False, methods=['get'], url_path='me')
     def me(self, request):
-        student = getattr(request.user, 'student_profile', None)
+        """GET /students/me/ — return current user's student profile."""
+        user = request.user
+        student = getattr(user, 'student_profile', None)
         if student is None:
             return Response({"error": "No student profile found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = self.get_serializer(student)
         return Response(serializer.data)
-
-    # ✅ NOW INSIDE THE CLASS — indented to match the other actions
-    @action(detail=True, methods=['post'], url_path='verify')
-    def verify(self, request, pk=None):
-        student = self.get_object()
-        student.is_verified = not student.is_verified
-        student.save(update_fields=['is_verified'])
-
-        from notifications.models import Notification
-        if student.is_verified:
-            Notification.objects.create(
-                user    = student.user,
-                type    = 'alert',
-                title   = 'Account verified',
-                message = 'Your account has been verified by an admin. You can now apply for available schemes.',
-            )
-            try:
-                send_account_verified_email(student.user.email, student.firstname)
-            except Exception:
-                import logging
-                logging.getLogger(__name__).exception(
-                    "Failed to send account verified email to %s", student.user.email
-                )
-
-        return Response({'is_verified': student.is_verified})

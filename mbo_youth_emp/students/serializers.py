@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Student, AcademicRecord
 
 
+
 class AcademicRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model  = AcademicRecord
@@ -15,37 +16,16 @@ class StudentSerializer(serializers.ModelSerializer):
     academic_records = AcademicRecordSerializer(many=True, read_only=True)
     has_active_award = serializers.SerializerMethodField()
 
-    email        = serializers.SerializerMethodField()
-    phone_number = serializers.SerializerMethodField()
-    gender       = serializers.SerializerMethodField()
-    nin_last4    = serializers.SerializerMethodField()
-    passport    = serializers.FileField(use_url=True, read_only=True)
-    certificate = serializers.FileField(use_url=True, read_only=True)
-
     class Meta:
         model  = Student
         fields = [
-            'user_id', 'firstname', 'lastname', 'ward', 'lga', 'level', 'cgpa',
-            'is_verified', 'active_award', 'has_active_award', 'academic_records',
-            'date_of_birth', 'passport', 'certificate', 'nin_last4',
-            'email', 'phone_number', 'gender',
+            'firstname', 'lastname', 'ward', 'lga', 'level', 'cgpa',
+            'is_verified',
+            'active_award', 'has_active_award', 'academic_records',
         ]
 
-    def get_has_active_award(self, obj):
+    def get_has_active_award(self, obj) -> bool:
         return obj.has_active_award()
-
-    def get_email(self, obj):
-        return getattr(obj.user, 'email', None)
-
-    def get_phone_number(self, obj):
-        return getattr(obj.user, 'phone_number', None)
-
-    def get_gender(self, obj):
-        return getattr(obj.user, 'gender', None)
-    
-    def get_nin_last4(self, obj):
-        nin = obj.nin_hash or ""
-        return nin[-4:] if len(nin) >= 4 else None
 
 
 class StudentCreateSerializer(serializers.ModelSerializer):

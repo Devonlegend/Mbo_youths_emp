@@ -1,5 +1,15 @@
 from django.contrib import admin
-from .models import SchemeProvider ,ScholarshipScheme
+from .models import Cycle, SchemeProvider, ScholarshipScheme
+
+
+@admin.register(Cycle)
+class CycleAdmin(admin.ModelAdmin):
+    list_display = ['name', 'start_year', 'end_year', 'is_active']
+    list_filter = ['is_active']
+    list_editable = ['is_active']
+    search_fields = ['name']
+
+
 @admin.register(SchemeProvider)
 class SchemeAdmin(admin.ModelAdmin):
     list_display =['name','provider_type']
