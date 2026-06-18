@@ -22,6 +22,10 @@ const statusConfig = {
   rejected:          { label: "Rejected",    color: "#64748b", bg: "#f8fafc" },
   withdrawn:         { label: "Rejected",    color: "#64748b", bg: "#f8fafc" },
 };
+// NOTE: "shortlisted" entry above is left in place intentionally. Existing
+// applications that were shortlisted before this change (if any) still need
+// a valid label/color to render. Going forward, no new application can reach
+// this status since the Shortlist button below is disabled.
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
@@ -180,7 +184,9 @@ export default function AdminApplicationDetailPage() {
   const [submitting,  setSubmitting]  = useState(false);
   const [actionError, setActionError] = useState("");
   const [decided,     setDecided]     = useState(false);
-  const [confirmModal,setConfirmModal]= useState(null); // "approved" | "rejected" | "shortlisted" | null
+  const [confirmModal,setConfirmModal]= useState(null); // "approved" | "rejected" | null
+  // "shortlisted" removed from the possible values above — the Shortlist
+  // button that used to set this is commented out below.
 
   // ── FETCH APPLICATION ────────────────────────────────────────────────────
   useEffect(() => {
@@ -514,6 +520,7 @@ export default function AdminApplicationDetailPage() {
                     Approve
                   </button>
 
+                  {/* Shortlist option removed — not part of the intended design.
                   <button
                     className={styles.shortlistBtn}
                     onClick={() => {
@@ -524,6 +531,7 @@ export default function AdminApplicationDetailPage() {
                   >
                     Shortlist
                   </button>
+                  */}
 
                   <button
                     className={styles.rejectBtn}
@@ -566,9 +574,8 @@ export default function AdminApplicationDetailPage() {
             background: "#fff", borderRadius: 16, padding: 32, maxWidth: 400, width: "90%",
           }}>
             <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
-              {confirmModal === "approved"   ? "Approve Application?" :
-               confirmModal === "shortlisted" ? "Shortlist Application?" :
-               "Reject Application?"}
+              {confirmModal === "approved" ? "Approve Application?" : "Reject Application?"}
+              {/* "shortlisted" branch removed along with the Shortlist button above */}
             </h3>
             <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>
               This action is permanent and cannot be undone.
@@ -588,14 +595,13 @@ export default function AdminApplicationDetailPage() {
                 onClick={() => { const d = confirmModal; setConfirmModal(null); handleDecision(d); }}
                 style={{
                   flex: 1, padding: "10px 0", borderRadius: 8, border: "none",
-                  background: confirmModal === "approved" ? "#15803d" :
-                              confirmModal === "shortlisted" ? "#3b82f6" : "#ef4444",
+                  background: confirmModal === "approved" ? "#15803d" : "#ef4444",
+                  /* "shortlisted" branch removed along with the Shortlist button above */
                   fontSize: 13, cursor: "pointer", color: "#fff", fontWeight: 600,
                 }}
               >
-                {confirmModal === "approved"    ? "Yes, Approve"    :
-                 confirmModal === "shortlisted" ? "Yes, Shortlist"  :
-                 "Yes, Reject"}
+                {confirmModal === "approved" ? "Yes, Approve" : "Yes, Reject"}
+                {/* "shortlisted" branch removed along with the Shortlist button above */}
               </button>
             </div>
           </div>

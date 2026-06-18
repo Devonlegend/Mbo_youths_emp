@@ -6,6 +6,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.utils import timezone
+
+from notifications.models import Notification
+from audit.models import AuditLog
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
 logger = logging.getLogger(__name__)
@@ -380,6 +383,17 @@ class ApplicationViewSet(viewsets.ViewSet):
         else:
             _dispatch_email(send_application_submitted_email, application, scheme)
 
+        Notification.objects.create(
+            user=request.user,
+            type='application',
+            title='Application Submitted' if not result['has_conflict'] else 'Conflict Detected',
+            message=(
+                f"Your application for {scheme.name} has been submitted and is under review."
+                if not result['has_conflict'] else
+                f"A conflict was detected for your {scheme.name} application. Please submit a waiver."
+            ),
+        )
+
         return Response({
             "application_id":   str(application.id),
             "status":           application.status,
@@ -511,11 +525,33 @@ class ApplicationViewSet(viewsets.ViewSet):
             reason         = reason,
         )
 
+        AuditLog.objects.create(
+            admin=request.user,
+            action=f"{decision.capitalize()} application for '{scheme.name}' — {student.full_name}",
+            entity_type="Application",
+            entity_id=str(application.id),
+        )
+
         # ── Send notifications ────────────────────────────────────────────────
         if decision == 'approved':
             _dispatch_email(send_application_approved_email, application, scheme)
         elif decision == 'rejected':
             _dispatch_email(send_application_rejected_email, application, scheme)
+            
+        if decision == 'approved':
+            Notification.objects.create(
+                user=student.user,
+                type='application',
+                title='Application Approved',
+                message=f"Congratulations! Your application for {scheme.name} has been approved.",
+            )
+        elif decision == 'rejected':
+            Notification.objects.create(
+                user=student.user,
+                type='application',
+                title='Application Rejected',
+                message=f"Your application for {scheme.name} was not successful. {notes}",
+            )    
 
         return Response({
             "message": f"Application {decision} successfully.",

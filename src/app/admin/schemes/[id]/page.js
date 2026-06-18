@@ -8,7 +8,7 @@ import {
   Users, Calendar, DollarSign, Shield,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { getSchemes, publishScheme, closeScheme, updateScheme, reopenScheme } from "@/services";
+import { getScheme, publishScheme, closeScheme, updateScheme, reopenScheme } from "@/services";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
@@ -68,6 +68,7 @@ export default function SchemeDetailPage() {
     async function load() {
       try {
         const res = await getScheme(params.id);
+        if (cancelled) return;
         setScheme(res.data);
         setForm(res.data);
       } catch {

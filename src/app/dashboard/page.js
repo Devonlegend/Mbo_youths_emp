@@ -42,7 +42,7 @@ function mapApplicationToActivity(app) {
     icon:      meta.icon,
     iconClass: meta.iconClass,
     title:     meta.title,
-    desc:      app.scheme_name || app.scheme || "Programme",
+    desc: app.scheme_name || app.scheme?.name || "Programme",
     time:      date ? formatTimeAgo(date) : "",
   };
 }

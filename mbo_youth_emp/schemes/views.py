@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
+from audit.models import AuditLog
 from .models import ScholarshipScheme, Cycle
 from .serializers import ScholarshipSchemeSerializer, CycleSerializer
 from accounts.permissions import IsAdmin
@@ -27,7 +28,6 @@ class CycleViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='activate')
     def activate(self, request, pk=None):
         """POST /schemes/cycles/{id}/activate/ — make this the active cycle."""
-        # Deactivate all others first
         Cycle.objects.all().update(is_active=False)
         cycle = self.get_object()
         cycle.is_active = True
@@ -45,6 +45,8 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
+        if self.action == 'fields':
+            return [IsAuthenticated()]
         return [IsAdmin()]
 
     def get_queryset(self):
@@ -55,16 +57,13 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
         user = self.request.user
         is_admin = user and user.is_authenticated and user.role in ['admin', 'superadmin']
 
-        # Non-admins only see published + active schemes
         if not is_admin:
             queryset = queryset.filter(is_published=True, is_active=True)
 
-        # Filter by award_type
         award_type = self.request.query_params.get('award_type')
         if award_type:
             queryset = queryset.filter(award_type=award_type)
 
-        # Filter by cycle — 'active' means the currently active cycle
         cycle_param = self.request.query_params.get('cycle')
         if cycle_param == 'active':
             active_cycle = Cycle.get_active()
@@ -82,6 +81,14 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
         scheme.is_published = True
         scheme.is_active    = True
         scheme.save()
+
+        AuditLog.objects.create(
+            admin=request.user,
+            action=f"Published scheme '{scheme.name}'",
+            entity_type="Scheme",
+            entity_id=str(scheme.id),
+        )
+
         return Response({
             'status': 'scheme published successfully',
             'is_published': scheme.is_published,
@@ -94,13 +101,19 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
         scheme = self.get_object()
         scheme.is_active = False
         scheme.save()
+
+        AuditLog.objects.create(
+            admin=request.user,
+            action=f"Closed scheme '{scheme.name}'",
+            entity_type="Scheme",
+            entity_id=str(scheme.id),
+        )
+
         return Response({
             'status': 'scheme closed successfully',
             'is_active': scheme.is_active
         })
-    
-    # dynamic forms...
-    
+
     @action(detail=True, methods=['get'], url_path='fields')
     def fields(self, request, pk=None):
         """GET /schemes/{id}/fields/ — returns field definitions for the apply form."""
