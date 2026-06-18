@@ -33,22 +33,22 @@ export default function AdminStudentsPage() {
   const [filterOpen,  setFilterOpen]  = useState(false);
 
   // ── FETCH ─────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res  = await getStudents();
-        if (cancelled) return;
-        setStudents(Array.isArray(res.data) ? res.data : []);
-      } catch {
-        if (!cancelled) setError("Failed to load students. Please try again.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+useEffect(() => {
+  let cancelled = false;
+  async function load() {
+    try {
+      const res = await getStudents();
+      if (cancelled) return;
+      setStudents(Array.isArray(res.data?.results) ? res.data.results : []);
+    } catch {
+      if (!cancelled) setError("Failed to load students. Please try again.");
+    } finally {
+      if (!cancelled) setLoading(false);
     }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  }
+  load();
+  return () => { cancelled = true; };
+}, []);
 
   // ── COUNTS ────────────────────────────────────────────────────────────────
   const total      = students.length;

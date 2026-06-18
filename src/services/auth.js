@@ -1,8 +1,9 @@
 import api from "./axiosInstance";
 
 export const register = (formData) =>
-  api.post("/auth/register/", formData);
-
+  api.post("/auth/register/", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 export const login = (body) =>
   api.post("/auth/login/", body);
 
@@ -34,7 +35,7 @@ export const forgotPasswordReset = (body) =>
   api.post("/auth/password/reset/confirm/", body);
 
 export const getAuditLogs = () =>
-  api.get("/auth/audit-logs/");
+  api.get("/audit/");
 
 export const getAdminUsers = () =>
   api.get("/auth/admin-users/");

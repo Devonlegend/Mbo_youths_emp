@@ -6,7 +6,7 @@ import {
   Settings, RefreshCw,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { getAuditLogs } from "@/services/auth";
+import { getAuditLogs } from "@/services";
 
 // ── ENTITY TYPE CONFIG ────────────────────────────────────────────────────────
 const entityConfig = {

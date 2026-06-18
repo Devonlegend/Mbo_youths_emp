@@ -106,7 +106,7 @@ class StudentViewSet(viewsets.ModelViewSet):
     def me(self, request):
         """GET /students/me/ — return current user's student profile."""
         user = request.user
-        student = getattr(user, 'student_profile', None)
+        student = getattr(user, 'student', None)
         if student is None:
             return Response({"error": "No student profile found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = self.get_serializer(student)

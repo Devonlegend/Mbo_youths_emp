@@ -61,7 +61,7 @@ export default function DashboardLayout({ children }) {
           is_verified:  profile.is_verified  || false,
           active_award: profile.active_award || "",
           has_active_award: profile.has_active_award || false,
-          passport_photo: null,
+          passport_photo: auth.passport || null,
           nin_masked:     "****-***-****",
           date_of_birth:  auth.date_of_birth || "",
           gender:         auth.gender        || "",

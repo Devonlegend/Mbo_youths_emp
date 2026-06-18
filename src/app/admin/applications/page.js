@@ -2,9 +2,9 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ClipboardList, Search, Filter, ChevronDown,
-  ArrowRight, AlertCircle, CheckCircle2, Clock,
-  XCircle, ShieldAlert, Users,
+  ClipboardList, Search,
+  ArrowRight, AlertCircle, CheckCircle2,
+  ShieldAlert,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApplications } from "@/services";
@@ -25,7 +25,6 @@ const statusConfig = {
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
   scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4" },
-  vocational:  { label: "Training",    color: "#1d4ed8", bg: "#eff6ff" },
   empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb" },
   grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff" },
 };
@@ -62,7 +61,6 @@ export default function AdminApplicationsPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
-  // Read tab from URL query (?tab=flagged) — set by quick actions on overview
   const initialTab = searchParams.get("tab") || "all";
 
   const [applications, setApplications] = useState([]);
@@ -70,7 +68,6 @@ export default function AdminApplicationsPage() {
   const [error,        setError]        = useState(null);
   const [activeTab,    setActiveTab]    = useState(initialTab);
   const [search,       setSearch]       = useState("");
-  const [filterOpen,   setFilterOpen]   = useState(false);
 
   // ── FETCH ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -79,7 +76,7 @@ export default function AdminApplicationsPage() {
       try {
         const res  = await getApplications();
         if (cancelled) return;
-        const data = Array.isArray(res.data) ? res.data : [];
+        const data = Array.isArray(res.data?.results) ? res.data.results : [];
         setApplications(data);
       } catch {
         if (!cancelled) setError("Failed to load applications. Please try again.");
@@ -107,20 +104,14 @@ export default function AdminApplicationsPage() {
 
   // ── FILTER BY TAB + SEARCH ────────────────────────────────────────────────
   const filtered = applications.filter((app) => {
-    // Tab filter
     const tabMatch =
-      activeTab === "all" ? true :
-      activeTab === "pending" ?
-        ["submitted", "eligibility_check", "document_review",
-         "shortlisted", "draft"].includes(app.status) :
-      activeTab === "flagged" ?
-        app.status === "double_dip_flag" : true;
+      activeTab === "all"     ? true :
+      activeTab === "pending" ? ["submitted", "eligibility_check", "document_review",
+                                 "shortlisted", "draft"].includes(app.status) :
+      activeTab === "flagged" ? app.status === "double_dip_flag" : true;
 
-    // Search filter
-    const studentName = app.student
-      ? `${app.student.firstname} ${app.student.lastname}`.toLowerCase()
-      : "";
-    const schemeName = (app.scheme_name || "").toLowerCase();
+    const studentName = (app.student?.full_name || "").toLowerCase();
+    const schemeName  = (app.scheme?.name || "").toLowerCase();
     const searchMatch = search.trim() === "" ? true :
       studentName.includes(search.toLowerCase()) ||
       schemeName.includes(search.toLowerCase());
@@ -133,17 +124,17 @@ export default function AdminApplicationsPage() {
     <div className={styles.page}>
 
       {/* PAGE HEADER */}
-     <div className={styles.header}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <ClipboardList size={20} color="#15803d" strokeWidth={1.8} />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
-              <h1 className={styles.title}>Applications</h1>
-              <p className={styles.sub}>Review and manage all programme applications.</p>
-            </div>
+      <div className={styles.header}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <ClipboardList size={20} color="#15803d" strokeWidth={1.8} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
+            <h1 className={styles.title}>Applications</h1>
+            <p className={styles.sub}>Review and manage all programme applications.</p>
           </div>
         </div>
+      </div>
 
       {/* SUMMARY STRIP */}
       <div className={styles.summaryStrip}>
@@ -160,10 +151,7 @@ export default function AdminApplicationsPage() {
             onClick={() => s.key && setActiveTab(s.key)}
             style={{ cursor: s.key ? "pointer" : "default" }}
           >
-            <span
-              className={styles.summaryValue}
-              style={{ color: s.color || "#0f172a" }}
-            >
+            <span className={styles.summaryValue} style={{ color: s.color || "#0f172a" }}>
               {loading ? "—" : s.value}
             </span>
             <span className={styles.summaryLabel}>{s.label}</span>
@@ -176,8 +164,6 @@ export default function AdminApplicationsPage() {
 
         {/* TABS + TOOLBAR */}
         <div className={styles.cardTop}>
-
-          {/* Tabs */}
           <div className={styles.tabs}>
             {TABS.map((tab) => (
               <button
@@ -193,7 +179,6 @@ export default function AdminApplicationsPage() {
             ))}
           </div>
 
-          {/* Search */}
           <div className={styles.toolbar}>
             <div className={styles.searchWrap}>
               <Search size={14} className={styles.searchIcon} />
@@ -205,7 +190,6 @@ export default function AdminApplicationsPage() {
               />
             </div>
           </div>
-
         </div>
 
         {/* TABLE */}
@@ -221,9 +205,7 @@ export default function AdminApplicationsPage() {
           </div>
 
           {/* Loading */}
-          {loading && (
-            [1,2,3,4,5].map((i) => <SkeletonRow key={i} />)
-          )}
+          {loading && [1,2,3,4,5].map((i) => <SkeletonRow key={i} />)}
 
           {/* Error */}
           {!loading && error && (
@@ -245,9 +227,7 @@ export default function AdminApplicationsPage() {
               <div className={styles.emptyIconWrap} style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0" }}>
                 <CheckCircle2 size={24} color="#15803d" strokeWidth={1.8} />
               </div>
-              <p className={styles.emptyTitle} style={{ color: "#15803d" }}>
-                Flagged queue is clear
-              </p>
+              <p className={styles.emptyTitle} style={{ color: "#15803d" }}>Flagged queue is clear</p>
               <p className={styles.emptySub}>No conflict or false declaration flags at this time.</p>
             </div>
           )}
@@ -258,14 +238,12 @@ export default function AdminApplicationsPage() {
               <div className={styles.emptyIconWrap} style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0" }}>
                 <CheckCircle2 size={24} color="#15803d" strokeWidth={1.8} />
               </div>
-              <p className={styles.emptyTitle} style={{ color: "#15803d" }}>
-                All caught up
-              </p>
+              <p className={styles.emptyTitle} style={{ color: "#15803d" }}>All caught up</p>
               <p className={styles.emptySub}>No pending applications waiting for review.</p>
             </div>
           )}
 
-          {/* Empty — no results from search */}
+          {/* Empty — no results */}
           {!loading && !error && filtered.length === 0 &&
            activeTab !== "flagged" && activeTab !== "pending" && (
             <div className={styles.emptyState}>
@@ -279,9 +257,17 @@ export default function AdminApplicationsPage() {
 
           {/* TABLE ROWS */}
           {!loading && !error && filtered.map((app) => {
-            const status   = statusConfig[app.status]   || statusConfig.submitted;
-            const category = categoryConfig[(app.scheme_category || "").toLowerCase()] || categoryConfig.scholarship;
+            const status     = statusConfig[app.status] || statusConfig.submitted;
+            const catKey     = (app.scheme?.award_type || "").toLowerCase();
+            const category   = categoryConfig[catKey] || categoryConfig.scholarship;
             const isConflict = app.status === "double_dip_flag";
+            const fullName   = app.student?.full_name || "Unknown";
+            const initials   = fullName
+              .split(" ")
+              .map((n) => n[0] || "")
+              .slice(0, 2)
+              .join("")
+              .toUpperCase();
 
             return (
               <div
@@ -290,30 +276,16 @@ export default function AdminApplicationsPage() {
               >
                 {/* Student */}
                 <div className={styles.tdStudent}>
-                  <div className={styles.studentAvatar}>
-                    {app.student
-                      ? `${app.student.firstname?.[0] || ""}${app.student.lastname?.[0] || ""}`
-                      : "??"
-                    }
-                  </div>
+                  <div className={styles.studentAvatar}>{initials}</div>
                   <div className={styles.studentInfo}>
-                    <span className={styles.studentName}>
-                      {app.student
-                        ? `${app.student.firstname} ${app.student.lastname}`
-                        : "Unknown"
-                      }
-                    </span>
-                    <span className={styles.studentMeta}>
-                      {app.student?.lga || "—"}
-                    </span>
+                    <span className={styles.studentName}>{fullName}</span>
+                    <span className={styles.studentMeta}>{app.student?.ward || "—"}</span>
                   </div>
                 </div>
 
                 {/* Scheme */}
                 <div className={styles.tdScheme}>
-                  <span className={styles.schemeName}>
-                    {app.scheme_name || "—"}
-                  </span>
+                  <span className={styles.schemeName}>{app.scheme?.name || "—"}</span>
                   <span
                     className={styles.categoryChip}
                     style={{ color: category.color, background: category.bg }}
@@ -323,9 +295,7 @@ export default function AdminApplicationsPage() {
                 </div>
 
                 {/* Date */}
-                <span className={styles.tdDate}>
-                  {formatDate(app.submission_date)}
-                </span>
+                <span className={styles.tdDate}>{formatDate(app.submission_date)}</span>
 
                 {/* Status */}
                 <div className={styles.tdStatus}>
@@ -335,7 +305,6 @@ export default function AdminApplicationsPage() {
                   >
                     {status.label}
                   </span>
-                  {/* Conflict indicator */}
                   {isConflict && (
                     <span className={styles.conflictChip}>
                       <ShieldAlert size={10} strokeWidth={2} />
@@ -351,7 +320,6 @@ export default function AdminApplicationsPage() {
                 >
                   Review <ArrowRight size={11} strokeWidth={2} />
                 </button>
-
               </div>
             );
           })}

@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse, inline_serializer
-
+import cloudinary.uploader
 from .services.paystack import PaystackVerificationService
 
 
@@ -85,3 +85,38 @@ def get_banks(request):
     """GET /verification/banks/ — list of Nigerian banks for the dropdown."""
     banks = PaystackVerificationService.get_banks()
     return Response({"banks": banks})
+
+
+@extend_schema(
+    summary="Upload a document",
+    description="Accepts a file, uploads it to Cloudinary, and returns the URL. Use before submitting an application.",
+    responses=OpenApiResponse(description='{ url }'),
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upload_document(request):
+    """
+    POST /verification/upload/
+    Body: multipart/form-data with a 'file' field.
+    Returns: { url: 'https://res.cloudinary.com/...' }
+    """
+    file = request.FILES.get('file')
+    if not file:
+        return Response({"error": "No file provided."}, status=400)
+
+    if file.size > 5 * 1024 * 1024:
+        return Response({"error": "File must not exceed 5MB."}, status=400)
+
+    allowed_types = ['image/jpeg', 'image/png', 'application/pdf']
+    if file.content_type not in allowed_types:
+        return Response({"error": "Only JPEG, PNG, and PDF files are allowed."}, status=400)
+
+    try:
+        result = cloudinary.uploader.upload(
+            file,
+            folder="mbo_documents",
+            resource_type="auto",
+        )
+        return Response({"url": result["secure_url"]})
+    except Exception as e:
+        return Response({"error": "Upload failed. Please try again."}, status=500)

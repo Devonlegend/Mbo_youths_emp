@@ -6,7 +6,7 @@ import {
   ShieldCheck, AlertCircle, RotateCcw, LogIn,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { login, otpVerify, otpResend, getMe } from "@/services/auth";
+import { login, otpSend, otpVerify, otpResend, getMe } from "@/services/auth";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -106,7 +106,7 @@ export default function LoginPage() {
 
     try {
       await login({ email: form.email, password: form.password });
-      await otpResend({ email: form.email });
+      await otpSend({ email: form.email });
       setStep("otp");
       startCountdown();
     } catch (err) {

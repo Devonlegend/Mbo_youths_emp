@@ -18,11 +18,14 @@ from rest_framework import serializers as drf_serializers
 from accounts.models import EmailOTP, PasswordResetOTP, Role
 from students.models import Student
 
+from accounts.permissions import IsSuperAdmin  
+from rest_framework.pagination import PageNumberPagination
+
 from .authentication import ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME
 from .services import ApiException, send_otp_email, send_password_reset_email
 from .validators import validate_upload, FileValidationError
 from .throttles import OTPThrottle, AuthThrottle
-
+from notifications.models import Notification
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
@@ -157,6 +160,11 @@ def register(request):
             gender=gender,
             passport=passport,
         )
+        if passport:
+            passport.seek(0)
+        if certificate:
+            certificate.seek(0)   
+         
         Student.objects.create(
             user=user,
             firstname=firstname,
@@ -369,6 +377,15 @@ def otp_verify(request):
     if not user.email_verified:
         user.email_verified = True
         user.save(update_fields=['email_verified'])
+        Notification.objects.create(
+            user=user,
+            type='welcome',
+            title='Welcome to RMHCDT Youth Portal',
+            message='Your account has been verified successfully. You can now apply for available programmes.',
+        )
+
+        user.last_login = now
+        user.save(update_fields=['last_login'])
 
     refresh = RefreshToken.for_user(user)
     response = Response({"message": "Verified"})
@@ -394,7 +411,10 @@ def me(request):
         "lastname":     request.user.lastname,
         "phone_number": request.user.phone_number,
         "role":         request.user.role,
+        "date_of_birth": request.user.date_of_birth,
+        "gender":       request.user.gender,
         "passport":     passport_url,
+        "last_login":   request.user.last_login,
     })
 
 
@@ -636,3 +656,196 @@ def password_reset_confirm(request):
     # Also clear cookies on this response in case the caller was logged in.
     _clear_jwt_cookies(response)
     return response
+
+
+# ──────────────────────────── admin users: list ────────────────────────────
+ 
+@extend_schema(
+    summary="List admin/verifier/superadmin users",
+    description="Superadmin-only. Returns paginated staff accounts (excludes plain students).",
+    responses=OpenApiResponse(description='{ count, next, previous, results: [...] }'),
+)
+@api_view(['GET'])
+@permission_classes([IsSuperAdmin])
+def admin_users_list(request):
+    """GET /auth/admin-users/"""
+    queryset = User.objects.filter(
+        role__in=['admin', 'verifier', 'superadmin']
+    ).order_by('firstname')
+ 
+    paginator = PageNumberPagination()
+    paginator.page_size = 50
+    page = paginator.paginate_queryset(queryset, request)
+ 
+    data = [
+        {
+            "id":         str(u.id),
+            "firstname":  u.firstname,
+            "lastname":   u.lastname,
+            "email":      u.email,
+            "role":       u.role,
+            "is_active":  u.is_active,
+            "last_login": u.last_login,
+        }
+        for u in page
+    ]
+    return paginator.get_paginated_response(data)
+ 
+ 
+# ──────────────────────────── admin users: create ────────────────────────────
+ 
+@extend_schema(
+    summary="Create an admin or verifier account",
+    description=(
+        "Superadmin-only. Creates a staff account directly (no OTP flow — "
+        "the account is active immediately). role must be 'admin' or "
+        "'verifier'; 'superadmin' cannot be created through this endpoint."
+    ),
+    request=inline_serializer(
+        name='AdminUserCreateRequest',
+        fields={
+            'firstname':    drf_serializers.CharField(),
+            'lastname':     drf_serializers.CharField(),
+            'email':        drf_serializers.EmailField(),
+            'phone_number': drf_serializers.CharField(),
+            'nin_hash':     drf_serializers.CharField(),
+            'password':     drf_serializers.CharField(),
+            'role':         drf_serializers.ChoiceField(choices=['admin', 'verifier']),
+        },
+    ),
+    responses={201: OpenApiResponse(description='{ id, email, role }')},
+)
+@api_view(['POST'])
+@permission_classes([IsSuperAdmin])
+def admin_users_create(request):
+    """POST /auth/admin-users/create/"""
+    firstname    = request.data.get('firstname')
+    lastname     = request.data.get('lastname')
+    email        = request.data.get('email')
+    phone_number = request.data.get('phone_number')
+    nin_hash     = request.data.get('nin_hash')
+    password     = request.data.get('password')
+    role         = request.data.get('role')
+ 
+    if not all([firstname, lastname, email, phone_number, nin_hash, password, role]):
+        return Response({"error": "All fields are required"},
+                        status=status.HTTP_400_BAD_REQUEST)
+ 
+    # Only admin/verifier may be created here — superadmin is reserved for
+    # `python manage.py createsuperuser` so it can never be granted over the API.
+    if role not in ('admin', 'verifier'):
+        return Response({"error": "role must be 'admin' or 'verifier'"},
+                        status=status.HTTP_400_BAD_REQUEST)
+ 
+    if User.objects.filter(email=email).exists():
+        return Response({"error": "Email already registered"},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if User.objects.filter(nin_hash=nin_hash).exists():
+        return Response({"error": "NIN already in use"},
+                        status=status.HTTP_400_BAD_REQUEST)
+ 
+    # Staff accounts don't get a Student row — unlike the public register
+    # view, this is the one place a User is created without one.
+    user = User.objects.create_user(
+        email=email,
+        phone_number=phone_number,
+        role=role,
+        password=password,
+        firstname=firstname,
+        lastname=lastname,
+        nin_hash=nin_hash,
+    )
+    user.email_verified = True  # staff accounts skip the OTP flow
+    user.save(update_fields=['email_verified'])
+ 
+    return Response(
+        {"id": str(user.id), "email": user.email, "role": user.role},
+        status=status.HTTP_201_CREATED,
+    )
+ 
+ 
+# ──────────────────────────── admin users: update role ────────────────────────────
+ 
+@extend_schema(
+    summary="Change a staff user's role",
+    description="Superadmin-only. Cannot promote/demote to 'superadmin', and cannot change your own role.",
+    request=inline_serializer(
+        name='AdminUserRoleRequest',
+        fields={'role': drf_serializers.ChoiceField(choices=['admin', 'verifier'])},
+    ),
+    responses=OpenApiResponse(description='{ id, role }'),
+)
+@api_view(['PATCH'])
+@permission_classes([IsSuperAdmin])
+def admin_users_update_role(request, user_id):
+    """PATCH /auth/admin-users/{id}/role/"""
+    new_role = request.data.get('role')
+    if new_role not in ('admin', 'verifier'):
+        return Response({"error": "role must be 'admin' or 'verifier'"},
+                        status=status.HTTP_400_BAD_REQUEST)
+ 
+    try:
+        target = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+ 
+    if target.id == request.user.id:
+        return Response({"error": "You cannot change your own role"},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if target.role == 'superadmin':
+        return Response({"error": "Cannot change a superadmin's role"},
+                        status=status.HTTP_400_BAD_REQUEST)
+ 
+    target.role = new_role
+    target.save(update_fields=['role'])
+    return Response({"id": str(target.id), "role": target.role})
+ 
+ 
+# ──────────────────────────── admin users: deactivate / reactivate ────────────────────────────
+ 
+@extend_schema(
+    summary="Deactivate a staff account",
+    description="Superadmin-only. Cannot deactivate yourself or a superadmin.",
+    request=None,
+    responses=OpenApiResponse(description='{ id, is_active }'),
+)
+@api_view(['PATCH'])
+@permission_classes([IsSuperAdmin])
+def admin_users_deactivate(request, user_id):
+    """PATCH /auth/admin-users/{id}/deactivate/"""
+    try:
+        target = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+ 
+    if target.id == request.user.id:
+        return Response({"error": "You cannot deactivate your own account"},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if target.role == 'superadmin':
+        return Response({"error": "Cannot deactivate a superadmin"},
+                        status=status.HTTP_400_BAD_REQUEST)
+ 
+    target.is_active = False
+    target.save(update_fields=['is_active'])
+    return Response({"id": str(target.id), "is_active": target.is_active})
+ 
+ 
+@extend_schema(
+    summary="Reactivate a staff account",
+    description="Superadmin-only.",
+    request=None,
+    responses=OpenApiResponse(description='{ id, is_active }'),
+)
+@api_view(['PATCH'])
+@permission_classes([IsSuperAdmin])
+def admin_users_reactivate(request, user_id):
+    """PATCH /auth/admin-users/{id}/reactivate/"""
+    try:
+        target = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+ 
+    target.is_active = True
+    target.save(update_fields=['is_active'])
+    return Response({"id": str(target.id), "is_active": target.is_active})
+ 

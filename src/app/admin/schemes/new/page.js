@@ -17,158 +17,172 @@ const categoryConfig = {
   grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff", icon: Banknote      },
 };
 
-const defaultFields = {
-  scholarship: [
-    { field_name: "institution",    field_label: "Institution Name",       field_type: "text",     placeholder: "e.g. University of Uyo",         is_required: true,  options: [], section: "Academic Information" },
-    { field_name: "level",          field_label: "Level of Study",         field_type: "select",   placeholder: "",                               is_required: true,  options: ["Secondary", "Undergraduate", "Postgraduate", "Vocational", "Professional"], section: "Academic Information" },
-    { field_name: "department",     field_label: "Department / Course",    field_type: "text",     placeholder: "e.g. Computer Science",           is_required: true,  options: [], section: "Academic Information" },
-    { field_name: "current_level",  field_label: "Current Level / Year",   field_type: "select",   placeholder: "",                               is_required: true,  options: ["100", "200", "300", "400", "500", "Postgraduate"], section: "Academic Information" },
-    { field_name: "matric_number",  field_label: "Matriculation Number",   field_type: "text",     placeholder: "e.g. UU/2022/001234",             is_required: true,  options: [], section: "Academic Information" },
-    { field_name: "cgpa",           field_label: "CGPA / Last Score",      field_type: "text",     placeholder: "e.g. 4.21 / 5.0",                is_required: true,  options: [], section: "Academic Information" },
-    { field_name: "result",         field_label: "Last Academic Result",   field_type: "file",     placeholder: "",                               is_required: true,  options: [], section: "Supporting Documents" },
-    { field_name: "admission",      field_label: "Admission Letter",       field_type: "file",     placeholder: "",                               is_required: true,  options: [], section: "Supporting Documents" },
-    { field_name: "bank_name",      field_label: "Bank Name",              field_type: "select",   placeholder: "",                               is_required: true,  options: ["Access Bank", "First Bank of Nigeria", "Guaranty Trust Bank (GTBank)", "United Bank for Africa (UBA)", "Zenith Bank", "Others"], section: "Bank Details" },
-    { field_name: "account_number", field_label: "Account Number",         field_type: "text",     placeholder: "10-digit account number",         is_required: true,  options: [], section: "Bank Details" },
-    { field_name: "account_name",   field_label: "Account Name",           field_type: "text",     placeholder: "Name as on bank account",         is_required: true,  options: [], section: "Bank Details" },
-  ],
-  empowerment: [
-    { field_name: "trade",             field_label: "Trade / Skill",          field_type: "text",     placeholder: "e.g. Tailoring, Welding",       is_required: true,  options: [], section: "Business / Trade Information" },
-    { field_name: "current_status",    field_label: "Current Status",         field_type: "select",   placeholder: "",                              is_required: true,  options: ["Starting", "Existing", "Cooperative"], section: "Business / Trade Information" },
-    { field_name: "support_needed",    field_label: "Support Needed",         field_type: "textarea", placeholder: "Describe the support needed...", is_required: true,  options: [], section: "Business / Trade Information" },
-    { field_name: "equipment",         field_label: "Equipment List",         field_type: "text",     placeholder: "e.g. Sewing machine",           is_required: false, options: [], section: "Business / Trade Information" },
-    { field_name: "business_location", field_label: "Business Location",      field_type: "text",     placeholder: "e.g. Eket Market, Mbo LGA",     is_required: true,  options: [], section: "Business / Trade Information" },
-  ],
-  grant: [
-    { field_name: "grant_purpose",          field_label: "Grant Purpose",          field_type: "textarea", placeholder: "Describe the purpose of the grant...",   is_required: true,  options: [], section: "Grant Details" },
-    { field_name: "business_plan_desc",     field_label: "Business Plan Summary",  field_type: "textarea", placeholder: "Brief summary of your business plan...", is_required: true,  options: [], section: "Grant Details" },
-    { field_name: "amount_requested",       field_label: "Amount Requested (₦)",   field_type: "text",     placeholder: "e.g. 500,000",                          is_required: true,  options: [], section: "Grant Details" },
-    { field_name: "expected_beneficiaries", field_label: "Expected Beneficiaries", field_type: "text",     placeholder: "e.g. 10 community members",              is_required: true,  options: [], section: "Grant Details" },
-    { field_name: "business_plan",          field_label: "Business Plan Document", field_type: "file",     placeholder: "",                                      is_required: true,  options: [], section: "Grant Details" },
-    { field_name: "bank_name",              field_label: "Bank Name",              field_type: "select",   placeholder: "",                                      is_required: true,  options: ["Access Bank", "First Bank of Nigeria", "Guaranty Trust Bank (GTBank)", "United Bank for Africa (UBA)", "Zenith Bank", "Others"], section: "Bank Details" },
-    { field_name: "account_number",         field_label: "Account Number",         field_type: "text",     placeholder: "10-digit account number",                is_required: true,  options: [], section: "Bank Details" },
-    { field_name: "account_name",           field_label: "Account Name",           field_type: "text",     placeholder: "Name as on bank account",                is_required: true,  options: [], section: "Bank Details" },
-  ],
-};
+/* ─────────────────────────────────────────────────────────────────────────
+ * FORM BUILDER — DISABLED (commented out, not deleted)
+ *
+ * Why: The apply form (student-facing) does NOT read these saved fields.
+ * It calls GET /schemes/{id}/fields/, which regenerates the field list
+ * directly from the backend's PROGRAMME_ANSWER_SERIALIZERS — completely
+ * ignoring whatever is configured here. So this builder currently has
+ * zero effect on what students see or submit; it's a no-op UI.
+ *
+ * Leaving the code here (commented) in case the backend is later updated
+ * to read custom SchemeFormField records instead of the fixed serializers,
+ * at which point this can be re-enabled.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+// const defaultFields = {
+//   scholarship: [
+//     { field_name: "institution",    field_label: "Institution Name",       field_type: "text",     placeholder: "e.g. University of Uyo",         is_required: true,  options: [], section: "Academic Information" },
+//     { field_name: "level",          field_label: "Level of Study",         field_type: "select",   placeholder: "",                               is_required: true,  options: ["Secondary", "Undergraduate", "Postgraduate", "Vocational", "Professional"], section: "Academic Information" },
+//     { field_name: "department",     field_label: "Department / Course",    field_type: "text",     placeholder: "e.g. Computer Science",           is_required: true,  options: [], section: "Academic Information" },
+//     { field_name: "current_level",  field_label: "Current Level / Year",   field_type: "select",   placeholder: "",                               is_required: true,  options: ["100", "200", "300", "400", "500", "Postgraduate"], section: "Academic Information" },
+//     { field_name: "matric_number",  field_label: "Matriculation Number",   field_type: "text",     placeholder: "e.g. UU/2022/001234",             is_required: true,  options: [], section: "Academic Information" },
+//     { field_name: "cgpa",           field_label: "CGPA / Last Score",      field_type: "text",     placeholder: "e.g. 4.21 / 5.0",                is_required: true,  options: [], section: "Academic Information" },
+//     { field_name: "result",         field_label: "Last Academic Result",   field_type: "file",     placeholder: "",                               is_required: true,  options: [], section: "Supporting Documents" },
+//     { field_name: "admission",      field_label: "Admission Letter",       field_type: "file",     placeholder: "",                               is_required: true,  options: [], section: "Supporting Documents" },
+//     { field_name: "bank_name",      field_label: "Bank Name",              field_type: "select",   placeholder: "",                               is_required: true,  options: ["Access Bank", "First Bank of Nigeria", "Guaranty Trust Bank (GTBank)", "United Bank for Africa (UBA)", "Zenith Bank", "Others"], section: "Bank Details" },
+//     { field_name: "account_number", field_label: "Account Number",         field_type: "text",     placeholder: "10-digit account number",         is_required: true,  options: [], section: "Bank Details" },
+//     { field_name: "account_name",   field_label: "Account Name",           field_type: "text",     placeholder: "Name as on bank account",         is_required: true,  options: [], section: "Bank Details" },
+//   ],
+//   empowerment: [
+//     { field_name: "trade",             field_label: "Trade / Skill",          field_type: "text",     placeholder: "e.g. Tailoring, Welding",       is_required: true,  options: [], section: "Business / Trade Information" },
+//     { field_name: "current_status",    field_label: "Current Status",         field_type: "select",   placeholder: "",                              is_required: true,  options: ["Starting", "Existing", "Cooperative"], section: "Business / Trade Information" },
+//     { field_name: "support_needed",    field_label: "Support Needed",         field_type: "textarea", placeholder: "Describe the support needed...", is_required: true,  options: [], section: "Business / Trade Information" },
+//     { field_name: "equipment",         field_label: "Equipment List",         field_type: "text",     placeholder: "e.g. Sewing machine",           is_required: false, options: [], section: "Business / Trade Information" },
+//     { field_name: "business_location", field_label: "Business Location",      field_type: "text",     placeholder: "e.g. Eket Market, Mbo LGA",     is_required: true,  options: [], section: "Business / Trade Information" },
+//   ],
+//   grant: [
+//     { field_name: "grant_purpose",          field_label: "Grant Purpose",          field_type: "textarea", placeholder: "Describe the purpose of the grant...",   is_required: true,  options: [], section: "Grant Details" },
+//     { field_name: "business_plan_desc",     field_label: "Business Plan Summary",  field_type: "textarea", placeholder: "Brief summary of your business plan...", is_required: true,  options: [], section: "Grant Details" },
+//     { field_name: "amount_requested",       field_label: "Amount Requested (₦)",   field_type: "text",     placeholder: "e.g. 500,000",                          is_required: true,  options: [], section: "Grant Details" },
+//     { field_name: "expected_beneficiaries", field_label: "Expected Beneficiaries", field_type: "text",     placeholder: "e.g. 10 community members",              is_required: true,  options: [], section: "Grant Details" },
+//     { field_name: "business_plan",          field_label: "Business Plan Document", field_type: "file",     placeholder: "",                                      is_required: true,  options: [], section: "Grant Details" },
+//     { field_name: "bank_name",              field_label: "Bank Name",              field_type: "select",   placeholder: "",                                      is_required: true,  options: ["Access Bank", "First Bank of Nigeria", "Guaranty Trust Bank (GTBank)", "United Bank for Africa (UBA)", "Zenith Bank", "Others"], section: "Bank Details" },
+//     { field_name: "account_number",         field_label: "Account Number",         field_type: "text",     placeholder: "10-digit account number",                is_required: true,  options: [], section: "Bank Details" },
+//     { field_name: "account_name",           field_label: "Account Name",           field_type: "text",     placeholder: "Name as on bank account",                is_required: true,  options: [], section: "Bank Details" },
+//   ],
+// };
 
 
-// ── FIELD TYPE OPTIONS ────────────────────────────────────────────────────────
-const fieldTypes = [
-  { value: "text",     label: "Text Input" },
-  { value: "textarea", label: "Text Area" },
-  { value: "select",   label: "Dropdown" },
-  { value: "radio",    label: "Radio Buttons" },
-  { value: "file",     label: "File Upload" },
-  { value: "number",   label: "Number" },
-  { value: "checkbox", label: "Checkbox" },
-];
+// // ── FIELD TYPE OPTIONS ────────────────────────────────────────────────────────
+// const fieldTypes = [
+//   { value: "text",     label: "Text Input" },
+//   { value: "textarea", label: "Text Area" },
+//   { value: "select",   label: "Dropdown" },
+//   { value: "radio",    label: "Radio Buttons" },
+//   { value: "file",     label: "File Upload" },
+//   { value: "number",   label: "Number" },
+//   { value: "checkbox", label: "Checkbox" },
+// ];
 
-// ── FIELD ROW COMPONENT ───────────────────────────────────────────────────────
-function FieldRow({ field, index, onChange, onRemove }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className={styles.fieldRow}>
-      <div className={styles.fieldRowTop}>
-        <div className={styles.fieldRowDrag}>
-          <GripVertical size={14} color="#cbd5e1" strokeWidth={2} />
-          <span className={styles.fieldRowNum}>{index + 1}</span>
-        </div>
-
-        <div className={styles.fieldRowMain}>
-          <input
-            className={styles.fieldInput}
-            placeholder="Field label (e.g. Institution Name)"
-            value={field.field_label}
-            onChange={(e) => onChange(index, "field_label", e.target.value)}
-          />
-          <select
-            className={styles.fieldSelect}
-            value={field.field_type}
-            onChange={(e) => onChange(index, "field_type", e.target.value)}
-          >
-            {fieldTypes.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-          <label className={styles.fieldRequired}>
-            <input
-              type="checkbox"
-              checked={field.is_required}
-              onChange={(e) => onChange(index, "is_required", e.target.checked)}
-              style={{ accentColor: "#15803d" }}
-            />
-            Required
-          </label>
-        </div>
-
-        <div className={styles.fieldRowActions}>
-          <button
-            type="button"
-            className={styles.fieldExpandBtn}
-            onClick={() => setExpanded((v) => !v)}
-            title="More options"
-          >
-            {expanded ? <ChevronUp size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
-          </button>
-          <button
-            type="button"
-            className={styles.fieldRemoveBtn}
-            onClick={() => onRemove(index)}
-            title="Remove field"
-          >
-            <Trash2 size={13} strokeWidth={2} />
-          </button>
-        </div>
-      </div>
-
-      {expanded && (
-        <div className={styles.fieldRowExtra}>
-          <div className={styles.fieldExtraRow}>
-            <div className={styles.fieldExtraItem}>
-              <label className={styles.fieldExtraLabel}>Field Name (key)</label>
-              <input
-                className={styles.fieldInput}
-                placeholder="e.g. institution_name"
-                value={field.field_name}
-                onChange={(e) => onChange(index, "field_name", e.target.value)}
-              />
-            </div>
-            <div className={styles.fieldExtraItem}>
-              <label className={styles.fieldExtraLabel}>Section</label>
-              <input
-                className={styles.fieldInput}
-                placeholder="e.g. Academic Information"
-                value={field.section}
-                onChange={(e) => onChange(index, "section", e.target.value)}
-              />
-            </div>
-            <div className={styles.fieldExtraItem}>
-              <label className={styles.fieldExtraLabel}>Placeholder</label>
-              <input
-                className={styles.fieldInput}
-                placeholder="Input hint text..."
-                value={field.placeholder}
-                onChange={(e) => onChange(index, "placeholder", e.target.value)}
-              />
-            </div>
-          </div>
-          {(field.field_type === "select" || field.field_type === "radio") && (
-            <div className={styles.fieldExtraItem} style={{ marginTop: 8 }}>
-              <label className={styles.fieldExtraLabel}>Options (one per line)</label>
-              <textarea
-                className={styles.fieldTextarea}
-                rows={3}
-                placeholder={"Option 1\nOption 2\nOption 3"}
-                value={(field.options || []).join("\n")}
-                onChange={(e) => onChange(index, "options", e.target.value.split("\n").filter(Boolean))}
-              />
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+// // ── FIELD ROW COMPONENT ───────────────────────────────────────────────────────
+// function FieldRow({ field, index, onChange, onRemove }) {
+//   const [expanded, setExpanded] = useState(false);
+//
+//   return (
+//     <div className={styles.fieldRow}>
+//       <div className={styles.fieldRowTop}>
+//         <div className={styles.fieldRowDrag}>
+//           <GripVertical size={14} color="#cbd5e1" strokeWidth={2} />
+//           <span className={styles.fieldRowNum}>{index + 1}</span>
+//         </div>
+//
+//         <div className={styles.fieldRowMain}>
+//           <input
+//             className={styles.fieldInput}
+//             placeholder="Field label (e.g. Institution Name)"
+//             value={field.field_label}
+//             onChange={(e) => onChange(index, "field_label", e.target.value)}
+//           />
+//           <select
+//             className={styles.fieldSelect}
+//             value={field.field_type}
+//             onChange={(e) => onChange(index, "field_type", e.target.value)}
+//           >
+//             {fieldTypes.map((t) => (
+//               <option key={t.value} value={t.value}>{t.label}</option>
+//             ))}
+//           </select>
+//           <label className={styles.fieldRequired}>
+//             <input
+//               type="checkbox"
+//               checked={field.is_required}
+//               onChange={(e) => onChange(index, "is_required", e.target.checked)}
+//               style={{ accentColor: "#15803d" }}
+//             />
+//             Required
+//           </label>
+//         </div>
+//
+//         <div className={styles.fieldRowActions}>
+//           <button
+//             type="button"
+//             className={styles.fieldExpandBtn}
+//             onClick={() => setExpanded((v) => !v)}
+//             title="More options"
+//           >
+//             {expanded ? <ChevronUp size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
+//           </button>
+//           <button
+//             type="button"
+//             className={styles.fieldRemoveBtn}
+//             onClick={() => onRemove(index)}
+//             title="Remove field"
+//           >
+//             <Trash2 size={13} strokeWidth={2} />
+//           </button>
+//         </div>
+//       </div>
+//
+//       {expanded && (
+//         <div className={styles.fieldRowExtra}>
+//           <div className={styles.fieldExtraRow}>
+//             <div className={styles.fieldExtraItem}>
+//               <label className={styles.fieldExtraLabel}>Field Name (key)</label>
+//               <input
+//                 className={styles.fieldInput}
+//                 placeholder="e.g. institution_name"
+//                 value={field.field_name}
+//                 onChange={(e) => onChange(index, "field_name", e.target.value)}
+//               />
+//             </div>
+//             <div className={styles.fieldExtraItem}>
+//               <label className={styles.fieldExtraLabel}>Section</label>
+//               <input
+//                 className={styles.fieldInput}
+//                 placeholder="e.g. Academic Information"
+//                 value={field.section}
+//                 onChange={(e) => onChange(index, "section", e.target.value)}
+//               />
+//             </div>
+//             <div className={styles.fieldExtraItem}>
+//               <label className={styles.fieldExtraLabel}>Placeholder</label>
+//               <input
+//                 className={styles.fieldInput}
+//                 placeholder="Input hint text..."
+//                 value={field.placeholder}
+//                 onChange={(e) => onChange(index, "placeholder", e.target.value)}
+//               />
+//             </div>
+//           </div>
+//           {(field.field_type === "select" || field.field_type === "radio") && (
+//             <div className={styles.fieldExtraItem} style={{ marginTop: 8 }}>
+//               <label className={styles.fieldExtraLabel}>Options (one per line)</label>
+//               <textarea
+//                 className={styles.fieldTextarea}
+//                 rows={3}
+//                 placeholder={"Option 1\nOption 2\nOption 3"}
+//                 value={(field.options || []).join("\n")}
+//                 onChange={(e) => onChange(index, "options", e.target.value.split("\n").filter(Boolean))}
+//               />
+//             </div>
+//           )}
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function NewSchemePage() {
@@ -186,7 +200,7 @@ export default function NewSchemePage() {
     stacking_policy:        "major_only",
   });
 
-  const [fields,   setFields]   = useState(defaultFields.scholarship.map((f, i) => ({ ...f, order: i })));
+  // const [fields,   setFields]   = useState(defaultFields.scholarship.map((f, i) => ({ ...f, order: i })));
   const [errors,   setErrors]   = useState({});
   const [loading,  setLoading]  = useState(false);
   const [apiError, setApiError] = useState("");
@@ -201,32 +215,32 @@ export default function NewSchemePage() {
     setApiError("");
 
     // When category changes — swap to default fields for that category
-    if (key === "award_type") {
-      setFields((defaultFields[value] || []).map((f, i) => ({ ...f, order: i })));
-    }
+    // if (key === "award_type") {
+    //   setFields((defaultFields[value] || []).map((f, i) => ({ ...f, order: i })));
+    // }
   }
 
   // ── FIELD OPERATIONS ──────────────────────────────────────────────────────
-  function handleFieldChange(index, key, value) {
-    setFields((prev) => prev.map((f, i) => i === index ? { ...f, [key]: value } : f));
-  }
+  // function handleFieldChange(index, key, value) {
+  //   setFields((prev) => prev.map((f, i) => i === index ? { ...f, [key]: value } : f));
+  // }
 
-  function handleFieldRemove(index) {
-    setFields((prev) => prev.filter((_, i) => i !== index));
-  }
+  // function handleFieldRemove(index) {
+  //   setFields((prev) => prev.filter((_, i) => i !== index));
+  // }
 
-  function handleAddField() {
-    setFields((prev) => [...prev, {
-      field_name:  "",
-      field_label: "",
-      field_type:  "text",
-      placeholder: "",
-      is_required: true,
-      options:     [],
-      section:     "",
-      order:       prev.length,
-    }]);
-  }
+  // function handleAddField() {
+  //   setFields((prev) => [...prev, {
+  //     field_name:  "",
+  //     field_label: "",
+  //     field_type:  "text",
+  //     placeholder: "",
+  //     is_required: true,
+  //     options:     [],
+  //     section:     "",
+  //     order:       prev.length,
+  //   }]);
+  // }
 
   // ── VALIDATION ────────────────────────────────────────────────────────────
   function validate() {
@@ -265,10 +279,14 @@ export default function NewSchemePage() {
       const schemeId = res.data.id;
 
       // Step 2 — save the form fields
-      if (fields.length > 0) {
-        const { default: api } = await import("@/services/axiosInstance");
-        await api.post(`/schemes/${schemeId}/fields/`, fields.map((f, i) => ({ ...f, order: i })));
-      }
+      // DISABLED: the apply form sources its fields from GET /schemes/{id}/fields/,
+      // which is generated server-side from PROGRAMME_ANSWER_SERIALIZERS and does
+      // NOT read whatever gets POSTed here. Re-enable only if/when the backend is
+      // changed to honor custom SchemeFormField records.
+      // if (fields.length > 0) {
+      //   const { default: api } = await import("@/services/axiosInstance");
+      //   await api.post(`/schemes/${schemeId}/fields/`, fields.map((f, i) => ({ ...f, order: i })));
+      // }
 
       setSuccess(true);
       setTimeout(() => router.push("/admin/schemes"), 1200);
@@ -396,7 +414,8 @@ export default function NewSchemePage() {
             </div>
           </div>
 
-          {/* Form Builder */}
+          {/* Form Builder — DISABLED, see comment block near top of file for why */}
+          {/*
           <div className={styles.card}>
             <div className={styles.cardHeadRow}>
               <div>
@@ -424,6 +443,7 @@ export default function NewSchemePage() {
               <Plus size={14} strokeWidth={2} /> Add Field
             </button>
           </div>
+          */}
 
         </div>
 
@@ -474,8 +494,8 @@ export default function NewSchemePage() {
               <span>₦{form.award_amount ? Number(form.award_amount).toLocaleString() : "—"}</span>
               <span>·</span>
               <span>{form.total_slots || "—"} slots</span>
-              <span>·</span>
-              <span>{fields.length} fields</span>
+              {/* <span>·</span>
+              <span>{fields.length} fields</span> */}
             </div>
           </div>
 

@@ -2,13 +2,13 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
-  GraduationCap, Briefcase, Wrench, Banknote,
+  GraduationCap, Briefcase, Banknote,
   CheckCircle2, Clock, XCircle, AlertCircle,
   ArrowRight, Search, Filter, FolderOpen, ChevronDown,
 } from "lucide-react";
 import styles from "./page.module.css";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { getApplications } from "@/services";
+import { getMyApplications } from "@/services";
 
 const statusMap = {
   submitted:         "pending",
@@ -24,7 +24,6 @@ const statusMap = {
 
 const categoryConfig = {
   scholarship: { label: "Scholarship", color: "green",  icon: GraduationCap },
-  vocational:  { label: "Training",    color: "blue",   icon: Wrench        },
   empowerment: { label: "Empowerment", color: "amber",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "purple", icon: Banknote      },
 };
@@ -32,7 +31,6 @@ const categoryConfig = {
 const colorMap = {
   green:  { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
   amber:  { bg: "#fffbeb", border: "#fde68a", text: "#b45309" },
-  blue:   { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8" },
   purple: { bg: "#faf5ff", border: "#e9d5ff", text: "#7e22ce" },
 };
 
@@ -40,7 +38,7 @@ const FILTERS = ["All", "Pending", "Flagged", "Approved", "Rejected"];
 
 function mapApplication(app) {
   const uiStatus = statusMap[app.status] || "pending";
-  const catKey = (app.scheme_category || app.scheme_type || "scholarship").toLowerCase();
+  const catKey   = (app.scheme?.award_type || "scholarship").toLowerCase();
   const config   = categoryConfig[catKey] || categoryConfig.scholarship;
 
   const date = app.submission_date
@@ -55,7 +53,7 @@ function mapApplication(app) {
 
   return {
     id:               app.id,
-    title:            app.scheme_name || "Programme Application",
+    title:            app.scheme?.name || "Programme Application",
     category:         config.label,
     categoryColor:    config.color,
     icon:             config.icon,
@@ -93,9 +91,9 @@ export default function ApplicationsPage() {
     let cancelled = false;
     async function load() {
       try {
-        const res  = await getApplications();
+        const res  = await getMyApplications();
         if (cancelled) return;
-        const apps = Array.isArray(res.data) ? res.data : [];
+        const apps = Array.isArray(res.data?.results) ? res.data.results : [];
         setApplications(apps.map(mapApplication));
       } catch {
         if (!cancelled) setError("Failed to load applications. Please try again.");
@@ -118,20 +116,20 @@ export default function ApplicationsPage() {
     <div className={styles.page}>
 
       {/* HEADER */}
-        <div className={styles.header}>
-          <div className={styles.headerLeft}>
-            <div className={styles.headerIcon}>
-              <FolderOpen size={20} color="#15803d" strokeWidth={1.8} />
-            </div>
-            <div>
-              <h1 className={styles.title}>My Applications</h1>
-              <p className={styles.sub}>Track the status of all your submitted applications.</p>
-            </div>
+      <div className={styles.header}>
+        <div className={styles.headerLeft}>
+          <div className={styles.headerIcon}>
+            <FolderOpen size={20} color="#15803d" strokeWidth={1.8} />
           </div>
-          {!loading && !error && (
-            <div className={styles.countPill}>{applications.length} total</div>
-          )}
+          <div>
+            <h1 className={styles.title}>My Applications</h1>
+            <p className={styles.sub}>Track the status of all your submitted applications.</p>
+          </div>
         </div>
+        {!loading && !error && (
+          <div className={styles.countPill}>{applications.length} total</div>
+        )}
+      </div>
 
       {/* TOOLBAR */}
       <div className={styles.toolbar}>

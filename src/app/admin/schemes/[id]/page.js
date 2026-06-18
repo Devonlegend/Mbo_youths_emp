@@ -13,7 +13,6 @@ import { getSchemes, publishScheme, closeScheme, updateScheme, reopenScheme } fr
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
   scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4", icon: GraduationCap },
-  vocational:  { label: "Training",    color: "#1d4ed8", bg: "#eff6ff", icon: Wrench        },
   empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb", icon: Briefcase     },
   grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff", icon: Banknote      },
 };
@@ -68,13 +67,9 @@ export default function SchemeDetailPage() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await getSchemes();
-        if (cancelled) return;
-        const all = Array.isArray(res.data) ? res.data : [];
-        const found = all.find((s) => String(s.id) === String(params.id));
-        if (!found) { setError("Scheme not found."); return; }
-        setScheme(found);
-        setForm(found);
+        const res = await getScheme(params.id);
+        setScheme(res.data);
+        setForm(res.data);
       } catch {
         if (!cancelled) setError("Failed to load scheme.");
       } finally {

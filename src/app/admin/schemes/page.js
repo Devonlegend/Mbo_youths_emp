@@ -7,12 +7,11 @@ import {
   Calendar, ArrowRight,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { getSchemes } from "@/services";
+import { getSchemes, getMe } from "@/services";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
   scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4", icon: GraduationCap },
-  vocational:  { label: "Training",    color: "#1d4ed8", bg: "#eff6ff", icon: Wrench        },
   empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb", icon: Briefcase     },
   grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff", icon: Banknote      },
 };
@@ -51,7 +50,7 @@ export default function AdminSchemesPage() {
     try {
       setLoading(true);
       const res = await getSchemes();
-      setSchemes(Array.isArray(res.data) ? res.data : []);
+      setSchemes(Array.isArray(res.data?.results) ? res.data.results : []);
     } catch {
       setError("Failed to load schemes. Please try again.");
     } finally {

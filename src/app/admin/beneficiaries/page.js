@@ -11,7 +11,7 @@ import { getApplications } from "@/services";
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
   scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4", icon: GraduationCap },
-  vocational:  { label: "Training",    color: "#1d4ed8", bg: "#eff6ff", icon: Wrench        },
+  // vocational:  { label: "Training",    color: "#1d4ed8", bg: "#eff6ff", icon: Wrench        },
   empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb", icon: Briefcase     },
   grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff", icon: Banknote      },
 };
@@ -36,7 +36,7 @@ function SkeletonRow() {
   );
 }
 
-const FILTERS = ["All", "Scholarship", "Training", "Empowerment", "Grant"];
+const FILTERS = ["All", "Scholarship", "Empowerment", "Grant"];
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function BeneficiaryRegisterPage() {
@@ -56,7 +56,7 @@ export default function BeneficiaryRegisterPage() {
       try {
         const res  = await getApplications();
         if (cancelled) return;
-        const all  = Array.isArray(res.data) ? res.data : [];
+        const all  = Array.isArray(res.data?.results) ? res.data.results : [];
         // Only approved applications become beneficiaries
         const approved = all.filter((a) => a.status === "approved");
         setBeneficiaries(approved);

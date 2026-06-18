@@ -111,7 +111,7 @@ export default function ProgrammesPage() {
           getSchemes(),
           getStudentProfile(),
         ]);
-        const mapped = (schemesRes.data || []).map(mapScheme);
+        const mapped = (schemesRes.data?.results || []).map(mapScheme);
         setProgrammes(mapped);
         setIsVerified(profileRes.data.is_verified);
       } catch {

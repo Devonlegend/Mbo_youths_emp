@@ -86,8 +86,8 @@ export default function DashboardPage() {
 
         const auth    = authRes.data;
         const profile = studentRes.data;
-        const apps    = Array.isArray(appsRes.data) ? appsRes.data : [];
-        const schemesList = Array.isArray(schemesRes.data) ? schemesRes.data : [];
+        const apps = Array.isArray(appsRes.data?.results) ? appsRes.data.results : [];
+        const schemesList = Array.isArray(schemesRes.data?.results) ? schemesRes.data.results : [];
 
         setUser({
           first_name:     auth.firstname      || "",

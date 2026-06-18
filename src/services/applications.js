@@ -14,3 +14,6 @@ export const submitWaiver = (id) =>
 
 export const reviewApplication = (id, body) =>
   api.post(`/applications/${id}/review/`, body);
+
+export const getMyApplications = () =>
+  api.get("/applications/mine/");

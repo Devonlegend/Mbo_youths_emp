@@ -130,9 +130,9 @@ export default function AdminSettingsPage() {
         getApplications(),
       ]);
       setStats({
-        schemes:      Array.isArray(schemes.data)      ? schemes.data.length      : 0,
-        students:     Array.isArray(students.data)     ? students.data.length     : 0,
-        applications: Array.isArray(applications.data) ? applications.data.length : 0,
+        schemes:      schemes.data?.count      ?? 0,
+        students:     students.data?.count     ?? 0,
+        applications: applications.data?.count ?? 0,
       });
     } catch {
       // Fail silently
@@ -152,8 +152,9 @@ export default function AdminSettingsPage() {
   async function loadAdminUsers() {
     setLoadingUsers(true);
     try {
-      const res  = await getAdminUsers();
-      setAdminUsers(Array.isArray(res.data) ? res.data : []);
+    const res = await getAdminUsers();
+    const data = res.data;
+    setAdminUsers(Array.isArray(data) ? data : (data?.results ?? []));
     } catch {
       // Endpoint may not be ready yet — fail silently
     } finally {

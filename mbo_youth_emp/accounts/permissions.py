@@ -14,9 +14,14 @@ class IsAdmin(BasePermission):
 
 
 class IsSuperAdmin(BasePermission):
+    """Allows access only to users with role == 'superadmin'."""
     def has_permission(self, request, view):
-        return (request.user.is_authenticated and
-                request.user.role == 'superadmin')
+        return bool(
+            request.user
+            and request.user.is_authenticated
+            and request.user.role == 'superadmin'
+        )
+ 
 
 
 class IsVerifier(BasePermission):

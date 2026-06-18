@@ -18,7 +18,7 @@ const navMain = [
 ];
 
 const navAccount = [
-  { label: "My Documents",  href: "/dashboard/documents",     icon: Files },
+  // { label: "My Documents",  href: "/dashboard/documents",     icon: Files },
   { label: "My Profile",    href: "/dashboard/profile",       icon: UserCircle },
   { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
 ];

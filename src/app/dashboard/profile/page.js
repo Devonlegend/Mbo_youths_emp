@@ -73,11 +73,11 @@ export default function ProfilePage() {
           gender:     auth.gender        || "",
           lga:        profile.lga        || "",
           ward:       profile.ward       || "",
-          nin_masked: auth.nin_last4 ? `****-***-${auth.nin_last4}` : "Not available",
+          nin_masked: "****-****-****",
         };
         setForm(loaded);
         setDraft(loaded);
-        if (profile.passport) setPhoto(profile.passport);
+        if (auth.passport) setPhoto(auth.passport);
       } catch {
         setApiError("Failed to load profile. Please refresh.");
       } finally {

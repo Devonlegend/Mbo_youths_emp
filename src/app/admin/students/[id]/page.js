@@ -28,7 +28,7 @@ const statusConfig = {
 // ── CATEGORY ICON ─────────────────────────────────────────────────────────────
 const categoryIcons = {
   scholarship: GraduationCap,
-  vocational:  Wrench,
+  // vocational:  Wrench,
   empowerment: Briefcase,
   grant:       Banknote,
 };
@@ -70,8 +70,8 @@ export default function StudentDetailPage() {
   const [applications,  setApplications]  = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState(null);
-  const [verifying,     setVerifying]     = useState(false);
-  const [verifyError,   setVerifyError]   = useState("");
+  // const [verifying,     setVerifying]     = useState(false);
+  // const [verifyError,   setVerifyError]   = useState("");
 
   // ── FETCH ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -113,18 +113,18 @@ export default function StudentDetailPage() {
   }, [params.id]);
 
   // ── TOGGLE VERIFICATION 
-async function handleToggleVerification() {
-  setVerifying(true);
-  setVerifyError("");
-  try {
-    const res = await verifyStudent(params.id);
-    setStudent((s) => ({ ...s, is_verified: res.data.is_verified }));
-  } catch {
-    setVerifyError("Failed to update verification status.");
-  } finally {
-    setVerifying(false);
-  }
-}
+// async function handleToggleVerification() {
+//   setVerifying(true);
+//   setVerifyError("");
+//   try {
+//     const res = await verifyStudent(params.id);
+//     setStudent((s) => ({ ...s, is_verified: res.data.is_verified }));
+//   } catch {
+//     setVerifyError("Failed to update verification status.");
+//   } finally {
+//     setVerifying(false);
+//   }
+// }
 
   // ── LOADING ───────────────────────────────────────────────────────────────
   if (loading) {
@@ -174,26 +174,16 @@ async function handleToggleVerification() {
 
         {/* Verification toggle */}
         <div className={styles.verifyWrap}>
-          {verifyError && (
-            <span className={styles.verifyError}>{verifyError}</span>
-          )}
-          <button
-            className={`${styles.verifyBtn} ${student.is_verified ? styles.verifyBtnVerified : styles.verifyBtnUnverified}`}
-            onClick={handleToggleVerification}
-            disabled={verifying}
-          >
-            {verifying ? (
-              <Loader2 size={14} strokeWidth={2} className={styles.spin} />
-            ) : student.is_verified ? (
+          <span className={`${styles.verifyBtn} ${student.is_verified ? styles.verifyBtnVerified : styles.verifyBtnUnverified}`}>
+            {student.is_verified ? (
               <ShieldCheck size={14} strokeWidth={2} />
             ) : (
               <ShieldAlert size={14} strokeWidth={2} />
             )}
-            {verifying ? "Updating..." :
-             student.is_verified ? "Verified" : "Mark as Verified"}
-          </button>
+            {student.is_verified ? "Verified" : "Not Verified"}
+          </span>
         </div>
-      </div>
+        </div>
 
       {/* BODY */}
       <div className={styles.body}>
@@ -215,7 +205,7 @@ async function handleToggleVerification() {
                   ? student.gender.charAt(0).toUpperCase() + student.gender.slice(1)
                   : "—"
               } />
-              <InfoRow icon={Fingerprint} label="NIN" value={student.nin_last4 ? `****-***-${student.nin_last4}` : "—"} />
+              <InfoRow icon={Fingerprint} label="NIN" value="****-****-****" />
             </div>
           </div>
 

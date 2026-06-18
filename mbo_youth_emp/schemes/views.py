@@ -98,3 +98,70 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
             'status': 'scheme closed successfully',
             'is_active': scheme.is_active
         })
+    
+    # dynamic forms...
+    
+    @action(detail=True, methods=['get'], url_path='fields')
+    def fields(self, request, pk=None):
+        """GET /schemes/{id}/fields/ — returns field definitions for the apply form."""
+        from applications.serializers import PROGRAMME_ANSWER_SERIALIZERS, REQUIRED_DOCUMENTS
+
+        scheme = self.get_object()
+
+        serializer_cls = PROGRAMME_ANSWER_SERIALIZERS.get(scheme.award_type)
+        if serializer_cls is None:
+            return Response(
+                {"error": f"Unknown award type '{scheme.award_type}'"},
+                status=400,
+            )
+
+        required_doc_keys = [k for k, _ in REQUIRED_DOCUMENTS.get(scheme.award_type, [])]
+
+        FIELD_META = {
+            'institution_name':        {'label': 'Institution Name',        'type': 'text',     'section': 'Academic Information', 'placeholder': 'e.g. University of Calabar'},
+            'course_of_study':         {'label': 'Course of Study',         'type': 'text',     'section': 'Academic Information', 'placeholder': 'e.g. Computer Science'},
+            'current_level':           {'label': 'Current Level',           'type': 'select',   'section': 'Academic Information', 'options': ['100', '200', '300', '400', '500', '600']},
+            'cgpa':                    {'label': 'CGPA',                    'type': 'number',   'section': 'Academic Information', 'placeholder': 'e.g. 3.50'},
+            'admission_year':          {'label': 'Admission Year',          'type': 'number',   'section': 'Academic Information', 'placeholder': 'e.g. 2022'},
+            'matric_number':           {'label': 'Matriculation Number',    'type': 'text',     'section': 'Academic Information', 'placeholder': 'e.g. UG/2022/001'},
+            'trade_or_skill':          {'label': 'Trade / Skill',           'type': 'text',     'section': 'Business / Trade Information', 'placeholder': 'e.g. Welding, Tailoring'},
+            'training_provider':       {'label': 'Training Provider',       'type': 'text',     'section': 'Business / Trade Information', 'placeholder': 'e.g. NABTEB Training Centre'},
+            'training_duration_months':{'label': 'Training Duration (months)', 'type': 'number','section': 'Business / Trade Information', 'placeholder': 'e.g. 6'},
+            'prior_experience':        {'label': 'Prior Experience',        'type': 'textarea', 'section': 'Business / Trade Information', 'placeholder': 'Describe any relevant experience'},
+            'business_name':           {'label': 'Business Name',           'type': 'text',     'section': 'Grant Details', 'placeholder': 'e.g. Mbo Fish Farm'},
+            'business_stage':          {'label': 'Business Stage',          'type': 'select',   'section': 'Grant Details', 'options': ['idea', 'startup', 'growth', 'mature']},
+            'business_description':    {'label': 'Business Description',    'type': 'textarea', 'section': 'Grant Details', 'placeholder': 'Describe your business'},
+            'requested_amount':        {'label': 'Amount Requested (₦)',    'type': 'number',   'section': 'Grant Details', 'placeholder': 'e.g. 500000'},
+            'intended_use':            {'label': 'Intended Use',            'type': 'textarea', 'section': 'Grant Details', 'placeholder': 'How will you use this grant?'},
+            'admission_letter':        {'label': 'Admission Letter',        'type': 'file',     'section': 'Documents'},
+            'last_result':             {'label': 'Latest Result',           'type': 'file',     'section': 'Documents'},
+        }
+
+        serializer = serializer_cls()
+        fields = []
+
+        for field_name, drf_field in serializer.fields.items():
+            meta = FIELD_META.get(field_name, {})
+            fields.append({
+                'field_name':  field_name,
+                'field_label': meta.get('label', field_name.replace('_', ' ').title()),
+                'field_type':  meta.get('type', 'text'),
+                'section':     meta.get('section', 'Details'),
+                'placeholder': meta.get('placeholder', ''),
+                'options':     meta.get('options', []),
+                'is_required': drf_field.required,
+            })
+
+        for doc_key in required_doc_keys:
+            meta = FIELD_META.get(doc_key, {})
+            fields.append({
+                'field_name':  doc_key,
+                'field_label': meta.get('label', doc_key.replace('_', ' ').title()),
+                'field_type':  'file',
+                'section':     'Documents',
+                'placeholder': '',
+                'options':     [],
+                'is_required': True,
+            })
+
+        return Response(fields)

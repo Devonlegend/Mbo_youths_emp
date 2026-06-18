@@ -11,8 +11,7 @@ import {
   Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
 import styles from "./page.module.css";
-import { getApplications, getSchemes } from "@/services";
-import { getMe } from "@/services/auth";
+import { getApplications, getSchemes, getMe } from "@/services";
 
 // ── STAT CARD ─────────────────────────────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, iconBg, iconColor, loading }) {
@@ -34,7 +33,7 @@ function StatCard({ icon: Icon, label, value, iconBg, iconColor, loading }) {
   );
 }
 
-// ── CUSTOM TOOLTIP for chart ──────────────────────────────────────────────────
+// ── CUSTOM TOOLTIP ────────────────────────────────────────────────────────────
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
@@ -45,7 +44,7 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-// ── STATUS MAP — backend status → UI label ────────────────────────────────────
+// ── STATUS MAP ────────────────────────────────────────────────────────────────
 const STATUS_UI = {
   submitted:         { label: "Pending",  color: "#f59e0b" },
   eligibility_check: { label: "Pending",  color: "#f59e0b" },
@@ -64,8 +63,7 @@ function mapActivityStatus(status) {
 
 function formatTimeAgo(dateStr) {
   if (!dateStr) return "";
-  const date = new Date(dateStr);
-  const days = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24));
+  const days = Math.floor((new Date() - new Date(dateStr)) / (1000 * 60 * 60 * 24));
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 7)  return `${days} days ago`;
@@ -76,36 +74,35 @@ function formatTimeAgo(dateStr) {
 export default function AdminOverviewPage() {
   const router = useRouter();
 
-  const [stats,       setStats]       = useState(null);
-  const [chartData,   setChartData]   = useState([]);
-  const [activity,    setActivity]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [user, setUser] = useState(null);
+  const [stats,     setStats]     = useState(null);
+  const [chartData, setChartData] = useState([]);
+  const [activity,  setActivity]  = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [user,      setUser]      = useState(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        // Run both calls in parallel
         const [appsRes, schemesRes, meRes] = await Promise.allSettled([
           getApplications(),
           getSchemes(),
           getMe(),
         ]);
 
+        if (cancelled) return;
+
         if (meRes.status === "fulfilled") {
           setUser(meRes.value.data);
         }
 
-        if (cancelled) return;
-
-        // ── Process applications ──────────────────────────────────────────
+        // ── Applications — paginated response ─────────────────────────────
         const apps = appsRes.status === "fulfilled"
-          ? (Array.isArray(appsRes.value.data) ? appsRes.value.data : [])
+          ? (Array.isArray(appsRes.value.data?.results) ? appsRes.value.data.results : [])
           : [];
 
-        const total    = apps.length;
+        const total = appsRes.status === "fulfilled" ? (appsRes.value.data?.count ?? 0) : 0;
         const pending  = apps.filter((a) =>
           ["submitted", "eligibility_check", "document_review",
            "shortlisted", "draft"].includes(a.status)
@@ -116,22 +113,14 @@ export default function AdminOverviewPage() {
           ["rejected", "withdrawn"].includes(a.status)
         ).length;
 
-        // ── Process schemes ───────────────────────────────────────────────
-        const schemes     = schemesRes.status === "fulfilled"
-          ? (Array.isArray(schemesRes.value.data) ? schemesRes.value.data : [])
+        // ── Schemes — paginated response ──────────────────────────────────
+        const schemes = schemesRes.status === "fulfilled"
+          ? (Array.isArray(schemesRes.value.data?.results) ? schemesRes.value.data.results : [])
           : [];
         const openSchemes = schemes.filter((s) => s.is_active && s.is_published).length;
 
-        setStats({
-          total,
-          pending,
-          flagged,
-          approved,
-          rejected,
-          openSchemes,
-        });
+        setStats({ total, pending, flagged, approved, rejected, openSchemes });
 
-        // ── Chart data ────────────────────────────────────────────────────
         setChartData([
           { label: "Pending",  value: pending,  fill: "#f59e0b" },
           { label: "Flagged",  value: flagged,  fill: "#ef4444" },
@@ -139,14 +128,13 @@ export default function AdminOverviewPage() {
           { label: "Rejected", value: rejected, fill: "#94a3b8" },
         ]);
 
-        // ── Recent activity — last 5 applications ─────────────────────────
+        // ── Recent activity — last 5 ──────────────────────────────────────
         const sorted = [...apps]
           .sort((a, b) => new Date(b.submission_date) - new Date(a.submission_date))
           .slice(0, 5);
         setActivity(sorted);
 
       } catch {
-        // Fail silently — show zeros
         setStats({ total: 0, pending: 0, flagged: 0, approved: 0, rejected: 0, openSchemes: 0 });
       } finally {
         if (!cancelled) setLoading(false);
@@ -158,54 +146,18 @@ export default function AdminOverviewPage() {
   }, []);
 
   const statCards = [
-    {
-      icon:       ClipboardList,
-      label:      "Total Applications",
-      value:      stats?.total      ?? 0,
-      iconBg:     "#eff6ff",
-      iconColor:  "#3b82f6",
-    },
-    {
-      icon:       Clock,
-      label:      "Pending Review",
-      value:      stats?.pending    ?? 0,
-      iconBg:     "#fffbeb",
-      iconColor:  "#f59e0b",
-    },
-    {
-      icon:       AlertCircle,
-      label:      "Flagged",
-      value:      stats?.flagged    ?? 0,
-      iconBg:     "#fef2f2",
-      iconColor:  "#ef4444",
-    },
-    {
-      icon:       CheckCircle2,
-      label:      "Approved",
-      value:      stats?.approved   ?? 0,
-      iconBg:     "#f0fdf4",
-      iconColor:  "#15803d",
-    },
-    {
-      icon:       XCircle,
-      label:      "Rejected",
-      value:      stats?.rejected   ?? 0,
-      iconBg:     "#f8fafc",
-      iconColor:  "#64748b",
-    },
-    {
-      icon:       BookOpen,
-      label:      "Open Schemes",
-      value:      stats?.openSchemes ?? 0,
-      iconBg:     "#f0fdf4",
-      iconColor:  "#15803d",
-    },
+    { icon: ClipboardList, label: "Total Applications", value: stats?.total      ?? 0, iconBg: "#eff6ff", iconColor: "#3b82f6" },
+    { icon: Clock,         label: "Pending Review",     value: stats?.pending    ?? 0, iconBg: "#fffbeb", iconColor: "#f59e0b" },
+    { icon: AlertCircle,   label: "Flagged",            value: stats?.flagged    ?? 0, iconBg: "#fef2f2", iconColor: "#ef4444" },
+    { icon: CheckCircle2,  label: "Approved",           value: stats?.approved   ?? 0, iconBg: "#f0fdf4", iconColor: "#15803d" },
+    { icon: XCircle,       label: "Rejected",           value: stats?.rejected   ?? 0, iconBg: "#f8fafc", iconColor: "#64748b" },
+    { icon: BookOpen,      label: "Open Schemes",       value: stats?.openSchemes ?? 0, iconBg: "#f0fdf4", iconColor: "#15803d" },
   ];
 
   return (
     <div className={styles.page}>
 
-      {/* ── PAGE HEADER ── */}
+      {/* PAGE HEADER */}
       <div className={styles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -216,24 +168,24 @@ export default function AdminOverviewPage() {
             <p className={styles.sub}>Here's what's happening today</p>
           </div>
         </div>
-
-        {/* Date badge */}
         <div className={styles.dateBadge}>
-           <Calendar size={16} color="#15803d" strokeWidth={1.8} />
+          <Calendar size={16} color="#15803d" strokeWidth={1.8} />
           <span className={styles.dateBadgeText}>
-            {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            {new Date().toLocaleDateString("en-GB", {
+              weekday: "long", day: "numeric", month: "long", year: "numeric",
+            })}
           </span>
         </div>
       </div>
 
-      {/* ── STAT CARDS ── */}
+      {/* STAT CARDS */}
       <div className={styles.statsGrid}>
         {statCards.map((s) => (
           <StatCard key={s.label} {...s} loading={loading} />
         ))}
       </div>
 
-      {/* ── CHART + ACTIVITY ROW ── */}
+      {/* CHART + QUICK ACTIONS */}
       <div className={styles.middleRow}>
 
         {/* Bar chart */}
@@ -249,14 +201,14 @@ export default function AdminOverviewPage() {
           </div>
 
           {loading ? (
-                  <div className={styles.chartSkeleton} />
-                ) : chartData.every(d => d.value === 0) ? (
-                  <div className={styles.chartEmpty}>
-                    <TrendingUp size={28} color="#cbd5e1" strokeWidth={1.5} />
-                    <p>No application data yet this cycle.</p>
-                  </div>
-                ) : (
-              <ResponsiveContainer width="100%" height={220}>
+            <div className={styles.chartSkeleton} />
+          ) : chartData.every((d) => d.value === 0) ? (
+            <div className={styles.chartEmpty}>
+              <TrendingUp size={28} color="#cbd5e1" strokeWidth={1.5} />
+              <p>No application data yet this cycle.</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart
                 data={chartData}
                 margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
@@ -296,13 +248,13 @@ export default function AdminOverviewPage() {
           </div>
           <div className={styles.quickList}>
             {[
-                { label: "Review pending applications", href: "/admin/applications",           icon: ClipboardList, color: "#f59e0b", bg: "#fffbeb", roles: ["admin", "superadmin", "verifier"] },
-                { label: "View flagged applications",   href: "/admin/applications?tab=flagged", icon: AlertCircle, color: "#ef4444", bg: "#fef2f2", roles: ["admin", "superadmin", "verifier"] },
-                { label: "Manage students", href: "/admin/students", icon: Users,    color: "#3b82f6", bg: "#eff6ff", roles: ["admin", "superadmin", "verifier"] },
-                { label: "Manage schemes",  href: "/admin/schemes",  icon: BookOpen, color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin"] },
-                { label: "Beneficiary register",        href: "/admin/beneficiaries",         icon: BadgeCheck,    color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin", "verifier"] },
-                { label: "Disqualification register",   href: "/admin/disqualifications",     icon: ShieldAlert,   color: "#ef4444", bg: "#fef2f2", roles: ["admin", "superadmin", "verifier"] },
-              ].filter(q => q.roles.includes(user?.role)).map((q) => {
+              { label: "Review pending applications", href: "/admin/applications",             icon: ClipboardList, color: "#f59e0b", bg: "#fffbeb", roles: ["admin", "superadmin", "verifier"] },
+              { label: "View flagged applications",   href: "/admin/applications?tab=flagged", icon: AlertCircle,   color: "#ef4444", bg: "#fef2f2", roles: ["admin", "superadmin", "verifier"] },
+              { label: "Manage students",             href: "/admin/students",                 icon: Users,         color: "#3b82f6", bg: "#eff6ff", roles: ["admin", "superadmin", "verifier"] },
+              { label: "Manage schemes",              href: "/admin/schemes",                  icon: BookOpen,      color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin"] },
+              { label: "Beneficiary register",        href: "/admin/beneficiaries",            icon: BadgeCheck,    color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin", "verifier"] },
+              { label: "Disqualification register",   href: "/admin/disqualifications",        icon: ShieldAlert,   color: "#ef4444", bg: "#fef2f2", roles: ["admin", "superadmin", "verifier"] },
+            ].filter((q) => q.roles.includes(user?.role)).map((q) => {
               const Icon = q.icon;
               return (
                 <button
@@ -323,7 +275,7 @@ export default function AdminOverviewPage() {
 
       </div>
 
-      {/* ── RECENT ACTIVITY ── */}
+      {/* RECENT ACTIVITY */}
       <div className={styles.activityCard}>
         <div className={styles.cardHead}>
           <div>
@@ -356,7 +308,6 @@ export default function AdminOverviewPage() {
           </div>
         ) : (
           <div className={styles.table}>
-            {/* Table header */}
             <div className={`${styles.tableRow} ${styles.tableHeader}`}>
               <span>Student</span>
               <span>Scheme</span>
@@ -364,19 +315,15 @@ export default function AdminOverviewPage() {
               <span>Status</span>
               <span></span>
             </div>
-            {/* Table rows */}
             {activity.map((app) => {
               const { label, color } = mapActivityStatus(app.status);
               return (
                 <div key={app.id} className={styles.tableRow}>
                   <span className={styles.tdName}>
-                    {app.student
-                      ? `${app.student.firstname} ${app.student.lastname}`
-                      : "—"
-                    }
+                    {app.student?.full_name || "—"}
                   </span>
                   <span className={styles.tdScheme}>
-                    {app.scheme_name || "—"}
+                    {app.scheme?.name || "—"}
                   </span>
                   <span className={styles.tdDate}>
                     {formatTimeAgo(app.submission_date)}

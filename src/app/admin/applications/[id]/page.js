@@ -2,9 +2,9 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
-  ArrowLeft, CheckCircle2, Clock, XCircle, AlertCircle,
-  ShieldAlert, FileText, User, MapPin, Phone, Mail,
-  GraduationCap, Briefcase, Wrench, Banknote,
+  ArrowLeft, CheckCircle2, XCircle, AlertCircle,
+  ShieldAlert, FileText, User, MapPin,
+  GraduationCap, Briefcase, Banknote,
   ShieldCheck, AlertTriangle, Loader2,
 } from "lucide-react";
 import styles from "./page.module.css";
@@ -12,21 +12,20 @@ import { getApplication, reviewApplication } from "@/services";
 
 // ── STATUS MAPPING ────────────────────────────────────────────────────────────
 const statusConfig = {
-  submitted:         { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  eligibility_check: { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  document_review:   { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  shortlisted:       { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  draft:             { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  double_dip_flag:   { label: "Flagged",  color: "#ef4444", bg: "#fef2f2" },
-  approved:          { label: "Approved", color: "#15803d", bg: "#f0fdf4" },
-  rejected:          { label: "Rejected", color: "#64748b", bg: "#f8fafc" },
-  withdrawn:         { label: "Rejected", color: "#64748b", bg: "#f8fafc" },
+  submitted:         { label: "Pending",     color: "#f59e0b", bg: "#fffbeb" },
+  eligibility_check: { label: "Pending",     color: "#f59e0b", bg: "#fffbeb" },
+  document_review:   { label: "Pending",     color: "#f59e0b", bg: "#fffbeb" },
+  shortlisted:       { label: "Shortlisted", color: "#3b82f6", bg: "#eff6ff" },
+  draft:             { label: "Pending",     color: "#f59e0b", bg: "#fffbeb" },
+  double_dip_flag:   { label: "Flagged",     color: "#ef4444", bg: "#fef2f2" },
+  approved:          { label: "Approved",    color: "#15803d", bg: "#f0fdf4" },
+  rejected:          { label: "Rejected",    color: "#64748b", bg: "#f8fafc" },
+  withdrawn:         { label: "Rejected",    color: "#64748b", bg: "#f8fafc" },
 };
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
   scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4", icon: GraduationCap },
-  vocational:  { label: "Training",    color: "#1d4ed8", bg: "#eff6ff", icon: Wrench        },
   empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb", icon: Briefcase     },
   grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff", icon: Banknote      },
 };
@@ -52,25 +51,23 @@ function Stepper({ step, uiStatus }) {
   return (
     <div className={styles.stepper}>
       {STEPS.map((label, i) => {
-        const done     = i < step - 1 || uiStatus === "approved" || uiStatus === "rejected";
-        const current  = i === step - 1;
+        const done       = i < step - 1 || uiStatus === "approved" || uiStatus === "rejected";
+        const current    = i === step - 1;
         const isApproved = current && uiStatus === "approved";
         const isRejected = current && uiStatus === "rejected";
         const isFlagged  = current && uiStatus === "flagged";
-        const Icon = stepIcons[i];
+        const Icon       = stepIcons[i];
 
         return (
           <div key={label} className={styles.stepWrap}>
-            <div
-              className={`${styles.stepPill}
-                ${done ? styles.pillDone : ""}
-                ${current && !isApproved && !isRejected && !isFlagged ? styles.pillCurrent : ""}
-                ${isApproved ? styles.pillApproved : ""}
-                ${isRejected ? styles.pillRejected : ""}
-                ${isFlagged  ? styles.pillFlagged  : ""}
-                ${!done && !current ? styles.pillPending : ""}
-              `}
-            >
+            <div className={`${styles.stepPill}
+              ${done                                                 ? styles.pillDone     : ""}
+              ${current && !isApproved && !isRejected && !isFlagged ? styles.pillCurrent  : ""}
+              ${isApproved                                           ? styles.pillApproved : ""}
+              ${isRejected                                           ? styles.pillRejected : ""}
+              ${isFlagged                                            ? styles.pillFlagged  : ""}
+              ${!done && !current                                    ? styles.pillPending  : ""}
+            `}>
               <Icon size={13} strokeWidth={2} />
               {label}
             </div>
@@ -86,18 +83,20 @@ function Stepper({ step, uiStatus }) {
   );
 }
 
-// ── BUILD FORM FIELDS from form_data ──────────────────────────────────────────
-function buildFields(schemeCategory, formData) {
-  if (!formData || Object.keys(formData).length === 0) return [];
+// ── BUILD FORM FIELDS from details ────────────────────────────────────────────
+function buildFields(schemeCategory, details) {
+  if (!details || Object.keys(details).length === 0) return [];
 
-  const fd = formData;
+  const fd = details;
 
   const declaration = {
     section: "Self-Declaration",
     items: [{
       label: "Received External Support",
-      value: fd.declared_external === "yes"
-        ? `Yes — ${fd.declaration_details || "No details provided"}`
+      value: fd.self_declaration_received_support
+        ? `Yes — ${(fd.self_declaration_details || [])
+            .map((d) => `${d.organisation} (${d.category}, ${d.year})`)
+            .join(", ") || "No details provided"}`
         : "No",
     }],
   };
@@ -116,12 +115,12 @@ function buildFields(schemeCategory, formData) {
       {
         section: "Academic Information",
         items: [
-          { label: "Institution",       value: fd.institution    || "—" },
-          { label: "Level of Study",    value: fd.level          || "—" },
-          { label: "Department",        value: fd.department     || "—" },
-          { label: "Current Level",     value: fd.current_level  || "—" },
-          { label: "Matric Number",     value: fd.matric_number  || "—" },
-          { label: "CGPA / Last Score", value: fd.cgpa           || "—" },
+          { label: "Institution Name",     value: fd.institution_name  || "—" },
+          { label: "Course of Study",      value: fd.course_of_study   || "—" },
+          { label: "Current Level",        value: fd.current_level     || "—" },
+          { label: "CGPA",                 value: fd.cgpa              || "—" },
+          { label: "Admission Year",       value: fd.admission_year    || "—" },
+          { label: "Matriculation Number", value: fd.matric_number     || "—" },
         ],
       },
       ...(bankDetails ? [bankDetails] : []),
@@ -134,29 +133,14 @@ function buildFields(schemeCategory, formData) {
       {
         section: "Grant Details",
         items: [
-          { label: "Grant Purpose",          value: fd.grant_purpose          || "—" },
-          { label: "Business Plan Summary",  value: fd.business_plan_desc     || "—" },
-          { label: "Amount Requested",       value: fd.amount_requested       || "—" },
-          { label: "Expected Beneficiaries", value: fd.expected_beneficiaries || "—" },
+          { label: "Business Name",        value: fd.business_name        || "—" },
+          { label: "Business Stage",       value: fd.business_stage       || "—" },
+          { label: "Business Description", value: fd.business_description || "—" },
+          { label: "Amount Requested",     value: fd.requested_amount     || "—" },
+          { label: "Intended Use",         value: fd.intended_use         || "—" },
         ],
       },
       ...(bankDetails ? [bankDetails] : []),
-      declaration,
-    ];
-  }
-
-  if (schemeCategory === "vocational") {
-    return [
-      {
-        section: "Training Details",
-        items: [
-          { label: "Training Applied For",    value: fd.training_name    || "—" },
-          { label: "Education Level",         value: fd.education_level  || "—" },
-          { label: "Prior Experience",        value: fd.prior_experience || "—" },
-          { label: "Career Goal",             value: fd.career_goal      || "—" },
-          { label: "Availability",            value: fd.availability     || "—" },
-        ],
-      },
       declaration,
     ];
   }
@@ -166,13 +150,14 @@ function buildFields(schemeCategory, formData) {
       {
         section: "Business / Trade Information",
         items: [
-          { label: "Trade / Skill",      value: fd.trade             || "—" },
-          { label: "Current Status",     value: fd.current_status    || "—" },
-          { label: "Support Needed",     value: fd.support_needed    || "—" },
-          { label: "Equipment List",     value: fd.equipment         || "—" },
-          { label: "Business Location",  value: fd.business_location || "—" },
+          { label: "Trade / Skill",     value: fd.trade_or_skill              || "—" },
+          { label: "Training Provider", value: fd.training_provider           || "—" },
+          { label: "Training Duration", value: fd.training_duration_months
+              ? `${fd.training_duration_months} months` : "—" },
+          { label: "Prior Experience",  value: fd.prior_experience            || "—" },
         ],
       },
+      ...(bankDetails ? [bankDetails] : []),
       declaration,
     ];
   }
@@ -181,28 +166,28 @@ function buildFields(schemeCategory, formData) {
 }
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
-export default function ApplicationDetailPage() {
+export default function AdminApplicationDetailPage() {
   const router = useRouter();
   const params = useParams();
 
-  const [app,          setApp]          = useState(null);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
+  const [app,         setApp]         = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
 
   // Decision panel state
-  const [note,         setNote]         = useState("");
-  const [noteError,    setNoteError]    = useState("");
-  const [submitting,   setSubmitting]   = useState(false);
-  const [actionError,  setActionError]  = useState("");
-  const [decided,      setDecided]      = useState(false);
-  const [confirmModal, setConfirmModal] = useState(null);
+  const [note,        setNote]        = useState("");
+  const [noteError,   setNoteError]   = useState("");
+  const [submitting,  setSubmitting]  = useState(false);
+  const [actionError, setActionError] = useState("");
+  const [decided,     setDecided]     = useState(false);
+  const [confirmModal,setConfirmModal]= useState(null); // "approved" | "rejected" | "shortlisted" | null
 
   // ── FETCH APPLICATION ────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const res  = await getApplication(params.id);
+        const res = await getApplication(params.id);
         if (cancelled) return;
         setApp(res.data);
       } catch {
@@ -216,7 +201,7 @@ export default function ApplicationDetailPage() {
   }, [params.id]);
 
   // ── DECISION ACTION ──────────────────────────────────────────────────────
-  async function handleDecision(approve) {
+  async function handleDecision(decision) {
     if (note.trim().length < 10) {
       setNoteError("Decision note must be at least 10 characters.");
       return;
@@ -228,7 +213,7 @@ export default function ApplicationDetailPage() {
 
     try {
       await reviewApplication(params.id, {
-        approve,
+        decision,
         notes: note.trim(),
       });
       setDecided(true);
@@ -273,16 +258,18 @@ export default function ApplicationDetailPage() {
   }
 
   // ── DERIVE DISPLAY DATA ──────────────────────────────────────────────────
-  const catKey   = (app.scheme_category || "scholarship").toLowerCase();
+  const catKey   = (app.scheme?.award_type || "scholarship").toLowerCase();
   const category = categoryConfig[catKey] || categoryConfig.scholarship;
   const Icon     = category.icon;
   const status   = statusConfig[app.status] || statusConfig.submitted;
   const uiStatus = status.label.toLowerCase();
   const step     = stepFromStatus[app.status] || 1;
-  const fields   = buildFields(catKey, app.form_data || {});
+  const fields   = buildFields(catKey, app.details || {});
 
-  const isDecidable = ["submitted", "eligibility_check", "document_review",
-    "shortlisted", "double_dip_flag"].includes(app.status);
+  const isDecidable = [
+    "submitted", "eligibility_check", "document_review",
+    "shortlisted", "double_dip_flag",
+  ].includes(app.status);
 
   const submissionDate = app.submission_date
     ? new Date(app.submission_date).toLocaleDateString("en-GB", {
@@ -294,10 +281,7 @@ export default function ApplicationDetailPage() {
     <div className={styles.page}>
 
       {/* BACK */}
-      <button
-        className={styles.backBtn}
-        onClick={() => router.push("/admin/applications")}
-      >
+      <button className={styles.backBtn} onClick={() => router.push("/admin/applications")}>
         <ArrowLeft size={14} strokeWidth={2} /> Back to Applications
       </button>
 
@@ -311,20 +295,12 @@ export default function ApplicationDetailPage() {
             <Icon size={20} color={category.color} strokeWidth={1.8} />
           </div>
           <div>
-            <h1 className={styles.title}>{app.scheme_name || "Application"}</h1>
+            <h1 className={styles.title}>{app.scheme?.name || "Application"}</h1>
             <p className={styles.sub}>Submitted {submissionDate}</p>
           </div>
         </div>
-
         <span
-          className={`${styles.statusBadge} ${styles.statusBadgeDesktop}`}
-          style={{ color: status.color, background: status.bg }}
-        >
-          {status.label}
-        </span>
-
-        <span
-          className={`${styles.statusBadge} ${styles.statusBadgeMobile}`}
+          className={styles.statusBadge}
           style={{ color: status.color, background: status.bg }}
         >
           {status.label}
@@ -349,7 +325,7 @@ export default function ApplicationDetailPage() {
         </div>
       )}
 
-      {/* MAIN BODY — two column on desktop */}
+      {/* MAIN BODY */}
       <div className={styles.body}>
 
         {/* LEFT — student info + submitted fields */}
@@ -363,27 +339,25 @@ export default function ApplicationDetailPage() {
                 <User size={13} color="#94a3b8" strokeWidth={2} />
                 <div>
                   <span className={styles.fieldLabel}>Full Name</span>
-                  <span className={styles.fieldValue}>
-                    {app.student
-                      ? `${app.student.firstname} ${app.student.lastname}`
-                      : "—"
-                    }
-                  </span>
-                </div>
-              </div>
-              <div className={styles.studentField}>
-                <Mail size={13} color="#94a3b8" strokeWidth={2} />
-                <div>
-                  <span className={styles.fieldLabel}>Email</span>
-                  <span className={styles.fieldValue}>{app.student?.email || "—"}</span>
+                  <span className={styles.fieldValue}>{app.student?.full_name || "—"}</span>
                 </div>
               </div>
               <div className={styles.studentField}>
                 <MapPin size={13} color="#94a3b8" strokeWidth={2} />
                 <div>
-                  <span className={styles.fieldLabel}>LGA / Ward</span>
-                  <span className={styles.fieldValue}>
-                    {app.student?.lga || "—"} · {app.student?.ward || "—"}
+                  <span className={styles.fieldLabel}>Ward</span>
+                  <span className={styles.fieldValue}>{app.student?.ward || "—"}</span>
+                </div>
+              </div>
+              <div className={styles.studentField}>
+                <ShieldCheck size={13} color="#94a3b8" strokeWidth={2} />
+                <div>
+                  <span className={styles.fieldLabel}>NIN Verified</span>
+                  <span
+                    className={styles.fieldValue}
+                    style={{ color: app.student?.nimc_verified ? "#15803d" : "#ef4444" }}
+                  >
+                    {app.student?.nimc_verified ? "Verified" : "Not verified"}
                   </span>
                 </div>
               </div>
@@ -405,17 +379,12 @@ export default function ApplicationDetailPage() {
           {/* Submitted Fields */}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Submitted Information</h2>
-            <p className={styles.cardSub}>
-              Read-only. Exactly as submitted by the applicant.
-            </p>
+            <p className={styles.cardSub}>Read-only. Exactly as submitted by the applicant.</p>
 
             {fields.length === 0 ? (
               <div className={styles.noFormData}>
                 <FileText size={22} color="#cbd5e1" strokeWidth={1.5} />
-                <p>Form data not yet available.</p>
-                <p style={{ fontSize: 12, color: "#cbd5e1" }}>
-                  Backend form data storage coming soon.
-                </p>
+                <p>No form data available for this application.</p>
               </div>
             ) : (
               <div className={styles.sections}>
@@ -443,7 +412,6 @@ export default function ApplicationDetailPage() {
               </div>
             )}
 
-            {/* Attestation confirmation */}
             <div className={styles.attestConfirm}>
               <CheckCircle2 size={13} color="#15803d" strokeWidth={2} />
               <span>Applicant confirmed accuracy of all information at time of submission.</span>
@@ -494,7 +462,6 @@ export default function ApplicationDetailPage() {
               </div>
             ) : (
               <>
-                {/* Decision success banner */}
                 {decided && (
                   <div className={styles.successBanner}>
                     <CheckCircle2 size={14} color="#15803d" strokeWidth={2} />
@@ -502,7 +469,6 @@ export default function ApplicationDetailPage() {
                   </div>
                 )}
 
-                {/* Action error */}
                 {actionError && (
                   <div className={styles.errorBanner}>
                     <AlertCircle size={14} color="#dc2626" strokeWidth={2} />
@@ -524,9 +490,7 @@ export default function ApplicationDetailPage() {
                     onChange={(e) => { setNote(e.target.value); setNoteError(""); }}
                   />
                   <div className={styles.noteFooter}>
-                    {noteError && (
-                      <span className={styles.noteError}>{noteError}</span>
-                    )}
+                    {noteError && <span className={styles.noteError}>{noteError}</span>}
                     <span className={`${styles.noteCount} ${note.length >= 10 ? styles.noteCountOk : ""}`}>
                       {note.length} / 10 min
                     </span>
@@ -539,7 +503,7 @@ export default function ApplicationDetailPage() {
                     className={styles.approveBtn}
                     onClick={() => {
                       if (note.trim().length < 10) { setNoteError("Decision note must be at least 10 characters."); return; }
-                      setConfirmModal('approve');
+                      setConfirmModal("approved");
                     }}
                     disabled={submitting}
                   >
@@ -547,14 +511,25 @@ export default function ApplicationDetailPage() {
                       ? <Loader2 size={15} strokeWidth={2} className={styles.spin} />
                       : <CheckCircle2 size={15} strokeWidth={2} />
                     }
-                    Approve Application
+                    Approve
+                  </button>
+
+                  <button
+                    className={styles.shortlistBtn}
+                    onClick={() => {
+                      if (note.trim().length < 10) { setNoteError("Decision note must be at least 10 characters."); return; }
+                      setConfirmModal("shortlisted");
+                    }}
+                    disabled={submitting}
+                  >
+                    Shortlist
                   </button>
 
                   <button
                     className={styles.rejectBtn}
                     onClick={() => {
                       if (note.trim().length < 10) { setNoteError("Decision note must be at least 10 characters."); return; }
-                      setConfirmModal('reject');
+                      setConfirmModal("rejected");
                     }}
                     disabled={submitting}
                   >
@@ -562,16 +537,15 @@ export default function ApplicationDetailPage() {
                       ? <Loader2 size={15} strokeWidth={2} className={styles.spin} />
                       : <XCircle size={15} strokeWidth={2} />
                     }
-                    Reject Application
+                    Reject
                   </button>
                 </div>
 
-                {/* Warning */}
                 <div className={styles.decisionWarning}>
                   <AlertTriangle size={12} color="#f59e0b" strokeWidth={2} />
                   <span>
-                    This action is irreversible. Approved applications create a permanent
-                    beneficiary record. Rejected applications are logged against the student's NIN.
+                    Approved applications create a permanent beneficiary record.
+                    Rejected applications are logged against the student's NIN.
                   </span>
                 </div>
               </>
@@ -582,6 +556,7 @@ export default function ApplicationDetailPage() {
 
       </div>
 
+      {/* CONFIRM MODAL */}
       {confirmModal && (
         <div style={{
           position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
@@ -591,7 +566,9 @@ export default function ApplicationDetailPage() {
             background: "#fff", borderRadius: 16, padding: 32, maxWidth: 400, width: "90%",
           }}>
             <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
-              {confirmModal === "approve" ? "Approve Application?" : "Reject Application?"}
+              {confirmModal === "approved"   ? "Approve Application?" :
+               confirmModal === "shortlisted" ? "Shortlist Application?" :
+               "Reject Application?"}
             </h3>
             <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>
               This action is permanent and cannot be undone.
@@ -608,14 +585,17 @@ export default function ApplicationDetailPage() {
                 Cancel
               </button>
               <button
-                onClick={() => { setConfirmModal(null); handleDecision(confirmModal === "approve"); }}
+                onClick={() => { const d = confirmModal; setConfirmModal(null); handleDecision(d); }}
                 style={{
                   flex: 1, padding: "10px 0", borderRadius: 8, border: "none",
-                  background: confirmModal === "approve" ? "#15803d" : "#ef4444",
+                  background: confirmModal === "approved" ? "#15803d" :
+                              confirmModal === "shortlisted" ? "#3b82f6" : "#ef4444",
                   fontSize: 13, cursor: "pointer", color: "#fff", fontWeight: 600,
                 }}
               >
-                {confirmModal === "approve" ? "Yes, Approve" : "Yes, Reject"}
+                {confirmModal === "approved"    ? "Yes, Approve"    :
+                 confirmModal === "shortlisted" ? "Yes, Shortlist"  :
+                 "Yes, Reject"}
               </button>
             </div>
           </div>

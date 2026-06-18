@@ -2,7 +2,7 @@
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
-  GraduationCap, Briefcase, Wrench, Banknote,
+  GraduationCap, Briefcase, Banknote,
   ArrowLeft, CheckCircle2, Clock,
   XCircle, AlertCircle, FileText,
 } from "lucide-react";
@@ -24,7 +24,6 @@ const statusMap = {
 
 const categoryConfig = {
   scholarship: { label: "Scholarship", color: "green",  icon: GraduationCap },
-  vocational:  { label: "Training",    color: "blue",   icon: Wrench        },
   empowerment: { label: "Empowerment", color: "amber",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "purple", icon: Banknote      },
 };
@@ -32,7 +31,6 @@ const categoryConfig = {
 const colorMap = {
   green:  { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
   amber:  { bg: "#fffbeb", border: "#fde68a", text: "#b45309" },
-  blue:   { bg: "#eff6ff", border: "#bfdbfe", text: "#1d4ed8" },
   purple: { bg: "#faf5ff", border: "#e9d5ff", text: "#7e22ce" },
 };
 
@@ -48,8 +46,10 @@ function buildFields(schemeType, formData) {
     items: [
       {
         label: "Received External Support",
-        value: fd.declared_external === "yes"
-          ? `Yes — ${fd.declaration_details || ""}`
+        value: fd.self_declaration_received_support
+          ? `Yes — ${(fd.self_declaration_details || [])
+              .map((d) => `${d.organisation} (${d.category}, ${d.year})`)
+              .join(", ") || ""}`
           : "No",
       },
     ],
@@ -58,9 +58,9 @@ function buildFields(schemeType, formData) {
   const bankDetails = (fd.bank_name || fd.account_number || fd.account_name) ? {
     section: "Bank Details",
     items: [
-      { label: "Bank Name",       value: fd.bank_name       || "—" },
-      { label: "Account Number",  value: fd.account_number  || "—" },
-      { label: "Account Name",    value: fd.account_name    || "—" },
+      { label: "Bank Name",      value: fd.bank_name      || "—" },
+      { label: "Account Number", value: fd.account_number || "—" },
+      { label: "Account Name",   value: fd.account_name   || "—" },
     ],
   } : null;
 
@@ -69,12 +69,12 @@ function buildFields(schemeType, formData) {
       {
         section: "Academic Information",
         items: [
-          { label: "Institution Name",      value: fd.institution    || "—" },
-          { label: "Level of Study",        value: fd.level          || "—" },
-          { label: "Department / Course",   value: fd.department     || "—" },
-          { label: "Current Level / Year",  value: fd.current_level  || "—" },
-          { label: "Matriculation Number",  value: fd.matric_number  || "—" },
-          { label: "CGPA / Last Score",     value: fd.cgpa           || "—" },
+          { label: "Institution Name",     value: fd.institution_name  || "—" },
+          { label: "Course of Study",      value: fd.course_of_study   || "—" },
+          { label: "Current Level",        value: fd.current_level     || "—" },
+          { label: "CGPA",                 value: fd.cgpa              || "—" },
+          { label: "Admission Year",       value: fd.admission_year    || "—" },
+          { label: "Matriculation Number", value: fd.matric_number     || "—" },
         ],
       },
       ...(bankDetails ? [bankDetails] : []),
@@ -87,29 +87,14 @@ function buildFields(schemeType, formData) {
       {
         section: "Grant Details",
         items: [
-          { label: "Grant Purpose",          value: fd.grant_purpose          || "—" },
-          { label: "Business Plan Summary",  value: fd.business_plan_desc     || "—" },
-          { label: "Amount Requested",       value: fd.amount_requested       || "—" },
-          { label: "Expected Beneficiaries", value: fd.expected_beneficiaries || "—" },
+          { label: "Business Name",        value: fd.business_name        || "—" },
+          { label: "Business Stage",       value: fd.business_stage       || "—" },
+          { label: "Business Description", value: fd.business_description || "—" },
+          { label: "Amount Requested",     value: fd.requested_amount     || "—" },
+          { label: "Intended Use",         value: fd.intended_use         || "—" },
         ],
       },
       ...(bankDetails ? [bankDetails] : []),
-      declaration,
-    ];
-  }
-
-  if (schemeType === "vocational") {
-    return [
-      {
-        section: "Training Details",
-        items: [
-          { label: "Training Applied For",    value: fd.training_name    || "—" },
-          { label: "Highest Education Level", value: fd.education_level  || "—" },
-          { label: "Prior Experience",        value: fd.prior_experience || "—" },
-          { label: "Career Goal",             value: fd.career_goal      || "—" },
-          { label: "Availability",            value: fd.availability     || "—" },
-        ],
-      },
       declaration,
     ];
   }
@@ -119,13 +104,13 @@ function buildFields(schemeType, formData) {
       {
         section: "Business / Trade Information",
         items: [
-          { label: "Trade / Skill",       value: fd.trade             || "—" },
-          { label: "Current Status",      value: fd.current_status    || "—" },
-          { label: "Support Needed",      value: fd.support_needed    || "—" },
-          { label: "Equipment List",      value: fd.equipment         || "—" },
-          { label: "Business Location",   value: fd.business_location || "—" },
+          { label: "Trade / Skill",      value: fd.trade_or_skill              || "—" },
+          { label: "Training Provider",  value: fd.training_provider           || "—" },
+          { label: "Training Duration",  value: fd.training_duration_months ? `${fd.training_duration_months} months` : "—" },
+          { label: "Prior Experience",   value: fd.prior_experience            || "—" },
         ],
       },
+      ...(bankDetails ? [bankDetails] : []),
       declaration,
     ];
   }
@@ -155,13 +140,13 @@ function Stepper({ step, status }) {
         const isApproved = current && status === "approved";
         const isRejected = current && status === "rejected";
         const isFlagged  = current && status === "flagged";
-        const Icon = stepIcons[i];
+        const Icon       = stepIcons[i];
 
         return (
           <div key={label} className={styles.stepWrap}>
             <div className={`${styles.stepPill}
-              ${done                                                 ? styles.pillDone    : ""}
-              ${current && !isApproved && !isRejected && !isFlagged ? styles.pillCurrent : ""}
+              ${done                                                 ? styles.pillDone     : ""}
+              ${current && !isApproved && !isRejected && !isFlagged ? styles.pillCurrent  : ""}
               ${isApproved                                           ? styles.pillApproved : ""}
               ${isRejected                                           ? styles.pillRejected : ""}
               ${isFlagged                                            ? styles.pillFlagged  : ""}
@@ -199,7 +184,7 @@ export default function ApplicationDetailPage() {
         const data = res.data;
         if (!data) throw new Error("No data returned");
 
-        const catKey = (data.scheme_category || data.scheme_type || "scholarship").toLowerCase();
+        const catKey   = (data.scheme?.award_type || "scholarship").toLowerCase();
         const config   = categoryConfig[catKey] || categoryConfig.scholarship;
         const uiStatus = statusMap[data.status] || "pending";
 
@@ -223,7 +208,7 @@ export default function ApplicationDetailPage() {
 
         setApp({
           id:              data.id,
-          title:           data.scheme_name   || "Programme Application",
+          title:           data.scheme?.name    || "Programme Application",
           category:        config.label,
           categoryColor:   config.color,
           icon:            config.icon,
@@ -233,14 +218,14 @@ export default function ApplicationDetailPage() {
           flagNote:        data.has_conflict
             ? "A conflict was detected with an existing award. Under admin review — no action needed from you at this time."
             : "Under admin review. No action needed from you at this time.",
-          rejectionReason: data.rejection_reason  || "",
-          reviewerNotes:   data.reviewer_notes    || "",
-          fields:          buildFields(catKey, data.form_data || {}),
+          rejectionReason: data.rejection_reason || "",
+          reviewerNotes:   data.reviewer_notes   || "",
+          fields:          buildFields(catKey, data.details || {}),
         });
 
       } catch (err) {
-      console.error("Application load error:", err);
-      if (!cancelled) setError("Failed to load application. Please try again.");
+        console.error("Application load error:", err);
+        if (!cancelled) setError("Failed to load application. Please try again.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -321,7 +306,7 @@ export default function ApplicationDetailPage() {
 
         {app.fields.length === 0 ? (
           <div style={{ padding: "24px 0", color: "#94a3b8", fontSize: 13 }}>
-            Form data not yet available. Check back once the backend stores submitted fields.
+            No form data available for this application.
           </div>
         ) : (
           <div className={styles.sections}>

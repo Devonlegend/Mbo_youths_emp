@@ -85,23 +85,24 @@ export default function RegisterPage() {
     setErrors({ ...errors, [e.target.name]: "" });
   }
 
-  function handleCertificateChange(e) {
-    const file = e.target.files[0];
-    setCertError("");
-    if (!file) return;
-    const allowed = ["application/pdf", "image/jpeg", "image/png"];
-    if (!allowed.includes(file.type)) {
-      setCertError("Only PDF, JPG or PNG files are allowed.");
-      e.target.value = "";
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setCertError("File size must not exceed 5MB.");
-      e.target.value = "";
-      return;
-    }
-    setCertificate(file);
+function handleCertificateChange(e) {
+  const file = e.target.files[0];
+  setCertError("");
+  if (!file) return;
+  const allowed = ["application/pdf", "image/jpeg", "image/png"];
+  if (!allowed.includes(file.type)) {
+    setCertError("Only PDF, JPG or PNG files are allowed.");
+    e.target.value = "";
+    return;
   }
+  if (file.size > MAX_FILE_SIZE) {
+    setCertError("File size must not exceed 5MB.");
+    e.target.value = "";
+    return;
+  }
+  setCertificate(file);
+  setErrors((prev) => ({ ...prev, certificate: "" }));
+}
 
   function removeCertificate() { setCertificate(null); setCertError(""); }
   function formatFileSize(bytes) { return (bytes / 1024).toFixed(1) + " KB"; }
@@ -150,7 +151,6 @@ export default function RegisterPage() {
     if (!form.lga.trim()) e.lga = "Required";
     if (!form.ward.trim()) e.ward = "Required";
     if (!passport) e.passport = "Passport photo is required.";
-    if (!certificate) e.certificate = "Certificate of Origin is required.";
     if (!form.password) e.password = "Required";
     else if (form.password.length < 8) e.password = "Minimum 8 characters";
     if (!form.confirm) e.confirm = "Required";
@@ -173,7 +173,13 @@ export default function RegisterPage() {
       formData.append("lastname", form.lastName);
       formData.append("email", form.email);
       formData.append("phone_number", form.phone);
-      formData.append("nin_hash", form.nin);
+
+      // nin hashed
+      const ninBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(form.nin));
+      const fullHash = Array.from(new Uint8Array(ninBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+      const ninHash = fullHash.slice(0, 20);
+      formData.append("nin_hash", ninHash);
+
       formData.append("date_of_birth", form.dob);
       formData.append("gender", form.gender);
       formData.append("ward", form.ward);
@@ -560,19 +566,31 @@ export default function RegisterPage() {
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label}>Ward</label>
-              <div className={styles.inputWrap}>
-                <MapPin size={15} color="#94a3b8" className={styles.inputIcon} />
-                <input
-                  name="ward"
-                  value={form.ward}
-                  onChange={handleChange}
-                  placeholder="Enter your ward"
-                  className={styles.input + (errors.ward ? " " + styles.inputError : "")}
-                />
-              </div>
-              {errors.ward && <span className={styles.error}>{errors.ward}</span>}
+            <label className={styles.label}>Ward</label>
+            <div className={styles.inputWrap}>
+              <MapPin size={15} color="#94a3b8" className={styles.inputIcon} />
+              <ChevronDown size={15} color="#94a3b8" className={styles.inputIconRight} />
+              <select
+                name="ward"
+                value={form.ward}
+                onChange={handleChange}
+                className={styles.select + " " + styles.selectPadLeft + (errors.ward ? " " + styles.inputError : "")}
+              >
+                <option value="">Select Ward</option>
+                <option value="efiat">Efiat</option>
+                <option value="efiat II">Efiat II</option>
+                <option value="enwang I">Enwang I</option>
+                <option value="enwang II">Enwang II</option>
+                <option value="ebughu I">Ebughu I</option>
+                <option value="ebughu II">Ebughu II</option>
+                <option value="ibaka">Ibaka</option>
+                <option value="uda I">Uda I</option>
+                <option value="uda II">Uda II</option>
+                <option value="udesi">Udesi</option>
+              </select>
             </div>
+            {errors.ward && <span className={styles.error}>{errors.ward}</span>}
+          </div>
 
             {/* ── DOCUMENTS ──────────────────────────────────────────────── */}
             <div className={styles.sectionLabel}><FolderOpen size={13} color="#15803d" strokeWidth={2.5} />Documents</div>

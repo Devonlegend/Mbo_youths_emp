@@ -18,19 +18,16 @@ export default function PassportCapture({ value, onChange, error }) {
   const [mode, setMode] = useState("idle"); // idle | camera | preview | error
   const [stream, setStream] = useState(null);
   const [camError, setCamError] = useState("");
-  const [faceHint, setFaceHint] = useState("");
   const [capturing, setCapturing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [enlarged, setEnlarged] = useState(false);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const checkRef = useRef(null);
 
   // Open camera
   async function openCamera() {
     setCamError("");
-    setFaceHint("");
     try {
       const s = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -61,7 +58,6 @@ export default function PassportCapture({ value, onChange, error }) {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     onChange(null);
-    setFaceHint("");
     openCamera();
   }
 
@@ -72,11 +68,10 @@ export default function PassportCapture({ value, onChange, error }) {
     setPreviewUrl(null);
     onChange(null);
     setMode("idle");
-    setFaceHint("");
     setCamError("");
   }
 
-  // Capture photo
+  // Capture photo — always succeeds once the shutter is pressed
   async function capture() {
     if (!videoRef.current || !canvasRef.current) return;
     setCapturing(true);
@@ -94,36 +89,6 @@ export default function PassportCapture({ value, onChange, error }) {
     ctx.drawImage(video, 0, 0);
     ctx.restore();
 
-    // Basic brightness check
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const brightness = getAverageBrightness(imageData);
-
-    if (brightness < 40) {
-      setFaceHint("Too dark — move to a brighter area.");
-      setCapturing(false);
-      return;
-    }
-    if (brightness > 220) {
-      setFaceHint("Too bright — reduce direct light.");
-      setCapturing(false);
-      return;
-    }
-
-    // Check face region (center oval) has skin-like tones
-    const faceRegion = ctx.getImageData(
-      canvas.width * 0.3, canvas.height * 0.1,
-      canvas.width * 0.4, canvas.height * 0.7
-    );
-    const hasFace = checkSkinTones(faceRegion);
-
-    if (!hasFace) {
-      setFaceHint("No face detected — centre your face in the oval.");
-      setCapturing(false);
-      return;
-    }
-
-    setFaceHint("");
-
     canvas.toBlob((blob) => {
       const file = new File([blob], "passport.jpg", { type: "image/jpeg" });
       const url = URL.createObjectURL(blob);
@@ -133,33 +98,6 @@ export default function PassportCapture({ value, onChange, error }) {
       setMode("preview");
       setCapturing(false);
     }, "image/jpeg", 0.92);
-  }
-
-  function getAverageBrightness(imageData) {
-    let sum = 0;
-    const data = imageData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      sum += (data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000;
-    }
-    return sum / (data.length / 4);
-  }
-
-  function checkSkinTones(imageData) {
-    const data = imageData.data;
-    let skinPixels = 0;
-    const total = data.length / 4;
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      // Broad skin tone range covering all ethnicities
-      if (
-        r > 60 && g > 40 && b > 20 &&
-        r > g && r > b &&
-        Math.abs(r - g) > 10 &&
-        r - b > 15 &&
-        r < 250
-      ) skinPixels++;
-    }
-    return skinPixels / total > 0.08; // at least 8% skin pixels
   }
 
   // ── IDLE STATE ──────────────────────────────────────────────────────────
@@ -270,14 +208,6 @@ export default function PassportCapture({ value, onChange, error }) {
 
           {/* Face oval guide */}
           <div className={styles.ovalGuide} />
-
-          {/* Hint overlay */}
-          {faceHint && (
-            <div className={styles.hintOverlay}>
-              <AlertCircle size={14} color="#fbbf24" strokeWidth={2} />
-              <span>{faceHint}</span>
-            </div>
-          )}
 
           {/* Instruction strip */}
           <div className={styles.instructionStrip}>
