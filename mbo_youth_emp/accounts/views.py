@@ -375,23 +375,22 @@ def otp_verify(request):
     EmailOTP.objects.filter(pk=otp.pk, used_at__isnull=True).update(used_at=now)
 
     if not user.email_verified:
-        user.email_verified = True
-        user.save(update_fields=['email_verified'])
-        Notification.objects.create(
-            user=user,
-            type='welcome',
-            title='Welcome to RMHCDT Youth Portal',
-            message='Your account has been verified successfully. You can now apply for available programmes.',
-        )
+            user.email_verified = True
+            user.save(update_fields=['email_verified'])
+            Notification.objects.create(
+                user=user,
+                type='welcome',
+                title='Welcome to RMHCDT Youth Portal',
+                message='Your account has been verified successfully. You can now apply for available programmes.',
+            )
 
-        user.last_login = now
-        user.save(update_fields=['last_login'])
+    user.last_login = now
+    user.save(update_fields=['last_login'])
 
     refresh = RefreshToken.for_user(user)
     response = Response({"message": "Verified"})
     _set_jwt_cookies(response, refresh)
     return response
-
 
 # ──────────────────────────── identity ────────────────────────────
 
