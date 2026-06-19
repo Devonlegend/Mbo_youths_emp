@@ -187,10 +187,13 @@
 .filterOption:hover         { background: #f8fafc; }
 .filterOptionActive         { background: #f0fdf4; color: #15803d; font-weight: 600; }
 
-/* ── TABLE ── */
+/* ── TABLE ──
+   6 columns now: Beneficiary | Scheme | Ward | Account Details | Approved | View
+   (was 5 — the View button wrapping onto its own row was this grid still
+   expecting only 5 cells per row) */
 .tableRow {
   display: grid;
-  grid-template-columns: 2fr 2fr 1.2fr 1fr 90px;
+  grid-template-columns: 2fr 1.7fr 0.9fr 1.3fr 0.9fr 90px;
   gap: 12px;
   padding: 0 20px;
   align-items: center;
@@ -212,7 +215,7 @@
 
 .tableRowData {
   display: grid;
-  grid-template-columns: 2fr 2fr 1.2fr 1fr 90px;
+  grid-template-columns: 2fr 1.7fr 0.9fr 1.3fr 0.9fr 90px;
   gap: 12px;
   padding: 0 20px;
   align-items: center;
@@ -318,10 +321,22 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
-.lgaText  { font-size: 12.5px; font-weight: 500; color: #374151; }
-.wardText { font-size: 11.5px; color: #94a3b8; }
+/* Account Details — separate class from tdLocation (Ward) so the two
+   columns can be shown/hidden independently at narrower widths. Bank
+   details matter more for this register than Ward, so they're kept
+   visible for longer as the viewport shrinks. */
+.tdBank {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lgaText  { font-size: 12.5px; font-weight: 500; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wardText { font-size: 11.5px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .tdDate {
   font-size: 12.5px;
@@ -387,11 +402,14 @@
 
 /* ══════════════════════════════════════════════
    RESPONSIVE — 1024px
+   Header span order: 1 Beneficiary, 2 Scheme, 3 Ward, 4 Account Details,
+   5 Approved, 6 (empty, View column). Ward drops first — Account Details
+   is the more important column for this register and stays visible.
 ══════════════════════════════════════════════ */
 @media (max-width: 1024px) {
   .tableRow,
   .tableRowData {
-    grid-template-columns: 1.8fr 1.8fr 1fr 90px;
+    grid-template-columns: 1.8fr 1.5fr 1.3fr 0.9fr 90px;
   }
   .tdLocation { display: none; }
   .tableHeader span:nth-child(3) { display: none; }
@@ -399,6 +417,8 @@
 
 /* ══════════════════════════════════════════════
    RESPONSIVE — 768px
+   Account Details and Approved date both drop here. Left with:
+   Beneficiary | Scheme | View only.
 ══════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .toolbar { flex-direction: column; align-items: stretch; }
@@ -406,12 +426,14 @@
 
   .tableRow,
   .tableRowData {
-    grid-template-columns: 1fr 1fr 80px;
+    grid-template-columns: 1.5fr 1fr 80px;
     padding: 0 14px;
   }
 
   .tdDate { display: none; }
+  .tdBank { display: none; }
   .tableHeader span:nth-child(4) { display: none; }
+  .tableHeader span:nth-child(5) { display: none; }
 
   .title { font-size: 18px; }
 }

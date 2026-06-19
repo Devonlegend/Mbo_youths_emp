@@ -7,7 +7,7 @@ import {
   UploadCloud, FileText, Trash2, Loader2, CheckCircle2,
 } from "lucide-react";
 import styles from "./apply-form.module.css";
-import { getScheme, getSchemeFields, submitApplication, uploadDocument, getBanks, verifyBank } from "@/services";
+import { getScheme, getSchemeFields, submitApplication, uploadDocument, getBanks, verifyBank, getBankDetail } from "@/services";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -228,15 +228,27 @@ export default function DynamicApplyPage() {
     let cancelled = false;
     async function load() {
       try {
-        const [schemeRes, fieldsRes, banksRes] = await Promise.all([
-          getScheme(schemeId),
-          getSchemeFields(schemeId),
-          getBanks(),
-        ]);
-        if (cancelled) return;
-        setScheme(schemeRes.data);
-        setFields(Array.isArray(fieldsRes.data) ? fieldsRes.data : []);
-        setBanks(Array.isArray(banksRes.data?.banks) ? banksRes.data.banks : []);
+      const [schemeRes, fieldsRes, banksRes, bankDetailRes] = await Promise.all([
+        getScheme(schemeId),
+        getSchemeFields(schemeId),
+        getBanks(),
+        getBankDetail().catch(() => ({ data: null })),
+      ]);
+
+      const existing = bankDetailRes.data;
+      if (existing?.account_number) {
+        setBankCode(existing.bank_code || "");
+        setBankName(existing.bank_name || "");
+        setAccountNumber(existing.account_number || "");
+        setBankResult({
+          account_name: existing.account_name,
+          name_match: { passed: true },
+        });
+      }
+      if (cancelled) return;
+      setScheme(schemeRes.data);
+      setFields(Array.isArray(fieldsRes.data) ? fieldsRes.data : []);
+      setBanks(Array.isArray(banksRes.data?.banks) ? banksRes.data.banks : []);
       } catch {
         if (!cancelled) setFetchError("Failed to load application form. Please go back and try again.");
       } finally {

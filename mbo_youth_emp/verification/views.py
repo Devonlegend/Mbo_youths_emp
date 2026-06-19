@@ -11,7 +11,8 @@ from .services.paystack import PaystackVerificationService
     summary="Resolve a bank account",
     description=(
         "Resolves an account name via Paystack and fuzzy-matches it against the "
-        "student's registered name. Call before submitting an application."
+        "student's registered name. Saves verified details to the student's profile. "
+        "Call before submitting an application."
     ),
     request=inline_serializer(
         name='ResolveBankRequest',
@@ -21,8 +22,8 @@ from .services.paystack import PaystackVerificationService
         },
     ),
     responses=OpenApiResponse(description=(
-        '{ success, account_name, account_number, name_match: {passed, score, '
-        'overlap_tokens, detail}, warning }'
+        '{ success, account_name, account_number, bank_name, bank_code, '
+        'name_match: {passed, score, overlap_tokens, detail}, warning }'
     )),
 )
 @api_view(['POST'])
@@ -32,7 +33,9 @@ def resolve_bank_account(request):
     POST /verification/bank/
     Body: { "account_number": "0123456789", "bank_code": "058" }
 
-    Resolves the account name and checks it matches the student's name.
+    Resolves the account name via Paystack, checks it matches the student's
+    registered name, and saves the verified details to the student's profile.
+    Returns bank_name and bank_code so the frontend can update local state.
     """
     account_number = request.data.get('account_number', '').strip()
     bank_code      = request.data.get('bank_code', '').strip()
@@ -43,34 +46,62 @@ def resolve_bank_account(request):
     if len(account_number) != 10 or not account_number.isdigit():
         return Response({"error": "Account number must be exactly 10 digits"}, status=400)
 
-    # Resolve the account
+    # Resolve the account via Paystack
     result = PaystackVerificationService.resolve_account(account_number, bank_code)
 
     if not result["success"]:
         return Response({"error": result["error"]}, status=400)
 
-    # Name match against the student's registered name
-    name_check = {}
+    # Derive bank_name from bank_code server-side — frontend never sends it
+    bank_name = ""
     try:
-        student    = request.user.student_profile
+        banks     = PaystackVerificationService.get_banks()
+        bank_map  = {b['code']: b['name'] for b in banks}
+        bank_name = bank_map.get(bank_code, "")
+    except Exception:
+        # Non-fatal — leave bank_name blank rather than crashing
+        bank_name = ""
+
+    # Name match against the student's registered name
+    # FIX: related_name is 'student', not 'student_profile'
+    student    = getattr(request.user, 'student', None)
+    name_check = {}
+
+    if student:
         name_check = PaystackVerificationService.name_match(
             result["account_name"],
-            student.full_name
+            student.full_name,
         )
-    except Exception:
+    else:
         name_check = {"passed": False, "detail": "No student profile found"}
 
+    # Persist verified details to the Student row
+    # FIX: was using request.user.student_profile (wrong) in a try/except that
+    # silently swallowed the AttributeError — nothing was ever actually saved.
+    if student:
+        try:
+            student.bank_name           = bank_name
+            student.bank_code           = bank_code
+            student.bank_account_number = account_number
+            student.bank_account_name   = result["account_name"]
+            student.save()
+        except Exception:
+            # Non-fatal — the application submit still carries the values
+            pass
+
     return Response({
-        "success": True,
-        "account_name": result["account_name"],
+        "success":        True,
+        "account_name":   result["account_name"],
         "account_number": result["account_number"],
-        "name_match": name_check,
+        "bank_name":      bank_name,
+        "bank_code":      bank_code,
+        "name_match":     name_check,
         "warning": (
             None if name_check.get("passed") else
             f"Name mismatch: bank shows '{result['account_name']}' "
-            f"but your profile shows '{getattr(getattr(request.user, 'student_profile', None), 'full_name', 'unknown')}'. "
+            f"but your profile shows '{getattr(student, 'full_name', 'unknown')}'. "
             f"An admin will review this manually."
-        )
+        ),
     })
 
 

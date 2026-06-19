@@ -24,6 +24,15 @@ function formatDate(dateStr) {
   });
 }
 
+// Backend only returns full_name (no firstname/lastname split) — derive initials from it.
+function getInitials(fullName) {
+  if (!fullName) return "—";
+  const parts = fullName.trim().split(/\s+/);
+  const first = parts[0]?.[0] || "";
+  const last  = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase();
+}
+
 // ── SKELETON ROW ──────────────────────────────────────────────────────────────
 function SkeletonRow() {
   return (
@@ -74,19 +83,21 @@ export default function DisqualificationRegisterPage() {
   }, []);
 
   // ── FILTER + SEARCH ───────────────────────────────────────────────────────
+  // NOTE: student/scheme are nested objects (student.full_name, scheme.name,
+  // scheme.award_type) — not flat fields. d.rejection_reason will be empty
+  // for every row until the backend adds it to serialize_application_list
+  // (it currently only exists in the single-application detail serializer).
   const filtered = disqualifications.filter((d) => {
-    const fullName   = d.student
-      ? `${d.student.firstname} ${d.student.lastname}`.toLowerCase()
-      : "";
-    const schemeName = (d.scheme_name || "").toLowerCase();
-    const reason     = (d.rejection_reason || "").toLowerCase();
+    const fullName   = (d.student?.full_name || "").toLowerCase();
+    const schemeName = (d.scheme?.name || "").toLowerCase();
+    const reason      = (d.rejection_reason || "").toLowerCase();
 
     const matchSearch = search.trim() === "" ? true :
       fullName.includes(search.toLowerCase()) ||
       schemeName.includes(search.toLowerCase()) ||
       reason.includes(search.toLowerCase());
 
-    const catKey   = (d.scheme_category || "scholarship").toLowerCase();
+    const catKey   = (d.scheme?.award_type || "scholarship").toLowerCase();
     const catLabel = categoryConfig[catKey]?.label || "Scholarship";
     const matchFilter = activeFilter === "All" ? true : catLabel === activeFilter;
 
@@ -204,28 +215,22 @@ export default function DisqualificationRegisterPage() {
 
         {/* TABLE ROWS */}
         {!loading && !error && filtered.map((d, index) => {
-          const catKey   = (d.scheme_category || "scholarship").toLowerCase();
+          const catKey   = (d.scheme?.award_type || "scholarship").toLowerCase();
           const category = categoryConfig[catKey] || categoryConfig.scholarship;
           const Icon     = category.icon;
-          const initials =
-            (d.student?.firstname?.[0] || "").toUpperCase() +
-            (d.student?.lastname?.[0]  || "").toUpperCase();
 
           return (
             <div key={d.id} className={styles.tableRowData}>
 
               {/* Student */}
               <div className={styles.tdStudent}>
-                <div className={styles.studentAvatar}>{initials || "—"}</div>
+                <div className={styles.studentAvatar}>{getInitials(d.student?.full_name)}</div>
                 <div className={styles.studentInfo}>
                   <span className={styles.studentName}>
-                    {d.student
-                      ? `${d.student.firstname} ${d.student.lastname}`
-                      : "Unknown"
-                    }
+                    {d.student?.full_name || "Unknown"}
                   </span>
                   <span className={styles.studentMeta}>
-                    {d.student?.lga || "—"}
+                    {d.student?.ward || "—"}
                   </span>
                 </div>
               </div>
@@ -236,7 +241,7 @@ export default function DisqualificationRegisterPage() {
                   <Icon size={12} color={category.color} strokeWidth={2} />
                 </div>
                 <div className={styles.schemeInfo}>
-                  <span className={styles.schemeName}>{d.scheme_name || "—"}</span>
+                  <span className={styles.schemeName}>{d.scheme?.name || "—"}</span>
                   <span
                     className={styles.categoryChip}
                     style={{ color: category.color, background: category.bg }}
@@ -246,7 +251,9 @@ export default function DisqualificationRegisterPage() {
                 </div>
               </div>
 
-              {/* Rejection reason */}
+              {/* Rejection reason — will read "No reason recorded" for every
+                  row until the backend adds rejection_reason to the list
+                  serializer (see note above the filtered() function) */}
               <div className={styles.tdReason}>
                 {d.rejection_reason ? (
                   <span className={styles.reasonText}>

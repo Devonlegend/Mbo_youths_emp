@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   BadgeCheck, Search, ArrowRight, AlertCircle,
-  GraduationCap, Briefcase, Wrench, Banknote, Filter,
+  GraduationCap, Briefcase, Wrench, Banknote, Filter, Download,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApplications } from "@/services";
@@ -21,6 +21,15 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "numeric", month: "short", year: "numeric",
   });
+}
+
+// Backend only returns full_name (no firstname/lastname split) — derive initials from it.
+function getInitials(fullName) {
+  if (!fullName) return "—";
+  const parts = fullName.trim().split(/\s+/);
+  const first = parts[0]?.[0] || "";
+  const last  = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (first + last).toUpperCase();
 }
 
 // ── SKELETON ROW ──────────────────────────────────────────────────────────────
@@ -71,23 +80,53 @@ export default function BeneficiaryRegisterPage() {
   }, []);
 
   // ── FILTER + SEARCH ───────────────────────────────────────────────────────
+  // NOTE: student and scheme are nested objects from the API
+  // (student.full_name / student.ward, scheme.name / scheme.award_type) —
+  // not flat fields. student.email and student.lga are not returned by the
+  // backend's StudentNestedSerializer yet, so those show as "—" until added.
   const filtered = beneficiaries.filter((b) => {
-    const fullName   = b.student
-      ? `${b.student.firstname} ${b.student.lastname}`.toLowerCase()
-      : "";
-    const schemeName = (b.scheme_name || "").toLowerCase();
+    const fullName   = (b.student?.full_name || "").toLowerCase();
+    const schemeName = (b.scheme?.name || "").toLowerCase();
 
     const matchSearch = search.trim() === "" ? true :
       fullName.includes(search.toLowerCase()) ||
       schemeName.includes(search.toLowerCase()) ||
-      (b.student?.lga || "").toLowerCase().includes(search.toLowerCase());
+      (b.student?.ward || "").toLowerCase().includes(search.toLowerCase());
 
-    const catKey   = (b.scheme_category || "scholarship").toLowerCase();
+    const catKey   = (b.scheme?.award_type || "scholarship").toLowerCase();
     const catLabel = categoryConfig[catKey]?.label || "Scholarship";
     const matchFilter = activeFilter === "All" ? true : catLabel === activeFilter;
 
     return matchSearch && matchFilter;
   });
+
+  // ── EXPORT — must come after filtered is declared ─────────────────────────
+  function handleExport() {
+    const headers = ["#", "Full Name", "Scheme", "Category", "Ward", "Bank Name", "Account Number", "Account Name", "Approved Date"];
+    const rows = filtered.map((b, index) => [
+      String(index + 1).padStart(3, "0"),
+      b.student?.full_name || "Unknown",
+      b.scheme?.name || "",
+      categoryConfig[(b.scheme?.award_type || "scholarship").toLowerCase()]?.label || "",
+      b.student?.ward || "",
+      b.details?.bank_name || "",
+      b.details?.account_number || "",
+      b.details?.account_name || "",
+      formatDate(b.submission_date),
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `beneficiary-register-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // ── RENDER ────────────────────────────────────────────────────────────────
   return (
@@ -107,9 +146,25 @@ export default function BeneficiaryRegisterPage() {
           </div>
         </div>
         {!loading && !error && (
-          <div className={styles.countPill}>
-            <BadgeCheck size={13} strokeWidth={2} />
-            {beneficiaries.length} confirmed beneficiar{beneficiaries.length !== 1 ? "ies" : "y"}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className={styles.countPill}>
+              <BadgeCheck size={13} strokeWidth={2} />
+              {beneficiaries.length} confirmed beneficiar{beneficiaries.length !== 1 ? "ies" : "y"}
+            </div>
+            <button
+              onClick={handleExport}
+              disabled={filtered.length === 0}
+              style={{
+                display: "flex", alignItems: "center", gap: 7,
+                padding: "8px 16px", borderRadius: 9,
+                border: "1px solid #bbf7d0", background: "#f0fdf4",
+                color: "#15803d", fontSize: 13, fontWeight: 600,
+                cursor: filtered.length === 0 ? "not-allowed" : "pointer",
+                opacity: filtered.length === 0 ? 0.5 : 1,
+              }}
+            >
+              <Download size={13} strokeWidth={2} /> Export CSV
+            </button>
           </div>
         )}
       </div>
@@ -129,7 +184,7 @@ export default function BeneficiaryRegisterPage() {
             <Search size={14} className={styles.searchIcon} />
             <input
               className={styles.searchInput}
-              placeholder="Search by name, scheme or LGA..."
+              placeholder="Search by name, scheme or ward..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -164,7 +219,8 @@ export default function BeneficiaryRegisterPage() {
         <div className={`${styles.tableRow} ${styles.tableHeader}`}>
           <span>Beneficiary</span>
           <span>Scheme</span>
-          <span>LGA / Ward</span>
+          <span>Ward</span>
+          <span>Account Details</span>
           <span>Approved</span>
           <span></span>
         </div>
@@ -201,28 +257,22 @@ export default function BeneficiaryRegisterPage() {
 
         {/* TABLE ROWS */}
         {!loading && !error && filtered.map((b, index) => {
-          const catKey   = (b.scheme_category || "scholarship").toLowerCase();
+          const catKey   = (b.scheme?.award_type || "scholarship").toLowerCase();
           const category = categoryConfig[catKey] || categoryConfig.scholarship;
           const Icon     = category.icon;
-          const initials =
-            (b.student?.firstname?.[0] || "").toUpperCase() +
-            (b.student?.lastname?.[0]  || "").toUpperCase();
 
           return (
             <div key={b.id} className={styles.tableRowData}>
 
               {/* Beneficiary */}
               <div className={styles.tdStudent}>
-                <div className={styles.studentAvatar}>{initials || "—"}</div>
+                <div className={styles.studentAvatar}>{getInitials(b.student?.full_name)}</div>
                 <div className={styles.studentInfo}>
                   <span className={styles.studentName}>
-                    {b.student
-                      ? `${b.student.firstname} ${b.student.lastname}`
-                      : "Unknown"
-                    }
+                    {b.student?.full_name || "Unknown"}
                   </span>
                   <span className={styles.studentMeta}>
-                    #{String(index + 1).padStart(3, "0")} · {b.student?.email || "—"}
+                    #{String(index + 1).padStart(3, "0")}
                   </span>
                 </div>
               </div>
@@ -233,7 +283,7 @@ export default function BeneficiaryRegisterPage() {
                   <Icon size={12} color={category.color} strokeWidth={2} />
                 </div>
                 <div className={styles.schemeInfo}>
-                  <span className={styles.schemeName}>{b.scheme_name || "—"}</span>
+                  <span className={styles.schemeName}>{b.scheme?.name || "—"}</span>
                   <span
                     className={styles.categoryChip}
                     style={{ color: category.color, background: category.bg }}
@@ -243,11 +293,22 @@ export default function BeneficiaryRegisterPage() {
                 </div>
               </div>
 
-              {/* LGA / Ward */}
+              {/* Ward — LGA not in this endpoint's response, removed for now */}
               <div className={styles.tdLocation}>
-                <span className={styles.lgaText}>{b.student?.lga || "—"}</span>
                 <span className={styles.wardText}>{b.student?.ward || "—"}</span>
               </div>
+
+                {/* Account Details */}
+                <div className={styles.tdBank}>
+                  {b.details?.account_number ? (
+                    <>
+                      <span className={styles.lgaText}>{b.details.bank_name || "—"}</span>
+                      <span className={styles.wardText}>{b.details.account_number}</span>
+                    </>
+                  ) : (
+                    <span className={styles.wardText}>No bank on file</span>
+                  )}
+                </div>
 
               {/* Approved date */}
               <span className={styles.tdDate}>

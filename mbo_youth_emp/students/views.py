@@ -111,3 +111,34 @@ class StudentViewSet(viewsets.ModelViewSet):
             return Response({"error": "No student profile found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = self.get_serializer(student)
         return Response(serializer.data)
+        
+    @action(detail=False, methods=['get'], url_path='bank')
+    def bank(self, request):
+        """GET /students/bank/ — current user's saved bank details."""
+        student = getattr(request.user, 'student', None)
+        if student is None:
+            return Response({"error": "No student profile found"}, status=404)
+        return Response({
+            "bank_name": student.bank_name,
+            "bank_code": student.bank_code,
+            "account_number": student.bank_account_number,
+            "account_name": student.bank_account_name,
+        })
+
+    @bank.mapping.patch
+    def update_bank(self, request):
+        """PATCH /students/bank/ — save/update bank details."""
+        student = getattr(request.user, 'student', None)
+        if student is None:
+            return Response({"error": "No student profile found"}, status=404)
+        student.bank_name = request.data.get('bank_name', student.bank_name)
+        student.bank_code = request.data.get('bank_code', student.bank_code)
+        student.bank_account_number = request.data.get('account_number', student.bank_account_number)
+        student.bank_account_name = request.data.get('account_name', student.bank_account_name)
+        student.save()
+        return Response({
+            "bank_name": student.bank_name,
+            "bank_code": student.bank_code,
+            "account_number": student.bank_account_number,
+            "account_name": student.bank_account_name,
+        })

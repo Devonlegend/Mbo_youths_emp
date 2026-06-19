@@ -33,6 +33,11 @@ class Student(models.Model):
     date_of_birth = models.DateField(null=True)
     certificate = models.FileField(null=True, blank=True)
 
+    bank_name = models.CharField(max_length=100, blank=True, default='')
+    bank_code = models.CharField(max_length=10, blank=True, default='')
+    bank_account_number = models.CharField(max_length=10, blank=True, default='')
+    bank_account_name = models.CharField(max_length=150, blank=True, default='')
+
     def __str__(self):
         return f"{self.firstname} {self.lastname} - {self.is_verified}"
 

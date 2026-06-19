@@ -2,25 +2,15 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
-  IdCard, ShieldCheck, Camera, Save, Loader2,
+  IdCard, ShieldCheck, Save, Loader2,
   Lock, ChevronRight, User, Mail, Phone,
   MapPin, Calendar, Users, Pencil, X, AlertCircle,
-  Banknote, Building2, Hash, CreditCard,
+  Banknote, Building2, Hash, CreditCard, CheckCircle2,
 } from "lucide-react";
 import styles from "./page.module.css";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { getMe, getStudentProfile, updateStudentProfile } from "@/services";
-import { getBankDetail, addBankDetail } from "@/services/students";
-
-const NIGERIAN_BANKS = [
-  "Access Bank", "Citibank Nigeria", "EcoBank Nigeria", "Fidelity Bank",
-  "First Bank of Nigeria", "First City Monument Bank (FCMB)", "Globus Bank",
-  "Guaranty Trust Bank (GTBank)", "Heritage Bank", "Keystone Bank",
-  "Lotus Bank", "Optimus Bank", "Polaris Bank", "Providus Bank",
-  "Stanbic IBTC Bank", "Standard Chartered Bank", "Sterling Bank",
-  "SunTrust Bank", "Titan Trust Bank", "Union Bank of Nigeria",
-  "United Bank for Africa (UBA)", "Unity Bank", "Wema Bank", "Zenith Bank",
-];
+import { getMe, getStudentProfile, updateStudentProfile, getBanks, verifyBank } from "@/services";
+import { getBankDetail } from "@/services/students";
 
 function ReadField({ icon: Icon, label, value, dimmed }) {
   return (
@@ -41,12 +31,20 @@ export default function ProfilePage() {
   const [apiError, setApiError] = useState("");
   const [photo,    setPhoto]    = useState(null);
 
-  const [bankEditing, setBankEditing] = useState(false);
-  const [bankSaving,  setBankSaving]  = useState(false);
-  const [bankSaved,   setBankSaved]   = useState(false);
-  const [bankError,   setBankError]   = useState("");
-  const [bank,        setBank]        = useState({ bank_name: "", account_number: "", account_name: "" });
-  const [bankDraft,   setBankDraft]   = useState({ ...bank });
+  // Bank — saved display state
+  const [bank, setBank] = useState({
+    bank_name: "", bank_code: "", account_number: "", account_name: "",
+  });
+
+  // Bank — edit mode state
+  const [bankEditing,     setBankEditing]     = useState(false);
+  const [banks,           setBanks]           = useState([]);   // from API
+  const [bankCode,        setBankCode]        = useState("");
+  const [accountDraft,    setAccountDraft]    = useState("");
+  const [bankVerifying,   setBankVerifying]   = useState(false);
+  const [bankVerified,    setBankVerified]    = useState(null); // result from Paystack
+  const [bankSaved,       setBankSaved]       = useState(false);
+  const [bankError,       setBankError]       = useState("");
 
   const [form, setForm] = useState({
     first_name: "", last_name: "", email: "", phone: "",
@@ -89,36 +87,33 @@ export default function ProfilePage() {
       try {
         const res = await getBankDetail();
         if (res.data) {
-          const b = {
+          setBank({
             bank_name:      res.data.bank_name      || "",
+            bank_code:      res.data.bank_code      || "",
             account_number: res.data.account_number || "",
             account_name:   res.data.account_name   || "",
-          };
-          setBank(b);
-          setBankDraft(b);
+          });
         }
+      } catch {}
+    }
+
+    async function loadBanks() {
+      try {
+        const res = await getBanks();
+        setBanks(Array.isArray(res.data?.banks) ? res.data.banks : []);
       } catch {}
     }
 
     loadProfile();
     loadBank();
+    loadBanks();
   }, []);
 
+  // ── PROFILE HANDLERS ──────────────────────────────────────────────────────
   function handleDraftField(e) {
     setDraft((d) => ({ ...d, [e.target.name]: e.target.value }));
     setSaved(false);
     setApiError("");
-  }
-
-  function handleBankDraftField(e) {
-    setBankDraft((d) => ({ ...d, [e.target.name]: e.target.value }));
-    setBankSaved(false);
-    setBankError("");
-  }
-
-  function handlePhotoChange(e) {
-    const file = e.target.files?.[0];
-    if (file) setPhoto(URL.createObjectURL(file));
   }
 
   function handleEdit() {
@@ -132,19 +127,6 @@ export default function ProfilePage() {
     setDraft({ ...form });
     setEditing(false);
     setApiError("");
-  }
-
-  function handleBankEdit() {
-    setBankDraft({ ...bank });
-    setBankSaved(false);
-    setBankError("");
-    setBankEditing(true);
-  }
-
-  function handleBankCancel() {
-    setBankDraft({ ...bank });
-    setBankEditing(false);
-    setBankError("");
   }
 
   async function handleSave(e) {
@@ -167,28 +149,64 @@ export default function ProfilePage() {
     }
   }
 
-  async function handleBankSave(e) {
-    e?.preventDefault();
-    if (!bankDraft.bank_name)                       { setBankError("Please select a bank.");              return; }
-    if (!/^\d{10}$/.test(bankDraft.account_number)) { setBankError("Account number must be 10 digits."); return; }
-    if (!bankDraft.account_name.trim())              { setBankError("Account name is required.");          return; }
-
-    setBankSaving(true);
+  // ── BANK HANDLERS ─────────────────────────────────────────────────────────
+  function handleBankEdit() {
+    // Pre-fill from saved bank if one exists, so user sees what's there
+    setBankCode(bank.bank_code || "");
+    setAccountDraft(bank.account_number || "");
+    setBankVerified(null);
+    setBankSaved(false);
     setBankError("");
+    setBankEditing(true);
+  }
+
+  function handleBankCancel() {
+    setBankEditing(false);
+    setBankVerified(null);
+    setBankCode("");
+    setAccountDraft("");
+    setBankError("");
+  }
+
+  async function handleVerifyBank() {
+    if (!bankCode) { setBankError("Please select a bank."); return; }
+    if (!/^\d{10}$/.test(accountDraft)) {
+      setBankError("Account number must be exactly 10 digits.");
+      return;
+    }
+
+    setBankVerifying(true);
+    setBankError("");
+    setBankVerified(null);
+
     try {
-      await addBankDetail(bankDraft);
-      setBank({ ...bankDraft });
-      setBankSaved(true);
-      setBankEditing(false);
+      // verifyBank now auto-saves to the Student row on the backend,
+      // so no separate PATCH call is needed after this.
+      const res = await verifyBank({ account_number: accountDraft, bank_code: bankCode });
+      setBankVerified(res.data);
     } catch (err) {
       setBankError(
         err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        "Failed to save bank details. Please try again."
+        "Could not verify account. Please check the details and try again."
       );
     } finally {
-      setBankSaving(false);
+      setBankVerifying(false);
     }
+  }
+
+  function handleBankSave() {
+    // Data is already persisted by verifyBank — just update local display state.
+    setBank({
+      bank_name:      bankVerified.bank_name      || "",
+      bank_code:      bankVerified.bank_code      || bankCode,
+      account_number: bankVerified.account_number || accountDraft,
+      account_name:   bankVerified.account_name   || "",
+    });
+    setBankSaved(true);
+    setBankEditing(false);
+    setBankVerified(null);
+    setBankCode("");
+    setAccountDraft("");
   }
 
   if (loading) return <LoadingSpinner fullPage />;
@@ -235,6 +253,27 @@ export default function ProfilePage() {
           <div style={{ flex: 1 }}>
             <h2 className={styles.cardTitle}>Personal Information</h2>
             <p className={styles.cardSub}>Your registered profile details.</p>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            {editing && (
+              <button type="button" className={styles.btnCancel} onClick={handleCancel}>
+                <X size={13} strokeWidth={2} /> Cancel
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.btnEdit}
+              onClick={editing ? handleSave : handleEdit}
+              disabled={saving}
+            >
+              {saving ? (
+                <><Loader2 size={13} strokeWidth={2} className={styles.spin} /> Saving...</>
+              ) : editing ? (
+                <><Save size={13} strokeWidth={2} /> Save</>
+              ) : (
+                <><Pencil size={13} strokeWidth={2} /> Edit</>
+              )}
+            </button>
           </div>
         </div>
 
@@ -321,20 +360,17 @@ export default function ProfilePage() {
                 <X size={13} strokeWidth={2} /> Cancel
               </button>
             )}
-            <button
-              type="button"
-              className={styles.btnEdit}
-              onClick={bankEditing ? handleBankSave : handleBankEdit}
-              disabled={bankSaving}
-            >
-              {bankSaving ? (
-                <><Loader2 size={13} strokeWidth={2} className={styles.spin} /> Saving...</>
-              ) : bankEditing ? (
-                <><Save size={13} strokeWidth={2} /> Update</>
-              ) : (
-                <><Pencil size={13} strokeWidth={2} /> {bank.bank_name ? "Edit" : "Add"}</>
-              )}
-            </button>
+            {/* Save button only appears once account is verified */}
+            {bankEditing && bankVerified && (
+              <button type="button" className={styles.btnEdit} onClick={handleBankSave}>
+                <Save size={13} strokeWidth={2} /> Save to Profile
+              </button>
+            )}
+            {!bankEditing && (
+              <button type="button" className={styles.btnEdit} onClick={handleBankEdit}>
+                <Pencil size={13} strokeWidth={2} /> {bank.bank_name ? "Edit" : "Add"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -349,47 +385,128 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {bankSaved && (
+        {bankSaved && !bankEditing && (
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             background: "#f0fdf4", border: "1px solid #bbf7d0",
             borderRadius: 8, padding: "10px 14px",
             fontSize: 13, color: "#15803d", marginBottom: 4,
           }}>
-            <ShieldCheck size={14} strokeWidth={2} /> Bank details saved successfully
+            <ShieldCheck size={14} strokeWidth={2} /> Bank details verified and saved
           </div>
         )}
 
         <div className={styles.form}>
           {bankEditing ? (
             <>
+              {/* Bank select + account number */}
               <div className={styles.row2}>
                 <div className={styles.field}>
-                  <label className={styles.label}><Building2 size={12} strokeWidth={2} /> Bank Name</label>
-                  <select className={styles.input} name="bank_name"
-                    value={bankDraft.bank_name} onChange={handleBankDraftField}>
+                  <label className={styles.label}><Building2 size={12} strokeWidth={2} /> Bank</label>
+                  <select
+                    className={styles.input}
+                    value={bankCode}
+                    onChange={(e) => {
+                      setBankCode(e.target.value);
+                      setBankVerified(null);
+                      setBankError("");
+                    }}
+                  >
                     <option value="">Select bank</option>
-                    {NIGERIAN_BANKS.map((b) => (
-                      <option key={b} value={b}>{b}</option>
+                    {banks.map((b) => (
+                      <option key={b.code} value={b.code}>{b.name}</option>
                     ))}
                   </select>
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}><Hash size={12} strokeWidth={2} /> Account Number</label>
-                  <input className={styles.input} name="account_number"
-                    value={bankDraft.account_number} onChange={handleBankDraftField}
-                    placeholder="10-digit account number" maxLength={10} />
+                  <input
+                    className={styles.input}
+                    value={accountDraft}
+                    onChange={(e) => {
+                      setAccountDraft(e.target.value);
+                      setBankVerified(null);
+                      setBankError("");
+                    }}
+                    placeholder="10-digit account number"
+                    maxLength={10}
+                  />
                 </div>
               </div>
-              <div className={styles.field}>
-                <label className={styles.label}><CreditCard size={12} strokeWidth={2} /> Account Name</label>
-                <input className={styles.input} name="account_name"
-                  value={bankDraft.account_name} onChange={handleBankDraftField}
-                  placeholder="Name as it appears on your bank account" />
-                <span style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
-                  Must match your BVN-linked account name exactly.
+
+              {/* Verify button — only shown before verification */}
+              {!bankVerified && (
+                <button
+                  type="button"
+                  onClick={handleVerifyBank}
+                  disabled={bankVerifying}
+                  style={{
+                    marginTop: 4, display: "flex", alignItems: "center", gap: 8,
+                    padding: "9px 20px", borderRadius: 9, border: "1px solid #bbf7d0",
+                    background: "#f0fdf4", color: "#15803d", fontSize: 13,
+                    fontWeight: 600, cursor: bankVerifying ? "not-allowed" : "pointer",
+                    opacity: bankVerifying ? 0.7 : 1,
+                  }}
+                >
+                  {bankVerifying ? (
+                    <><Loader2 size={14} strokeWidth={2} className={styles.spin} /> Verifying...</>
+                  ) : (
+                    "Verify Account"
+                  )}
+                </button>
+              )}
+
+              {/* Verification result */}
+              {bankVerified && (
+                <div style={{
+                  marginTop: 12, padding: "12px 16px", borderRadius: 10,
+                  background: bankVerified.name_match?.passed ? "#f0fdf4" : "#fffbeb",
+                  border: `1px solid ${bankVerified.name_match?.passed ? "#bbf7d0" : "#fde68a"}`,
+                  display: "flex", flexDirection: "column", gap: 6,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <CheckCircle2
+                      size={15}
+                      color={bankVerified.name_match?.passed ? "#15803d" : "#b45309"}
+                      strokeWidth={2}
+                    />
+                    <span style={{
+                      fontSize: 13, fontWeight: 600,
+                      color: bankVerified.name_match?.passed ? "#15803d" : "#b45309",
+                    }}>
+                      {bankVerified.account_name}
+                    </span>
+                  </div>
+                  {!bankVerified.name_match?.passed && (
+                    <p style={{ fontSize: 12, color: "#92400e", margin: 0 }}>
+                      Name does not exactly match your profile. An admin will review this manually.
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBankVerified(null);
+                      setBankCode("");
+                      setAccountDraft("");
+                      setBankError("");
+                    }}
+                    style={{
+                      alignSelf: "flex-start", fontSize: 12, color: "#64748b",
+                      background: "none", border: "none", cursor: "pointer",
+                      padding: 0, textDecoration: "underline",
+                    }}
+                  >
+                    Use a different account
+                  </button>
+                </div>
+              )}
+
+              {/* Hint — only shown before verification */}
+              {!bankVerified && (
+                <span style={{ fontSize: 11, color: "#94a3b8", marginTop: 4, display: "block" }}>
+                  Verify your account — the name must match your BVN-linked account.
                 </span>
-              </div>
+              )}
             </>
           ) : bank.bank_name ? (
             <>

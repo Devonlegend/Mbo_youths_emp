@@ -21,8 +21,11 @@ export const getAcademicRecords = () =>
 export const addAcademicRecord = (body) =>
   api.post("/students/academic-records/", body);
 
-export const getBankDetail = () =>
-  api.get("/students/bank-detail/");
+export const getBankDetail = () => 
+  api.get("/students/bank/");
+
+export const updateBankDetail = (data) => 
+  api.patch("/students/bank/", data);
 
 export const addBankDetail = (body) =>
   api.post("/students/bank-detail/", body);
