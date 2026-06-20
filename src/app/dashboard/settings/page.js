@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import {
   Eye, EyeOff, Save, Loader2, ShieldCheck,
   Bell, Globe, UserX, ChevronDown, ChevronUp,
-  Smartphone, Mail, Megaphone, CalendarCheck, AlertTriangle, KeyRound, Check, X,
+  Smartphone, Mail, Megaphone, CalendarCheck, AlertTriangle, KeyRound, Check, X, Wrench,
 } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -23,6 +23,25 @@ function Section({ icon, title, sub, children, defaultOpen = false }) {
         }
       </button>
       {open && <div className={styles.cardBody}>{children}</div>}
+    </div>
+  );
+}
+
+function CardEmptyState({ message }) {
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "center",
+      textAlign: "center", padding: "40px 20px", gap: "12px",
+    }}>
+      <div style={{
+        width: 48, height: 48, borderRadius: 14, background: "#f0fdf4",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <Wrench size={20} strokeWidth={1.8} color="#15803d" />
+      </div>
+      <p style={{ fontSize: 13.5, color: "#6b7280", maxWidth: 280, margin: 0 }}>
+        {message}
+      </p>
     </div>
   );
 }
@@ -208,7 +227,8 @@ function PasswordCard() {
       </div>
 
       {/* ── FORM STAGE ── */}
-      {stage === "form" && (
+      {/* empty state */}
+      {false && stage === "form" && (  
         <div className={styles.cardBody}>
           {pwdError && <div className={styles.errorBanner}>{pwdError}</div>}
           <form className={styles.form} onSubmit={handleSubmitPwd}>
@@ -263,7 +283,12 @@ function PasswordCard() {
             </div>
           </form>
         </div>
+        
       )}
+      
+      <div className={styles.cardBody}>
+        <CardEmptyState message="Password management features are currently under development." />
+      </div>
 
       {/* ── OTP STAGE ── */}
       {stage === "otp" && (
@@ -377,7 +402,7 @@ export default function SettingsPage() {
       <PasswordCard />
 
       {/* ── 2. NOTIFICATIONS ── */}
-      <Section icon={<Bell size={17} strokeWidth={1.9} />} title="Notifications" sub="Choose how and when you receive alerts.">
+      {/* <Section icon={<Bell size={17} strokeWidth={1.9} />} title="Notifications" sub="Choose how and when you receive alerts.">
         <div className={styles.toggleList}>
           <p className={styles.groupLabel}>Channels</p>
           <ToggleRow icon={<Smartphone size={14} strokeWidth={2} />} label="SMS notifications" sub="Receive updates via text message" checked={notifs.sms} onChange={() => toggleNotif("sms")} />
@@ -388,18 +413,18 @@ export default function SettingsPage() {
           <ToggleRow icon={<CalendarCheck size={14} strokeWidth={2} />} label="Events" sub="Youth events and programmes" checked={notifs.events} onChange={() => toggleNotif("events")} />
           <ToggleRow icon={<ShieldCheck size={14} strokeWidth={2} />} label="Cycle alerts" sub="Reminders for your registration cycle" checked={notifs.cycleAlerts} onChange={() => toggleNotif("cycleAlerts")} />
         </div>
-      </Section>
+      </Section> */}
 
       {/* ── 3. PRIVACY ── */}
-      <Section icon={<ShieldCheck size={17} strokeWidth={1.9} />} title="Privacy" sub="Control who can see your information.">
+      {/* <Section icon={<ShieldCheck size={17} strokeWidth={1.9} />} title="Privacy" sub="Control who can see your information.">
         <div className={styles.toggleList}>
           <ToggleRow label="Public profile" sub="Allow other members to view your profile" checked={privacy.showProfile} onChange={() => togglePrivacy("showProfile")} />
           <ToggleRow label="Show phone number" sub="Display your phone number on your profile" checked={privacy.showPhone} onChange={() => togglePrivacy("showPhone")} />
         </div>
-      </Section>
+      </Section> */}
 
       {/* ── 4. LANGUAGE & REGION ── */}
-      <Section icon={<Globe size={17} strokeWidth={1.9} />} title="Language & Region" sub="Set your preferred language for the portal.">
+      {/* <Section icon={<Globe size={17} strokeWidth={1.9} />} title="Language & Region" sub="Set your preferred language for the portal.">
         <div className={styles.field} style={{ maxWidth: 280 }}>
           <label className={styles.label}>Display language</label>
           <select className={styles.input} value={lang} onChange={(e) => setLang(e.target.value)}>
@@ -410,10 +435,14 @@ export default function SettingsPage() {
             <option value="pcm">Nigerian Pidgin</option>
           </select>
         </div>
-      </Section>
+      </Section> */}
 
-      {/* ── 5. ACCOUNT ── */}
-      <Section icon={<UserX size={17} strokeWidth={1.9} />} title="Account" sub="Manage your account data and access.">
+      {/* ── 5. ACCOUNT, without empty state 
+      just delete the empty state and replace with this to have the account cards back── */}
+
+          {/* i just comment it so just remove the comments and connect to backend */}
+
+      {/* <Section icon={<UserX size={17} strokeWidth={1.9} />} title="Account" sub="Manage your account data and access.">
         <div className={styles.accountActions}>
           <div className={styles.actionRow}>
             <div>
@@ -431,7 +460,12 @@ export default function SettingsPage() {
             <button className={styles.btnDanger} onClick={() => setShowDeactivateModal(true)}>Deactivate</button>
           </div>
         </div>
-      </Section>
+      </Section> */}
+
+      {/* account empty state */}
+        <Section icon={<UserX size={17} strokeWidth={1.9} />} title="Account" sub="Manage your account data and access.">
+      <CardEmptyState message="Account management features are currently under development." />
+    </Section>
 
       {/* ── DEACTIVATE MODAL ── */}
       {showDeactivateModal && (

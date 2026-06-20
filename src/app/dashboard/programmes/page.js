@@ -149,10 +149,10 @@ export default function ProgrammesPage() {
             <p className={styles.sub}>Browse and apply for open programmes this cycle.</p>
           </div>
         </div>
-        <div className={styles.cyclePill}>
+        {/* <div className={styles.cyclePill}>
           <span className={styles.cycleDot} />
           Cycle 2026 – 2027
-        </div>
+        </div> */}
       </div>
 
       {/* SEARCH + FILTER */}

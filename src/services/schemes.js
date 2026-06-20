@@ -23,3 +23,6 @@ export const reopenScheme = (id) =>
 
 export const getSchemeFields = (id) =>
   api.get(`/schemes/${id}/fields/`);
+
+export const getCycles = () => 
+  api.get("/schemes/cycles/");

@@ -9,12 +9,12 @@ import {
 import ProfileCard from "./components/ProfileCard";
 import LoadingSpinner from "./components/LoadingSpinner";
 import styles from "./page.module.css";
-import { getMe, getStudentProfile, getApplications, getSchemes } from "@/services";
+import { getMe, getStudentProfile, getApplications, getSchemes, getCycles } from "@/services";
 
-const CYCLE_END = new Date("2027-03-31");
-
-function getDaysLeft() {
-  const diff = Math.ceil((CYCLE_END - new Date()) / (1000 * 60 * 60 * 24));
+function getDaysLeft(endYear) {
+  if (!endYear) return 0;
+  const end = new Date(`${endYear}-12-31`);
+  const diff = Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
   return diff > 0 ? diff : 0;
 }
 
@@ -66,7 +66,7 @@ export default function DashboardPage() {
   const [schemes,        setSchemes]       = useState([]);
   const [loading,        setLoading]       = useState(true);
 
-  const daysLeft = getDaysLeft();
+  const [activeCycle, setActiveCycle] = useState(null);
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
@@ -75,12 +75,13 @@ export default function DashboardPage() {
     let cancelled = false;
     async function loadAll() {
       try {
-        const [authRes, studentRes, appsRes, schemesRes] = await Promise.all([
-          getMe(),
-          getStudentProfile(),
-          getApplications().catch(() => ({ data: [] })),
-          getSchemes().catch(() => ({ data: [] })),
-        ]);
+          const [authRes, studentRes, appsRes, schemesRes, cyclesRes] = await Promise.all([
+            getMe(),
+            getStudentProfile(),
+            getApplications().catch(() => ({ data: [] })),
+            getSchemes().catch(() => ({ data: [] })),
+            getCycles().catch(() => ({ data: [] })),
+          ]);
 
         if (cancelled) return;
 
@@ -88,6 +89,9 @@ export default function DashboardPage() {
         const profile = studentRes.data;
         const apps = Array.isArray(appsRes.data?.results) ? appsRes.data.results : [];
         const schemesList = Array.isArray(schemesRes.data?.results) ? schemesRes.data.results : [];
+        const cyclesList = Array.isArray(cyclesRes.data?.results) ? cyclesRes.data.results : (cyclesRes.data || []);
+        const active = cyclesList.find((c) => c.is_active) || null;
+        setActiveCycle(active);
 
         setUser({
           first_name:     auth.firstname      || "",
@@ -145,11 +149,11 @@ export default function DashboardPage() {
       <div className={styles.cycleBanner}>
         <div className={styles.cycleLeft}>
           <Calendar size={14} strokeWidth={2} className={styles.cycleIcon} />
-          <span>Current cycle closes <strong>31 Mar 2027</strong></span>
+          <span>Current cycle: <strong>{activeCycle?.name || "No active cycle"}</strong></span>
         </div>
         <div className={styles.cycleRight}>
           <Clock size={13} strokeWidth={2} />
-          <span>{daysLeft} days left</span>
+          <span>{getDaysLeft(activeCycle?.end_year)} days left</span>
         </div>
       </div>
 

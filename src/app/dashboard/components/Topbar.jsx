@@ -10,6 +10,9 @@ import {
   getNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  getMe, 
+  getStudentProfile, 
+  getCycles
 } from "@/services";
 
 const TYPE_META = {
@@ -45,7 +48,7 @@ function formatTime(isoString) {
   return `${days}d ago`;
 }
 
-export default function Topbar({ user, onMenuOpen }) {
+export default function Topbar({ user, activeCycle, onMenuOpen }) {
   const router = useRouter();
 
   const [dropOpen,  setDropOpen]  = useState(false);
@@ -127,7 +130,7 @@ export default function Topbar({ user, onMenuOpen }) {
       <div className={styles.center}>
         <span className={styles.cyclePill}>
           <span className={styles.cycleDot} />
-          Cycle 2026 – 2027
+          {activeCycle?.name || "No active cycle"}
         </span>
       </div>
 
