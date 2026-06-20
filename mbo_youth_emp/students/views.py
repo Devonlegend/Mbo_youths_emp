@@ -20,14 +20,16 @@ class StudentViewSet(viewsets.ModelViewSet):
         return StudentSerializer
 
     def get_permissions(self):
-        """
-        Different actions need different permissions.
-        Students can only see their own profile.
-        Admins can see everyone.
-        """
-        if self.action in ['list', 'destroy']:
-            return [IsAdmin()]
-        return [IsAuthenticated()]
+            """
+            Different actions need different permissions.
+            Students can only see their own profile.
+            Verifiers and admins can list everyone; only admins can delete.
+            """
+            if self.action == 'list':
+                return [IsVerifier()]
+            if self.action == 'destroy':
+                return [IsAdmin()]
+            return [IsAuthenticated()]
 
     @extend_schema(
         summary="Quick eligibility pre-check",

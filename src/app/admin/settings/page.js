@@ -378,7 +378,7 @@ async function handleReactivate(id) {
       </Section>
 
       {/* ── SECTION 2: CHANGE PASSWORD ── */}
-        <Section title="Password & Security" sub="Keep your account secure with a strong password.">
+        {/* <Section title="Password & Security" sub="Keep your account secure with a strong password.">
            {!editingPwd ? (
             <div className={styles.pwdEmptyState}>
               <div className={styles.pwdEmptyIcon}>
@@ -481,7 +481,8 @@ async function handleReactivate(id) {
             </form>
           </>
         )}
-      </Section>
+      </Section> */}
+      
       {/* ── SECTION 3: ADMIN USERS (super admin only) ── */}
       {isSuperAdmin && (
         <Section
