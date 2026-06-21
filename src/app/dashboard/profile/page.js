@@ -360,8 +360,8 @@ export default function ProfilePage() {
                 <X size={13} strokeWidth={2} /> Cancel
               </button>
             )}
-            {/* Save button only appears once account is verified */}
-            {bankEditing && bankVerified && (
+            {/* Save button only appears once account is verified AND the name matches */}
+            {bankEditing && bankVerified && bankVerified.name_match?.passed && (
               <button type="button" className={styles.btnEdit} onClick={handleBankSave}>
                 <Save size={13} strokeWidth={2} /> Save to Profile
               </button>
@@ -479,10 +479,10 @@ export default function ProfilePage() {
                   </div>
                   {!bankVerified.name_match?.passed && (
                     <p style={{ fontSize: 12, color: "#92400e", margin: 0 }}>
-                      Name does not exactly match your profile. An admin will review this manually.
+                      Name does not match your registered name. You must verify an account registered in your own name before you can save it.
                     </p>
                   )}
-                  <button
+                  {/* <button
                     type="button"
                     onClick={() => {
                       setBankVerified(null);
@@ -497,7 +497,7 @@ export default function ProfilePage() {
                     }}
                   >
                     Use a different account
-                  </button>
+                  </button> */}
                 </div>
               )}
 

@@ -163,6 +163,7 @@ def serialize_application_list(row):
         'rejection_reason':   row.rejection_reason,
         'can_waive':          _can_waive(row),
         'created_at':         row.created_at,
+        'details':            {f: getattr(row, f, None) for f in BANK_FIELDS},
     }
 
 

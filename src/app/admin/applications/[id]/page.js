@@ -8,7 +8,7 @@ import {
   ShieldCheck, AlertTriangle, Loader2,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { getApplication, reviewApplication } from "@/services";
+import { getApplication, reviewApplication, getSchemeFields } from "@/services";
 
 // ── STATUS MAPPING ────────────────────────────────────────────────────────────
 const statusConfig = {
@@ -188,6 +188,8 @@ export default function AdminApplicationDetailPage() {
   // "shortlisted" removed from the possible values above — the Shortlist
   // button that used to set this is commented out below.
 
+  const [schemeFields, setSchemeFields] = useState([]);
+
   // ── FETCH APPLICATION ────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -196,6 +198,16 @@ export default function AdminApplicationDetailPage() {
         const res = await getApplication(params.id);
         if (cancelled) return;
         setApp(res.data);
+
+        const schemeId = res.data?.scheme?.id;
+        if (schemeId) {
+          try {
+            const fieldsRes = await getSchemeFields(schemeId);
+            if (!cancelled) setSchemeFields(Array.isArray(fieldsRes.data) ? fieldsRes.data : []);
+          } catch {
+            // non-fatal — Documents section just won't render
+          }
+        }
       } catch {
         if (!cancelled) setError("Failed to load application.");
       } finally {
@@ -271,6 +283,7 @@ export default function AdminApplicationDetailPage() {
   const uiStatus = status.label.toLowerCase();
   const step     = stepFromStatus[app.status] || 1;
   const fields   = buildFields(catKey, app.details || {});
+  const documentFields = schemeFields.filter((f) => f.field_type === "file");
 
   const isDecidable = [
     "submitted", "eligibility_check", "document_review",
@@ -415,6 +428,44 @@ export default function AdminApplicationDetailPage() {
                     </div>
                   </div>
                 ))}
+
+                {/* Documents — only rendered when the scheme actually has file fields */}
+                {documentFields.length > 0 && (
+                  <div className={styles.section}>
+                    <div className={styles.sectionHead}>
+                      <span className={styles.sectionNum}>{fields.length + 1}</span>
+                      <h3 className={styles.sectionTitle}>Documents</h3>
+                    </div>
+                    <div className={styles.fieldGrid}>
+                      {documentFields.map((docField) => {
+                        const url = app.documents?.[docField.field_name];
+                        return (
+                          <div key={docField.field_name} className={styles.fieldItem}>
+                            <span className={styles.fieldLabel}>{docField.field_label}</span>
+                            {url ? (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={styles.fieldValue}
+                                style={{ color: "#15803d", display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none" }}
+                              >
+                                <FileText size={13} strokeWidth={2} /> View document
+                              </a>
+                            ) : (
+                              <span
+                                className={styles.fieldValue}
+                                style={{ color: docField.is_required ? "#ef4444" : "#94a3b8" }}
+                              >
+                                {docField.is_required ? "Not uploaded (required)" : "Not provided"}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

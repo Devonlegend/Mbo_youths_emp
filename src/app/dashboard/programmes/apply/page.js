@@ -360,8 +360,12 @@ export default function DynamicApplyPage() {
       }
     }
 
-    // Bank — must be verified before submit
-    if (!bankResult) e.bank = "Please verify your bank account before submitting.";
+    // Bank — must be verified AND the account name must match before submit
+    if (!bankResult) {
+      e.bank = "Please verify your bank account before submitting.";
+    } else if (!bankResult.name_match?.passed) {
+      e.bank = "Account name does not match your registered name. Please verify an account registered in your own name.";
+    }
 
     // Declaration
     if (!declaredExternal) e.declared_external = "Please select an option.";
@@ -644,7 +648,7 @@ export default function DynamicApplyPage() {
                 Account Number <span style={{ color: "#ef4444", marginLeft: 2 }}>*</span>
               </label>
               <input
-                className={`${styles.input} ${errors.bank && !bankResult ? styles.inputError : ""}`}
+                className={`${styles.input} ${errors.bank && (!bankResult || !bankResult.name_match?.passed) ? styles.inputError : ""}`}
                 placeholder="10-digit account number"
                 value={accountNumber}
                 onChange={handleAccountNumberChange}
@@ -708,10 +712,10 @@ export default function DynamicApplyPage() {
               </div>
               {!bankResult.name_match?.passed && (
                 <p style={{ fontSize: 12, color: "#92400e", margin: 0 }}>
-                  Name does not exactly match your profile. An admin will review this manually.
+                  Name does not match your registered name. You must verify an account registered in your own name before you can submit.
                 </p>
               )}
-              <button
+              {/* <button
                 type="button"
                 onClick={() => { setBankResult(null); setBankCode(""); setBankName(""); setAccountNumber(""); }}
                 style={{
@@ -721,11 +725,11 @@ export default function DynamicApplyPage() {
                 }}
               >
                 Use a different account
-              </button>
+              </button> */}
             </div>
           )}
 
-          {errors.bank && !bankResult && (
+          {errors.bank && (
             <span className={styles.error} style={{ marginTop: 8, display: "block" }}>
               {errors.bank}
             </span>
