@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ClipboardList, Users, BookOpen,
   BadgeCheck, ShieldAlert, ScrollText, Settings,
-  LogOut, X,
+  LogOut, X, CalendarRange,
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
 import { logout } from "@/services";
@@ -15,6 +15,7 @@ const navMain = [
   { label: "Applications",  href: "/admin/applications", icon: ClipboardList,   roles: ["admin", "superadmin", "verifier"] },
   { label: "Students",      href: "/admin/students",     icon: Users,           roles: ["admin", "superadmin", "verifier"] },
   { label: "Schemes",       href: "/admin/schemes",      icon: BookOpen,        roles: ["admin", "superadmin"] },
+  { label: "Cycles",        href: "/admin/cycles",       icon: CalendarRange,   roles: ["admin", "superadmin"] },
 ];
 
 const navRecords = [
@@ -97,8 +98,8 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
 
         {/* ── NAV ── */}
           <nav className={styles.nav}>
-
-            <span className={styles.sectionLabel}>Main</span>
+              {/* Comment out becoz of space to avoid scrolling */}
+            {/* <span className={styles.sectionLabel}>Main</span> */}
 
             {navMain.filter(item => item.roles.includes(user?.role)).map((item) => (
               <NavItem key={item.href} item={item} active={isActive(item.href)} onClick={onClose} />
@@ -106,7 +107,8 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
 
             <div className={styles.divider} />
 
-            <span className={styles.sectionLabel}>Records</span>
+              {/* Comment out becoz of space to avoid scrolling */}
+            {/* <span className={styles.sectionLabel}>Records</span> */}
 
             {navRecords.filter(item => item.roles.includes(user?.role)).map((item) => (
               <NavItem key={item.href} item={item} active={isActive(item.href)} onClick={onClose} />

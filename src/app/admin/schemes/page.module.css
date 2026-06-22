@@ -40,6 +40,25 @@
   margin: -2px 0 0;
 }
 
+/* checking key frames */
+.centerState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 50vh;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid #e2e8f0;
+  border-top-color: #15803d;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
 /* ── CREATE BUTTON ── */
 .createBtn {
   display: inline-flex;

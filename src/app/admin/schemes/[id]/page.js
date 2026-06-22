@@ -5,9 +5,12 @@ import {
   ArrowLeft, BookOpen, GraduationCap, Briefcase,
   Wrench, Banknote, AlertCircle, CheckCircle2,
   Loader2, XCircle, Edit2, Save, X,
-  Users, Calendar, DollarSign, Shield,
+  Users, Calendar, DollarSign, Shield, CalendarRange,
 } from "lucide-react";
 import styles from "./page.module.css";
+
+import { useRoleGuard } from "@/hooks/useRoleGuard";
+
 import { getScheme, publishScheme, closeScheme, updateScheme, reopenScheme } from "@/services";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
@@ -50,6 +53,7 @@ function InfoRow({ icon: Icon, label, value, color }) {
 export default function SchemeDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const { checking } = useRoleGuard(["admin", "superadmin"]);
 
   const [scheme,       setScheme]       = useState(null);
   const [loading,      setLoading]      = useState(true);
@@ -70,6 +74,7 @@ export default function SchemeDetailPage() {
         const res = await getScheme(params.id);
         if (cancelled) return;
         setScheme(res.data);
+        console.log("Full scheme object:", res.data);
         setForm(res.data);
       } catch {
         if (!cancelled) setError("Failed to load scheme.");
@@ -169,6 +174,14 @@ async function handleReopen() {
   }
 
   // ── LOADING ───────────────────────────────────────────────────────────────
+if (checking) {
+    return (
+      <div className={styles.centerState}>
+        <div className={styles.spinner} />
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className={styles.centerState}>
@@ -325,6 +338,7 @@ async function handleReopen() {
               <div className={styles.infoGrid}>
                 <InfoRow icon={BookOpen}     label="Description"      value={scheme.description} />
                 <InfoRow icon={Calendar}     label="Academic Year"    value={scheme.academic_year} />
+                <InfoRow icon={CalendarRange} label="Cycle" value={scheme.cycle?.name || "—"} />
                 <InfoRow icon={DollarSign}   label="Award Amount"     value={formatCurrency(scheme.award_amount)} />
                 <InfoRow icon={Users}        label="Total Slots"      value={`${scheme.remaining_slots ?? scheme.total_slots ?? "—"} remaining of ${scheme.total_slots ?? "—"}`} />
                 <InfoRow icon={Calendar}     label="Opens"            value={formatDate(scheme.application_open_date)} />

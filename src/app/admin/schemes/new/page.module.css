@@ -138,6 +138,89 @@
   margin: 0;
 }
 
+/* ── CYCLE CHIP ── */
+.cycleChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  width: fit-content;
+}
+
+.cycleChipName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.cycleChipBadge {
+  margin-left: 4px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: #15803d;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cycleChipEmpty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid  #e2e8f0;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  width: fit-content;
+}
+
+.cycleChipLoading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #94a3b8;
+  font-size: 12.5px;
+  width: fit-content;
+}
+
+.cycleHint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* key frames check later while testing */
+.centerState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 50vh;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid #e2e8f0;
+  border-top-color: #15803d;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
 /* ── FORM FIELDS ── */
 .field {
   display: flex;

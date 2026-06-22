@@ -5,6 +5,7 @@ import {
   ClipboardList, Users, BookOpen, Shield,
   Settings, RefreshCw,
 } from "lucide-react";
+import { useRoleGuard } from "@/hooks/useRoleGuard";
 import styles from "./page.module.css";
 import { getAuditLogs } from "@/services";
 
@@ -53,6 +54,8 @@ const ENTITY_FILTERS = ["All", "Application", "Student", "Scheme", "System"];
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function AuditLogPage() {
+  const { checking } = useRoleGuard(["admin", "superadmin"]);
+
   const [logs,         setLogs]         = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
@@ -90,6 +93,14 @@ export default function AuditLogPage() {
 
     return matchSearch && matchFilter;
   });
+
+    if (checking) {
+    return (
+      <div style={{ padding: 60, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+        Checking access...
+      </div>
+    );
+  }
 
   // ── RENDER ────────────────────────────────────────────────────────────────
   return (

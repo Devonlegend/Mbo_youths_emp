@@ -6,6 +6,9 @@ import {
   GraduationCap, Briefcase, Wrench, Banknote,
   Calendar, ArrowRight,
 } from "lucide-react";
+
+import { useRoleGuard } from "@/hooks/useRoleGuard";
+
 import styles from "./page.module.css";
 import { getSchemes, getMe } from "@/services";
 
@@ -38,6 +41,7 @@ function SkeletonCard() {
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function AdminSchemesPage() {
   const router = useRouter();
+  const { checking } = useRoleGuard(["admin", "superadmin"]);
   const [user, setUser] = useState(null);
 
   const [schemes,  setSchemes]  = useState([]);
@@ -88,6 +92,14 @@ export default function AdminSchemesPage() {
   const closedCount = schemes.filter((s) => !s.is_active).length;
 
   // ── RENDER ────────────────────────────────────────────────────────────────
+if (checking) {
+    return (
+      <div className={styles.centerState}>
+        <div className={styles.spinner} />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page}>
 

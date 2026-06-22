@@ -32,6 +32,14 @@ class CycleViewSet(viewsets.ModelViewSet):
         cycle = self.get_object()
         cycle.is_active = True
         cycle.save()
+
+        AuditLog.objects.create(
+            admin=request.user,
+            action=f"Activated cycle '{cycle.name}'",
+            entity_type="Cycle",
+            entity_id=str(cycle.id),
+        )
+
         return Response({'status': 'Cycle activated', 'cycle': CycleSerializer(cycle).data})
 
 

@@ -1,14 +1,17 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, BookOpen, GraduationCap, Briefcase,
   Wrench, Banknote, AlertCircle, CheckCircle2,
   Loader2, Plus, Trash2, GripVertical, ChevronDown,
-  ChevronUp, Settings2,
+  ChevronUp, Settings2, CalendarRange,
 } from "lucide-react";
+
+import { useRoleGuard } from "@/hooks/useRoleGuard";
+
 import styles from "./page.module.css";
-import { createScheme } from "@/services";
+import { createScheme, getCycles } from "@/services";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
@@ -187,6 +190,29 @@ const categoryConfig = {
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function NewSchemePage() {
   const router = useRouter();
+  const { checking } = useRoleGuard(["admin", "superadmin"]);
+
+    // ── ACTIVE CYCLE ──────────────────────────────────────────────────────────
+  const [activeCycle,     setActiveCycle]     = useState(null);
+  const [cycleLoading,    setCycleLoading]    = useState(true);
+ 
+  useEffect(() => {
+    async function fetchActiveCycle() {
+      try {
+        const res = await getCycles();
+        const list = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
+        const active = list.find((c) => c.is_active) || null;
+        setActiveCycle(active);
+      } catch {
+        // fail silently — warning will show
+      } finally {
+        setCycleLoading(false);
+      }
+    }
+    fetchActiveCycle();
+  }, []);
+ 
+  // ── FORM STATE ────────────────────────────────────────────────────────────
 
   const [form, setForm] = useState({
     name:                   "",
@@ -300,6 +326,14 @@ export default function NewSchemePage() {
 } finally {
       setLoading(false);
     }
+  }
+
+if (checking) {
+    return (
+      <div className={styles.centerState}>
+        <div className={styles.spinner} />
+      </div>
+    );
   }
 
   return (
@@ -450,6 +484,35 @@ export default function NewSchemePage() {
         {/* RIGHT — award details + preview + submit */}
         <div className={styles.rightCol}>
 
+          {/* Cycle display — read only */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Cycle</h2>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel}>Assigned Cycle</label>
+              {cycleLoading ? (
+                <div className={styles.cycleChipLoading}>
+                  <Loader2 size={13} strokeWidth={2} className={styles.spin} />
+                  <span>Loading cycle...</span>
+                </div>
+              ) : activeCycle ? (
+                <div className={styles.cycleChip}>
+                  <CalendarRange size={14} color="#15803d" strokeWidth={2} />
+                  <span className={styles.cycleChipName}>{activeCycle.name}</span>
+                  <span className={styles.cycleChipBadge}>Active</span>
+                </div>
+              ) : (
+                <div className={styles.cycleChipEmpty}>
+                  <CalendarRange size={14} color="#94a3b8" strokeWidth={2} />
+                  <span>No active cycle</span>
+                </div>
+              )}
+              <p className={styles.cycleHint}>
+                Schemes are automatically assigned to the active cycle.
+              </p>
+            </div>
+          </div>
+ 
+          {/* Award Details */}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Award Details</h2>
 
