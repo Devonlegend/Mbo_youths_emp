@@ -214,6 +214,7 @@ export default function NotificationsPage() {
 
           const metaKey =
             title.includes("approved")  ? "application" :
+            title.includes("conflict")  ? "alert"       :
             title.includes("rejected")  ? "alert"       :
             title.includes("submitted") ? "application" :
             title.includes("verified")  ? "system"      :
@@ -225,6 +226,7 @@ export default function NotificationsPage() {
 
           const Icon =
             title.includes("approved")  ? CheckCircle2  :
+            title.includes("conflict")  ? ShieldAlert    :
             title.includes("rejected")  ? XCircle       :
             title.includes("submitted") ? FileText       :
             title.includes("verified")  ? ShieldCheck    :

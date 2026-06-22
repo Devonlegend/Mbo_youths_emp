@@ -89,6 +89,20 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
             entity_id=str(scheme.id),
         )
 
+        from notifications.models import Notification
+        from accounts.models import User
+
+        students = User.objects.filter(role='student')
+        Notification.objects.bulk_create([
+            Notification(
+                user=student,
+                type='programme',
+                title='New Programme Available',
+                message=f"{scheme.name} is now open for applications. Apply before {scheme.application_close_date:%d %B %Y}.",
+            )
+            for student in students
+        ])
+
         return Response({
             'status': 'scheme published successfully',
             'is_published': scheme.is_published,

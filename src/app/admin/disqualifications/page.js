@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   ShieldAlert, Search, ArrowRight, AlertCircle,
   GraduationCap, Briefcase, Wrench, Banknote, Filter,
-  XCircle,
+  XCircle, Download,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApplications } from "@/services";
@@ -24,7 +24,6 @@ function formatDate(dateStr) {
   });
 }
 
-// Backend only returns full_name (no firstname/lastname split) — derive initials from it.
 function getInitials(fullName) {
   if (!fullName) return "—";
   const parts = fullName.trim().split(/\s+/);
@@ -59,7 +58,7 @@ export default function DisqualificationRegisterPage() {
   const [activeFilter,      setActiveFilter]      = useState("All");
   const [filterOpen,        setFilterOpen]        = useState(false);
 
-  // ── FETCH — filter rejected from all applications ─────────────────────────
+  // ── FETCH ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -67,7 +66,6 @@ export default function DisqualificationRegisterPage() {
         const res = await getApplications();
         if (cancelled) return;
         const all = Array.isArray(res.data?.results) ? res.data.results : [];
-        // Rejected and withdrawn both count as disqualified
         const rejected = all.filter((a) =>
           ["rejected", "withdrawn"].includes(a.status)
         );
@@ -83,14 +81,10 @@ export default function DisqualificationRegisterPage() {
   }, []);
 
   // ── FILTER + SEARCH ───────────────────────────────────────────────────────
-  // NOTE: student/scheme are nested objects (student.full_name, scheme.name,
-  // scheme.award_type) — not flat fields. d.rejection_reason will be empty
-  // for every row until the backend adds it to serialize_application_list
-  // (it currently only exists in the single-application detail serializer).
   const filtered = disqualifications.filter((d) => {
     const fullName   = (d.student?.full_name || "").toLowerCase();
     const schemeName = (d.scheme?.name || "").toLowerCase();
-    const reason      = (d.rejection_reason || "").toLowerCase();
+    const reason     = (d.rejection_reason || "").toLowerCase();
 
     const matchSearch = search.trim() === "" ? true :
       fullName.includes(search.toLowerCase()) ||
@@ -103,6 +97,32 @@ export default function DisqualificationRegisterPage() {
 
     return matchSearch && matchFilter;
   });
+
+  // ── EXPORT CSV ────────────────────────────────────────────────────────────
+  function handleExport() {
+    const headers = ["#", "Full Name", "Ward", "Scheme", "Category", "Rejection Reason", "Date"];
+    const rows = filtered.map((d, index) => [
+      String(index + 1).padStart(3, "0"),
+      d.student?.full_name || "Unknown",
+      d.student?.ward || "",
+      d.scheme?.name || "",
+      categoryConfig[(d.scheme?.award_type || "scholarship").toLowerCase()]?.label || "",
+      d.rejection_reason || "No reason recorded",
+      formatDate(d.submission_date),
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `disqualification-register-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // ── RENDER ────────────────────────────────────────────────────────────────
   return (
@@ -122,9 +142,19 @@ export default function DisqualificationRegisterPage() {
           </div>
         </div>
         {!loading && !error && (
-          <div className={styles.countPill}>
-            <XCircle size={13} strokeWidth={2} />
-            {disqualifications.length} disqualified record{disqualifications.length !== 1 ? "s" : ""}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className={styles.countPill}>
+              <XCircle size={13} strokeWidth={2} />
+              {disqualifications.length} disqualified record{disqualifications.length !== 1 ? "s" : ""}
+            </div>
+            <button
+              onClick={handleExport}
+              disabled={filtered.length === 0}
+              className={styles.exportBtn}
+              style={{ opacity: filtered.length === 0 ? 0.5 : 1, cursor: filtered.length === 0 ? "not-allowed" : "pointer" }}
+            >
+              <Download size={13} strokeWidth={2} /> Export CSV
+            </button>
           </div>
         )}
       </div>
@@ -214,7 +244,7 @@ export default function DisqualificationRegisterPage() {
         )}
 
         {/* TABLE ROWS */}
-        {!loading && !error && filtered.map((d, index) => {
+        {!loading && !error && filtered.map((d) => {
           const catKey   = (d.scheme?.award_type || "scholarship").toLowerCase();
           const category = categoryConfig[catKey] || categoryConfig.scholarship;
           const Icon     = category.icon;
@@ -251,9 +281,7 @@ export default function DisqualificationRegisterPage() {
                 </div>
               </div>
 
-              {/* Rejection reason — will read "No reason recorded" for every
-                  row until the backend adds rejection_reason to the list
-                  serializer (see note above the filtered() function) */}
+              {/* Rejection Reason */}
               <div className={styles.tdReason}>
                 {d.rejection_reason ? (
                   <span className={styles.reasonText}>

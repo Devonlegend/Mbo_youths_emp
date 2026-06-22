@@ -23,7 +23,6 @@ function formatDate(dateStr) {
   });
 }
 
-// Backend only returns full_name (no firstname/lastname split) — derive initials from it.
 function getInitials(fullName) {
   if (!fullName) return "—";
   const parts = fullName.trim().split(/\s+/);
@@ -58,7 +57,7 @@ export default function BeneficiaryRegisterPage() {
   const [activeFilter,  setActiveFilter]  = useState("All");
   const [filterOpen,    setFilterOpen]    = useState(false);
 
-  // ── FETCH — filter approved from all applications ─────────────────────────
+  // ── FETCH ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -66,7 +65,6 @@ export default function BeneficiaryRegisterPage() {
         const res  = await getApplications();
         if (cancelled) return;
         const all  = Array.isArray(res.data?.results) ? res.data.results : [];
-        // Only approved applications become beneficiaries
         const approved = all.filter((a) => a.status === "approved");
         setBeneficiaries(approved);
       } catch {
@@ -80,10 +78,6 @@ export default function BeneficiaryRegisterPage() {
   }, []);
 
   // ── FILTER + SEARCH ───────────────────────────────────────────────────────
-  // NOTE: student and scheme are nested objects from the API
-  // (student.full_name / student.ward, scheme.name / scheme.award_type) —
-  // not flat fields. student.email and student.lga are not returned by the
-  // backend's StudentNestedSerializer yet, so those show as "—" until added.
   const filtered = beneficiaries.filter((b) => {
     const fullName   = (b.student?.full_name || "").toLowerCase();
     const schemeName = (b.scheme?.name || "").toLowerCase();
@@ -100,7 +94,7 @@ export default function BeneficiaryRegisterPage() {
     return matchSearch && matchFilter;
   });
 
-  // ── EXPORT — must come after filtered is declared ─────────────────────────
+  // ── EXPORT CSV ────────────────────────────────────────────────────────────
   function handleExport() {
     const headers = ["#", "Full Name", "Scheme", "Category", "Ward", "Bank Name", "Account Number", "Account Name", "Approved Date"];
     const rows = filtered.map((b, index) => [
@@ -154,14 +148,8 @@ export default function BeneficiaryRegisterPage() {
             <button
               onClick={handleExport}
               disabled={filtered.length === 0}
-              style={{
-                display: "flex", alignItems: "center", gap: 7,
-                padding: "8px 16px", borderRadius: 9,
-                border: "1px solid #bbf7d0", background: "#f0fdf4",
-                color: "#15803d", fontSize: 13, fontWeight: 600,
-                cursor: filtered.length === 0 ? "not-allowed" : "pointer",
-                opacity: filtered.length === 0 ? 0.5 : 1,
-              }}
+              className={styles.exportBtn}
+              style={{ opacity: filtered.length === 0 ? 0.5 : 1, cursor: filtered.length === 0 ? "not-allowed" : "pointer" }}
             >
               <Download size={13} strokeWidth={2} /> Export CSV
             </button>
@@ -172,7 +160,7 @@ export default function BeneficiaryRegisterPage() {
       {/* INFO BANNER */}
       <div className={styles.infoBanner}>
         <BadgeCheck size={14} color="#15803d" strokeWidth={2} style={{ flexShrink: 0 }} />
-        <span> This register is read-only. Records are created automatically when an application is approved and are retained permanently.</span>
+        <span>This register is read-only. Records are created automatically when an application is approved and are retained permanently.</span>
       </div>
 
       {/* MAIN CARD */}
@@ -190,7 +178,6 @@ export default function BeneficiaryRegisterPage() {
             />
           </div>
 
-          {/* Filter */}
           <div style={{ position: "relative" }}>
             <button
               className={`${styles.filterBtn} ${activeFilter !== "All" ? styles.filterBtnActive : ""}`}
@@ -293,29 +280,29 @@ export default function BeneficiaryRegisterPage() {
                 </div>
               </div>
 
-              {/* Ward — LGA not in this endpoint's response, removed for now */}
+              {/* Ward */}
               <div className={styles.tdLocation}>
                 <span className={styles.wardText}>{b.student?.ward || "—"}</span>
               </div>
 
-                {/* Account Details */}
-                <div className={styles.tdBank}>
-                  {b.details?.account_number ? (
-                    <>
-                      <span className={styles.lgaText}>{b.details.bank_name || "—"}</span>
-                      <span className={styles.wardText}>{b.details.account_number}</span>
-                    </>
-                  ) : (
-                    <span className={styles.wardText}>No bank on file</span>
-                  )}
-                </div>
+              {/* Account Details */}
+              <div className={styles.tdBank}>
+                {b.details?.account_number ? (
+                  <>
+                    <span className={styles.lgaText}>{b.details.bank_name || "—"}</span>
+                    <span className={styles.wardText}>{b.details.account_number}</span>
+                  </>
+                ) : (
+                  <span className={styles.wardText}>No bank on file</span>
+                )}
+              </div>
 
               {/* Approved date */}
               <span className={styles.tdDate}>
                 {formatDate(b.submission_date)}
               </span>
 
-              {/* View application */}
+              {/* View */}
               <button
                 className={styles.viewBtn}
                 onClick={() => router.push(`/admin/applications/${b.id}`)}

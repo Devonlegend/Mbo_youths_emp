@@ -67,6 +67,27 @@
   flex-shrink: 0;
 }
 
+/* ── EXPORT BUTTON ── */
+.exportBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.exportBtn:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
 /* ── INFO BANNER ── */
 .infoBanner {
   display: flex;
@@ -188,9 +209,7 @@
 .filterOptionActive         { background: #f0fdf4; color: #15803d; font-weight: 600; }
 
 /* ── TABLE ──
-   6 columns now: Beneficiary | Scheme | Ward | Account Details | Approved | View
-   (was 5 — the View button wrapping onto its own row was this grid still
-   expecting only 5 cells per row) */
+   6 columns: Beneficiary | Scheme | Ward | Account Details | Approved | View */
 .tableRow {
   display: grid;
   grid-template-columns: 2fr 1.7fr 0.9fr 1.3fr 0.9fr 90px;
@@ -324,10 +343,6 @@
   min-width: 0;
 }
 
-/* Account Details — separate class from tdLocation (Ward) so the two
-   columns can be shown/hidden independently at narrower widths. Bank
-   details matter more for this register than Ward, so they're kept
-   visible for longer as the viewport shrinks. */
 .tdBank {
   display: flex;
   flex-direction: column;
@@ -402,9 +417,7 @@
 
 /* ══════════════════════════════════════════════
    RESPONSIVE — 1024px
-   Header span order: 1 Beneficiary, 2 Scheme, 3 Ward, 4 Account Details,
-   5 Approved, 6 (empty, View column). Ward drops first — Account Details
-   is the more important column for this register and stays visible.
+   Ward drops first; Account Details stays visible.
 ══════════════════════════════════════════════ */
 @media (max-width: 1024px) {
   .tableRow,
@@ -417,8 +430,8 @@
 
 /* ══════════════════════════════════════════════
    RESPONSIVE — 768px
-   Account Details and Approved date both drop here. Left with:
-   Beneficiary | Scheme | View only.
+   Account Details and Approved both drop.
+   Left with: Beneficiary | Scheme | View
 ══════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .toolbar { flex-direction: column; align-items: stretch; }

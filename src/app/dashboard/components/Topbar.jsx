@@ -2,7 +2,8 @@
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, Menu, Settings, LogOut, ChevronDown,
          GraduationCap, CalendarClock, FileText, CheckCheck, Sparkles,
-         ShieldAlert, UserCircle, Megaphone, Loader2 } from "lucide-react";
+         ShieldAlert, UserCircle, Megaphone, Loader2,
+         CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import styles from "./Topbar.module.css";
 import { logout } from "@/services";
@@ -173,8 +174,29 @@ export default function Topbar({ user, activeCycle, onMenuOpen }) {
                   </div>
                 )}
                 {!loading && preview.map((n) => {
-                  const Icon   = TYPE_ICONS[n.type] || Bell;
-                  const colors = TYPE_META[n.type] || TYPE_META.system;
+                  const title = n.title.toLowerCase();
+                  const metaKey =
+                    title.includes("approved")  ? "application" :
+                    title.includes("conflict")  ? "alert"       :
+                    title.includes("rejected")  ? "alert"       :
+                    title.includes("submitted") ? "application" :
+                    title.includes("verified")  ? "system"      :
+                    title.includes("eligible")  ? "alert"       :
+                    title.includes("programme") ? "programme"   :
+                    title.includes("waiver")    ? "deadline"    :
+                    n.type;
+                  const colors = TYPE_META[metaKey] || TYPE_META.system;
+
+                  const Icon =
+                    title.includes("approved")  ? CheckCircle2  :
+                    title.includes("conflict")  ? ShieldAlert   :
+                    title.includes("rejected")  ? XCircle       :
+                    title.includes("submitted") ? FileText      :
+                    title.includes("verified")  ? ShieldCheck   :
+                    title.includes("eligible")  ? ShieldAlert   :
+                    title.includes("programme") ? CalendarClock :
+                    title.includes("waiver")    ? FileText      :
+                    TYPE_ICONS[n.type]          || Bell;
                   return (
                     <div
                       key={n.id}

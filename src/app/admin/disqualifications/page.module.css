@@ -67,6 +67,27 @@
   flex-shrink: 0;
 }
 
+/* ── EXPORT BUTTON — matches beneficiary page ── */
+.exportBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.exportBtn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
 /* ── INFO BANNER ── */
 .infoBanner {
   display: flex;
@@ -187,7 +208,9 @@
 .filterOption:hover      { background: #f8fafc; }
 .filterOptionActive      { background: #fef2f2; color: #ef4444; font-weight: 600; }
 
-/* ── TABLE ── */
+/* ── TABLE ──
+   5 columns: Student | Scheme | Rejection Reason | Date | View
+   Mirrors the beneficiary layout pattern exactly. */
 .tableRow {
   display: grid;
   grid-template-columns: 1.6fr 1.6fr 2fr 0.9fr 90px;
@@ -397,6 +420,7 @@
 
 /* ══════════════════════════════════════════════
    RESPONSIVE — 1024px
+   Date column drops first, Reason stays visible.
 ══════════════════════════════════════════════ */
 @media (max-width: 1024px) {
   .tableRow,
@@ -409,6 +433,7 @@
 
 /* ══════════════════════════════════════════════
    RESPONSIVE — 768px
+   Scheme drops, left with: Student | Reason | View
 ══════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .toolbar { flex-direction: column; align-items: stretch; }

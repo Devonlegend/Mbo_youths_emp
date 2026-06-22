@@ -385,7 +385,7 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         Notification.objects.create(
             user=request.user,
-            type='application',
+            type='alert' if result['has_conflict'] else 'application',
             title='Application Submitted' if not result['has_conflict'] else 'Conflict Detected',
             message=(
                 f"Your application for {scheme.name} has been submitted and is under review."
@@ -548,7 +548,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         elif decision == 'rejected':
             Notification.objects.create(
                 user=student.user,
-                type='application',
+                type='alert',
                 title='Application Rejected',
                 message=f"Your application for {scheme.name} was not successful. {notes}",
             )    
