@@ -5,7 +5,13 @@ from .models import SchemeProvider, ScholarshipScheme, Cycle
 class CycleSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Cycle
-        fields = ['id', 'name', 'start_year', 'end_year', 'is_active']
+        fields = ['id', 'name', 'start_year', 'end_year', 'is_active', 'created_at']
+        
+    def validate_name(self, value):
+        import re
+        if not re.match(r'^\d{4}/\d{4}$', value):
+            raise serializers.ValidationError("Name must be in the format YYYY/YYYY, e.g. 2026/2027.")
+        return value
 
 
 class SchemeProviderSerializer(serializers.ModelSerializer):

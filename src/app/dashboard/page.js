@@ -11,11 +11,15 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import styles from "./page.module.css";
 import { getMe, getStudentProfile, getApplications, getSchemes, getCycles } from "@/services";
 
-function getDaysLeft(endYear) {
-  if (!endYear) return 0;
-  const end = new Date(`${endYear}-12-31`);
-  const diff = Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
-  return diff > 0 ? diff : 0;
+function getDaysLeftUntilNextDeadline(schemes) {
+  if (!schemes || schemes.length === 0) return null;
+  const today = new Date();
+  const upcoming = schemes
+    .map((s) => new Date(s.application_close_date))
+    .filter((d) => d > today)
+    .sort((a, b) => a - b);
+  if (upcoming.length === 0) return null;
+  return Math.ceil((upcoming[0] - today) / (1000 * 60 * 60 * 24));
 }
 
 function formatTimeAgo(date) {
@@ -153,7 +157,12 @@ export default function DashboardPage() {
         </div>
         <div className={styles.cycleRight}>
           <Clock size={13} strokeWidth={2} />
-          <span>{getDaysLeft(activeCycle?.end_year)} days left</span>
+          <span>
+            {(() => {
+              const days = getDaysLeftUntilNextDeadline(schemes);
+              return days !== null ? `${days} days left` : "No upcoming deadlines";
+            })()} 
+          </span>
         </div>
       </div>
 

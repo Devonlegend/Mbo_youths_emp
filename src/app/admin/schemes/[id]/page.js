@@ -292,6 +292,15 @@ if (checking) {
             {editing ? (
               <div className={styles.editForm}>
                 <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Cycle</label>
+                  <input
+                    className={styles.input}
+                    value={scheme.cycle?.name || "—"}
+                    disabled
+                    style={{ background: "#f1f5f9", color: "#64748b", cursor: "not-allowed" }}
+                  />
+                </div>
+                <div className={styles.field}>
                   <label className={styles.fieldLabel}>Scheme Name</label>
                   <input className={styles.input} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
                 </div>
@@ -336,9 +345,9 @@ if (checking) {
               </div>
             ) : (
               <div className={styles.infoGrid}>
+                <InfoRow icon={CalendarRange} label="Cycle" value={scheme.cycle?.name || "—"} />
                 <InfoRow icon={BookOpen}     label="Description"      value={scheme.description} />
                 <InfoRow icon={Calendar}     label="Academic Year"    value={scheme.academic_year} />
-                <InfoRow icon={CalendarRange} label="Cycle" value={scheme.cycle?.name || "—"} />
                 <InfoRow icon={DollarSign}   label="Award Amount"     value={formatCurrency(scheme.award_amount)} />
                 <InfoRow icon={Users}        label="Total Slots"      value={`${scheme.remaining_slots ?? scheme.total_slots ?? "—"} remaining of ${scheme.total_slots ?? "—"}`} />
                 <InfoRow icon={Calendar}     label="Opens"            value={formatDate(scheme.application_open_date)} />

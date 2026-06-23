@@ -113,16 +113,23 @@ export default function AdminCyclesPage() {
   }
 
   // ── CREATE ────────────────────────────────────────────────────────────────
-  function validateForm() {
-    const e = {};
-    if (!form.name.trim())   e.name       = "Name is required.";
-    if (!form.start_year)    e.start_year = "Start year is required.";
-    if (!form.end_year)      e.end_year   = "End year is required.";
-    if (form.start_year && form.end_year &&
-        Number(form.end_year) <= Number(form.start_year))
-      e.end_year = "End year must be after start year.";
-    return e;
+function validateForm() {
+  const e = {};
+  const yearPattern = /^\d{4}\/\d{4}$/;
+
+  if (!form.name.trim()) {
+    e.name = "Name is required.";
+  } else if (!yearPattern.test(form.name.trim())) {
+    e.name = "Name must be in the format YYYY/YYYY, e.g. 2026/2027.";
   }
+
+  if (!form.start_year)    e.start_year = "Start year is required.";
+  if (!form.end_year)      e.end_year   = "End year is required.";
+  if (form.start_year && form.end_year &&
+      Number(form.end_year) <= Number(form.start_year))
+    e.end_year = "End year must be after start year.";
+  return e;
+}
 
   async function handleCreate() {
     const e = validateForm();
@@ -232,7 +239,7 @@ if (checking) {
                 </p>
               </div>
             </div>
-            <BookOpen size={18} color="#15803d" strokeWidth={1.5} />
+            {/* <BookOpen size={18} color="#15803d" strokeWidth={1.5} style={{ flexShrink: 0 }} /> */}
           </div>
         ) : (
           <div className={styles.noActiveBanner}>
