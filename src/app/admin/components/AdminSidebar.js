@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, ClipboardList, Users, BookOpen,
   BadgeCheck, ShieldAlert, ScrollText, Settings,
-  LogOut, X, CalendarRange,
+  LogOut, X, CalendarRange, Building2,
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
 import { logout } from "@/services";
@@ -16,6 +16,7 @@ const navMain = [
   { label: "Students",      href: "/admin/students",     icon: Users,           roles: ["admin", "superadmin", "verifier"] },
   { label: "Schemes",       href: "/admin/schemes",      icon: BookOpen,        roles: ["admin", "superadmin"] },
   { label: "Cycles",        href: "/admin/cycles",       icon: CalendarRange,   roles: ["admin", "superadmin"] },
+  { label: "Providers", href: "/admin/providers", icon: Building2, roles: ["admin", "superadmin"] },
 ];
 
 const navRecords = [

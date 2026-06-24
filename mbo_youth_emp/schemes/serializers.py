@@ -17,11 +17,17 @@ class CycleSerializer(serializers.ModelSerializer):
 class SchemeProviderSerializer(serializers.ModelSerializer):
     class Meta:
         model  = SchemeProvider
-        fields = ['id', 'name', 'provider_type']
+        fields = ['id', 'name', 'provider_type', 'created_at']
 
 
 class ScholarshipSchemeSerializer(serializers.ModelSerializer):
     provider          = SchemeProviderSerializer(read_only=True)
+    provider_id       = serializers.PrimaryKeyRelatedField(
+                            queryset=SchemeProvider.objects.all(),
+                            source='provider',
+                            write_only=True,
+                            required=True,
+                        )
     cycle             = CycleSerializer(read_only=True)
     cycle_id          = serializers.PrimaryKeyRelatedField(
                             queryset=Cycle.objects.all(),
@@ -35,7 +41,7 @@ class ScholarshipSchemeSerializer(serializers.ModelSerializer):
     class Meta:
         model  = ScholarshipScheme
         fields = [
-            'id', 'provider', 'cycle', 'cycle_id', 'name', 'award_type', 'award_type_display',
+            'id', 'provider', 'provider_id', 'cycle', 'cycle_id', 'name', 'award_type', 'award_type_display',
             'description', 'academic_year', 'award_amount', 'total_slots', 'remaining_slots',
             'stacking_policy', 'eligibility_criteria', 'application_open_date',
             'application_close_date', 'is_active', 'is_published',
@@ -43,12 +49,8 @@ class ScholarshipSchemeSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        # Find or create a default SchemeProvider to assign
-        provider, _ = SchemeProvider.objects.get_or_create(
-            name="Mbo LGA Council",
-            defaults={"provider_type": "lga"}
-        )
-        validated_data['provider'] = provider
+        # provider is required via provider_id (no fallback — the frontend
+        # must always send a real provider chosen on the Providers page).
 
         # Set remaining slots to total slots initially
         validated_data['remaining_slots'] = validated_data['total_slots']

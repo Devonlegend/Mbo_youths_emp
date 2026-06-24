@@ -8,6 +8,10 @@ from .models import ScholarshipScheme, Cycle
 from .serializers import ScholarshipSchemeSerializer, CycleSerializer
 from accounts.permissions import IsAdmin
 
+# Providers 
+from .serializers import ScholarshipSchemeSerializer, CycleSerializer, SchemeProviderSerializer
+from .models import ScholarshipScheme, Cycle, SchemeProvider
+
 
 # ── Cycle ViewSet ─────────────────────────────────────────────────────────────
 
@@ -24,6 +28,18 @@ class CycleViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
         return [IsAdmin()]
+
+    def perform_create(self, serializer):
+        """Logs cycle creation. (Update/delete are not yet supported via the
+        frontend for cycles, so only create is hooked here.)"""
+        cycle = serializer.save()
+
+        AuditLog.objects.create(
+            admin=self.request.user,
+            action=f"Created cycle '{cycle.name}'",
+            entity_type="Cycle",
+            entity_id=str(cycle.id),
+        )
 
     @action(detail=True, methods=['post'], url_path='activate')
     def activate(self, request, pk=None):
@@ -42,6 +58,48 @@ class CycleViewSet(viewsets.ModelViewSet):
 
         return Response({'status': 'Cycle activated', 'cycle': CycleSerializer(cycle).data})
 
+# ── SchemeProvider ViewSet ─────────────────────────────────────────────────
+
+class SchemeProviderViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for scheme providers (LGA, State, Corporate, NGO, Federal).
+    Admin-only for write operations; anyone can read.
+    """
+    queryset           = SchemeProvider.objects.all().order_by('name')
+    serializer_class   = SchemeProviderSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAdmin()]
+
+    def perform_create(self, serializer):
+        provider = serializer.save()
+
+        AuditLog.objects.create(
+            admin=self.request.user,
+            action=f"Created provider '{provider.name}'",
+            entity_type="SchemeProvider",
+            entity_id=str(provider.id),
+        )
+
+    def perform_destroy(self, instance):
+        # Capture name/id before the row is actually gone — once delete()
+        # runs, instance.name would still work in memory, but this keeps the
+        # log call clearly "before" in intent and protects against any
+        # future on_delete-side-effect quirks.
+        provider_name = instance.name
+        provider_id   = str(instance.id)
+
+        instance.delete()
+
+        AuditLog.objects.create(
+            admin=self.request.user,
+            action=f"Deleted provider '{provider_name}'",
+            entity_type="SchemeProvider",
+            entity_id=provider_id,
+        )
 
 # ── ScholarshipScheme ViewSet ─────────────────────────────────────────────────
 
@@ -81,6 +139,39 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(cycle__id=cycle_param)
 
         return queryset
+
+    def perform_create(self, serializer):
+        scheme = serializer.save()
+
+        AuditLog.objects.create(
+            admin=self.request.user,
+            action=f"Created scheme '{scheme.name}'",
+            entity_type="Scheme",
+            entity_id=str(scheme.id),
+        )
+
+    def perform_update(self, serializer):
+        scheme = serializer.save()
+
+        AuditLog.objects.create(
+            admin=self.request.user,
+            action=f"Updated scheme '{scheme.name}'",
+            entity_type="Scheme",
+            entity_id=str(scheme.id),
+        )
+
+    def perform_destroy(self, instance):
+        scheme_name = instance.name
+        scheme_id   = str(instance.id)
+
+        instance.delete()
+
+        AuditLog.objects.create(
+            admin=self.request.user,
+            action=f"Deleted scheme '{scheme_name}'",
+            entity_type="Scheme",
+            entity_id=scheme_id,
+        )
 
     @action(detail=True, methods=['post'])
     def publish(self, request, pk=None):

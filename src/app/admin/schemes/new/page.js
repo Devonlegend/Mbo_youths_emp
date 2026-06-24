@@ -5,13 +5,13 @@ import {
   ArrowLeft, BookOpen, GraduationCap, Briefcase,
   Wrench, Banknote, AlertCircle, CheckCircle2,
   Loader2, Plus, Trash2, GripVertical, ChevronDown,
-  ChevronUp, Settings2, CalendarRange,
+  ChevronUp, Settings2, CalendarRange, Building2,
 } from "lucide-react";
 
 import { useRoleGuard } from "@/hooks/useRoleGuard";
 
 import styles from "./page.module.css";
-import { createScheme, getCycles } from "@/services";
+import { createScheme, getCycles, getProviders } from "@/services";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
@@ -211,10 +211,29 @@ export default function NewSchemePage() {
     }
     fetchActiveCycle();
   }, []);
+
+  // ── PROVIDERS ────────────────────────────────────────────────────────────
+  const [providers,       setProviders]       = useState([]);
+  const [providersLoading, setProvidersLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchProviders() {
+      try {
+        const res = await getProviders();
+        const list = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
+        setProviders(list);
+      } catch {
+        // fail silently — empty dropdown + validation error will catch it
+      } finally {
+        setProvidersLoading(false);
+      }
+    }
+    fetchProviders();
+  }, []);
  
   // ── FORM STATE ────────────────────────────────────────────────────────────
 
-  const [form, setForm] = useState({
+const [form, setForm] = useState({
     name:                   "",
     award_type:             "scholarship",
     description:            "",
@@ -224,6 +243,7 @@ export default function NewSchemePage() {
     application_open_date:  "",
     application_close_date: "",
     stacking_policy:        "major_only",
+    provider_id:            "",
   });
 
   // const [fields,   setFields]   = useState(defaultFields.scholarship.map((f, i) => ({ ...f, order: i })));
@@ -269,9 +289,10 @@ export default function NewSchemePage() {
   // }
 
   // ── VALIDATION ────────────────────────────────────────────────────────────
-  function validate() {
+function validate() {
     const e = {};
     if (!form.name.trim())               e.name = "Scheme name is required.";
+    if (!form.provider_id)               e.provider_id = "Provider is required.";
     if (!form.description.trim())        e.description = "Description is required.";
     if (!form.award_amount)              e.award_amount = "Award amount is required.";
     if (!form.total_slots)               e.total_slots = "Total slots is required.";
@@ -483,6 +504,41 @@ if (checking) {
 
         {/* RIGHT — award details + preview + submit */}
         <div className={styles.rightCol}>
+
+{/* Provider — required selection */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Provider</h2>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel}>
+                Funding Provider {errors.provider_id && <span className={styles.fieldError}>{errors.provider_id}</span>}
+              </label>
+              {providersLoading ? (
+                <div className={styles.cycleChipLoading}>
+                  <Loader2 size={13} strokeWidth={2} className={styles.spin} />
+                  <span>Loading providers...</span>
+                </div>
+              ) : providers.length === 0 ? (
+                <div className={styles.cycleChipEmpty}>
+                  <Building2 size={14} color="#94a3b8" strokeWidth={2} />
+                  <span>No providers yet — create one first</span>
+                </div>
+              ) : (
+                <select
+                  className={`${styles.input} ${errors.provider_id ? styles.inputError : ""}`}
+                  value={form.provider_id}
+                  onChange={(e) => set("provider_id", e.target.value)}
+                >
+                  <option value="">Select a provider...</option>
+                  {providers.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              )}
+              <p className={styles.cycleHint}>
+                The organization funding or sponsoring this scheme.
+              </p>
+            </div>
+          </div>
 
           {/* Cycle display — read only */}
           <div className={styles.card}>

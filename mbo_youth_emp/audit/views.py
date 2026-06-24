@@ -1,19 +1,25 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from rest_framework.generics import ListAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema_view, extend_schema
 from accounts.permissions import IsAdmin, IsSuperAdmin
 from .models import AuditLog
 from .serializers import AuditLogSerializer
 
-class AuditLogView(APIView):
-    permission_classes = [IsAuthenticated, IsAdmin | IsSuperAdmin]
 
-    @extend_schema(
+class AuditLogPagination(PageNumberPagination):
+    page_size = 100  
+
+
+@extend_schema_view(
+    get=extend_schema(
         summary="Audit log",
-        description='The 100 most recent admin actions. Admin/superadmin only.',
+        description="Paginated admin actions, newest first. Admin/superadmin only.",
         responses=AuditLogSerializer(many=True),
     )
-    def get(self, request):
-        logs = AuditLog.objects.select_related('admin').all()[:100]
-        return Response(AuditLogSerializer(logs, many=True).data)
+)
+class AuditLogView(ListAPIView):
+    permission_classes = [IsAuthenticated, IsAdmin | IsSuperAdmin]
+    serializer_class   = AuditLogSerializer
+    pagination_class    = AuditLogPagination
+    queryset            = AuditLog.objects.select_related('admin').all()

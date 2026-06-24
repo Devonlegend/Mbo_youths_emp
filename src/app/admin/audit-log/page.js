@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   ScrollText, Search, AlertCircle, Filter,
   ClipboardList, Users, BookOpen, Shield,
-  Settings, RefreshCw,
+  Settings, RefreshCw, CalendarRange, Building2,
 } from "lucide-react";
 import { useRoleGuard } from "@/hooks/useRoleGuard";
 import styles from "./page.module.css";
@@ -11,10 +11,12 @@ import { getAuditLogs } from "@/services";
 
 // ── ENTITY TYPE CONFIG ────────────────────────────────────────────────────────
 const entityConfig = {
-  Application: { icon: ClipboardList, color: "#3b82f6", bg: "#eff6ff" },
-  Student:     { icon: Users,         color: "#15803d", bg: "#f0fdf4" },
-  Scheme:      { icon: BookOpen,      color: "#7e22ce", bg: "#faf5ff" },
-  System:      { icon: Settings,      color: "#64748b", bg: "#f8fafc" },
+  Application:    { icon: ClipboardList, color: "#3b82f6", bg: "#eff6ff" },
+  Student:        { icon: Users,         color: "#15803d", bg: "#f0fdf4" },
+  Scheme:         { icon: BookOpen,      color: "#7e22ce", bg: "#faf5ff" },
+  Cycle:          { icon: CalendarRange, color: "#0891b2", bg: "#ecfeff" },
+  SchemeProvider: { icon: Building2,     color: "#b45309", bg: "#fffbeb" },
+  System:         { icon: Settings,      color: "#64748b", bg: "#f8fafc" },
 };
 
 function formatDateTime(dateStr) {
@@ -50,7 +52,7 @@ function SkeletonRow() {
   );
 }
 
-const ENTITY_FILTERS = ["All", "Application", "Student", "Scheme", "System"];
+const ENTITY_FILTERS = ["All", "Application", "Student", "Scheme", "Cycle", "SchemeProvider", "System"];
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function AuditLogPage() {
@@ -64,20 +66,19 @@ export default function AuditLogPage() {
   const [filterOpen,   setFilterOpen]   = useState(false);
 
   // ── FETCH ─────────────────────────────────────────────────────────────────
-  async function loadLogs() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res  = await getAuditLogs();
-      const data = Array.isArray(res.data) ? res.data : [];
-      setLogs(data);
-    } catch (err) {
-      const status = err?.response?.status;
-      setError("Failed to load audit log. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+async function loadLogs() {
+  setLoading(true);
+  setError(null);
+  try {
+    const res  = await getAuditLogs();
+    const data = Array.isArray(res.data?.results) ? res.data.results : [];
+    setLogs(data);
+  } catch (err) {
+    setError("Failed to load audit log. Please try again.");
+  } finally {
+    setLoading(false);
   }
+}
 
   useEffect(() => { loadLogs(); }, []);
 
@@ -272,7 +273,7 @@ export default function AuditLogPage() {
         {/* FOOTER */}
         {!loading && !error && logs.length > 0 && (
           <div className={styles.tableFooter}>
-            Showing {filtered.length} of {logs.length} entries · Last 100 actions
+            Showing {filtered.length} of {logs.length} loaded
           </div>
         )}
 

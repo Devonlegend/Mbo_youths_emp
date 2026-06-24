@@ -26,3 +26,14 @@ export const getSchemeFields = (id) =>
 
 export const getCycles = () => 
   api.get("/schemes/cycles/");
+
+// TESTING FOR PROVIDERS
+
+export const getProviders = () =>
+  api.get("/schemes/providers/");
+
+export const createProvider = (body) =>
+  api.post("/schemes/providers/", body);
+
+export const deleteProvider = (id) =>
+  api.delete(`/schemes/providers/${id}/`);
