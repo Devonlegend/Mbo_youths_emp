@@ -65,6 +65,49 @@ function RoleBadge({ role }) {
   );
 }
 
+// Modal 
+function ConfirmModal({ type, user, onConfirm, onCancel, loading }) {
+  const isDeactivate = type === "deactivate";
+  return (
+    <div className={styles.modalOverlay}>
+      <div className={styles.modal}>
+        <div className={styles.modalIcon} style={{ background: isDeactivate ? "#fef2f2" : "#f0fdf4", border: `1.5px solid ${isDeactivate ? "#fecaca" : "#bbf7d0"}` }}>
+          {isDeactivate
+            ? <UserX size={22} color="#ef4444" strokeWidth={1.8} />
+            : <UserCheck size={22} color="#15803d" strokeWidth={1.8} />
+          }
+        </div>
+        <h2 className={styles.modalTitle}>
+          {isDeactivate ? "Deactivate account?" : "Reactivate account?"}
+        </h2>
+        <p className={styles.modalBody}>
+          {isDeactivate
+            ? <><strong>{user?.firstname} {user?.lastname}</strong> will lose access to the admin portal immediately.</>
+            : <><strong>{user?.firstname} {user?.lastname}</strong> will regain access to the admin portal.</>
+          }
+        </p>
+        <div className={styles.modalActions}>
+          <button className={styles.modalCancel} onClick={onCancel} disabled={loading}>
+            Cancel
+          </button>
+          <button
+            className={isDeactivate ? styles.modalDeactivate : styles.modalReactivate}
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading
+              ? <><Loader2 size={13} strokeWidth={2} className={styles.spin} /> {isDeactivate ? "Deactivating..." : "Reactivating..."}</>
+              : isDeactivate
+                ? <><UserX size={13} strokeWidth={2} /> Deactivate</>
+                : <><UserCheck size={13} strokeWidth={2} /> Reactivate</>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function AdminSettingsPage() {
   const [user,         setUser]         = useState(null);
@@ -95,6 +138,7 @@ export default function AdminSettingsPage() {
   const [createError,  setCreateError]  = useState("");
   const [createSuccess, setCreateSuccess] = useState(false);
   const [roleUpdating, setRoleUpdating] = useState({});
+  const [confirmModal, setConfirmModal] = useState(null);
   const [deactivating, setDeactivating] = useState({});
 
   const [stats, setStats] = useState({ schemes: 0, students: 0, applications: 0 });
@@ -237,35 +281,33 @@ async function handleRoleChange(id, newRole) {
 }
 
   // ── DEACTIVATE & ACTIVATE USER ───────────────────────────────────────────────────────
-async function handleReactivate(id) {
-  if (!confirm("Reactivate this account?")) return;
-  setDeactivating((p) => ({ ...p, [id]: true }));
-  try {
-    await reactivateUser(id);
-    setAdminUsers((prev) => prev.map((u) =>
-      u.id === id ? { ...u, is_active: true } : u
-    ));
-  } catch {
-    // Fail silently
-  } finally {
-    setDeactivating((p) => ({ ...p, [id]: false }));
-  }
+async function handleDeactivate(u) {
+  setConfirmModal({ type: "deactivate", user: u });
 }
 
-  async function handleDeactivate(id) {
-    if (!confirm("Are you sure you want to deactivate this account?")) return;
-    setDeactivating((p) => ({ ...p, [id]: true }));
-    try {
-      await deactivateUser(id);
-      setAdminUsers((prev) => prev.map((u) =>
-        u.id === id ? { ...u, is_active: false } : u
-      ));
-    } catch {
-      // Fail silently
-    } finally {
-      setDeactivating((p) => ({ ...p, [id]: false }));
+async function handleReactivate(u) {
+  setConfirmModal({ type: "reactivate", user: u });
+}
+
+async function handleConfirmModal() {
+  if (!confirmModal) return;
+  const { type, user: u } = confirmModal;
+  setDeactivating((p) => ({ ...p, [u.id]: true }));
+  try {
+    if (type === "deactivate") {
+      await deactivateUser(u.id);
+      setAdminUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, is_active: false } : x));
+    } else {
+      await reactivateUser(u.id);
+      setAdminUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, is_active: true } : x));
     }
+    setConfirmModal(null);
+  } catch {
+    // fail silently
+  } finally {
+    setDeactivating((p) => ({ ...p, [u.id]: false }));
   }
+}
 
   if (loadingUser) {
     return (
@@ -277,6 +319,16 @@ async function handleReactivate(id) {
 
   return (
     <div className={styles.page}>
+
+      {confirmModal && (
+        <ConfirmModal
+          type={confirmModal.type}
+          user={confirmModal.user}
+          loading={!!deactivating[confirmModal.user?.id]}
+          onConfirm={handleConfirmModal}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
 
       <div className={styles.pageHeader}>
         <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -665,7 +717,7 @@ async function handleReactivate(id) {
                       {!isMe && u.is_active && (
                         <button
                           className={styles.deactivateBtn}
-                          onClick={() => handleDeactivate(u.id)}
+                          onClick={() => handleDeactivate(u)}
                           disabled={deactivating[u.id]}
                         >
                           {deactivating[u.id]
@@ -675,22 +727,19 @@ async function handleReactivate(id) {
                           Deactivate
                         </button>
                       )}
-                      {isMe && (
-                        <span className={styles.selfNote}>Current session</span>
-                      )}
                       {!isMe && !u.is_active && (
-                          <button
-                            className={styles.reactivateBtn}
-                            onClick={() => handleReactivate(u.id)}
-                            disabled={deactivating[u.id]}
-                          >
-                            {deactivating[u.id]
-                              ? <Loader2 size={12} strokeWidth={2} className={styles.spin} />
-                              : <UserCheck size={12} strokeWidth={2} />
-                            }
-                            Reactivate
-                          </button>
-                        )}
+                        <button
+                          className={styles.reactivateBtn}
+                          onClick={() => handleReactivate(u)}
+                          disabled={deactivating[u.id]}
+                        >
+                          {deactivating[u.id]
+                            ? <Loader2 size={12} strokeWidth={2} className={styles.spin} />
+                            : <UserCheck size={12} strokeWidth={2} />
+                          }
+                          Reactivate
+                        </button>
+                      )}
                     </div>
 
                   </div>
