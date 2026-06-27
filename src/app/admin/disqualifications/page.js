@@ -3,16 +3,18 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ShieldAlert, Search, ArrowRight, AlertCircle,
-  GraduationCap, Briefcase, Wrench, Banknote, Filter,
+  GraduationCap, Briefcase, Banknote, Filter,
   XCircle, Download,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApplications } from "@/services";
+import Pagination from "../components/pagination/Pagination";
+
+const PAGE_SIZE = 50;
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
   scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4", icon: GraduationCap },
-  // vocational:  { label: "Training",    color: "#1d4ed8", bg: "#eff6ff", icon: Wrench        },
   empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb", icon: Briefcase     },
   grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff", icon: Banknote      },
 };
@@ -58,29 +60,33 @@ export default function DisqualificationRegisterPage() {
   const [activeFilter,      setActiveFilter]      = useState("All");
   const [filterOpen,        setFilterOpen]        = useState(false);
 
-  // ── FETCH ─────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await getApplications();
-        if (cancelled) return;
-        const all = Array.isArray(res.data?.results) ? res.data.results : [];
-        const rejected = all.filter((a) =>
-          ["rejected", "withdrawn"].includes(a.status)
-        );
-        setDisqualifications(rejected);
-      } catch {
-        if (!cancelled) setError("Failed to load disqualification register.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  // ── PAGINATION STATE ───────────────────────────────────────────────────────
+  const [page,     setPage]     = useState(1);
+  const [pageInfo, setPageInfo] = useState({ count: 0, next: null, previous: null });
 
-  // ── FILTER + SEARCH ───────────────────────────────────────────────────────
+  // ── FETCH ─────────────────────────────────────────────────────────────────
+  async function loadDisqualifications(targetPage) {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getApplications(targetPage, { status: "rejected" });
+      setDisqualifications(Array.isArray(res.data?.results) ? res.data.results : []);
+      setPageInfo({
+        count:    res.data?.count    ?? 0,
+        next:     res.data?.next     ?? null,
+        previous: res.data?.previous ?? null,
+      });
+      setPage(targetPage);
+    } catch {
+      setError("Failed to load disqualification register.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadDisqualifications(1); }, []);
+
+  // ── FILTER + SEARCH (current page only) ───────────────────────────────────
   const filtered = disqualifications.filter((d) => {
     const fullName   = (d.student?.full_name || "").toLowerCase();
     const schemeName = (d.scheme?.name || "").toLowerCase();
@@ -98,7 +104,7 @@ export default function DisqualificationRegisterPage() {
     return matchSearch && matchFilter;
   });
 
-  // ── EXPORT CSV ────────────────────────────────────────────────────────────
+  // ── EXPORT CSV (current page only) ────────────────────────────────────────
   function handleExport() {
     const headers = ["#", "Full Name", "Ward", "Scheme", "Category", "Rejection Reason", "Date"];
     const rows = filtered.map((d, index) => [
@@ -145,7 +151,7 @@ export default function DisqualificationRegisterPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div className={styles.countPill}>
               <XCircle size={13} strokeWidth={2} />
-              {disqualifications.length} disqualified record{disqualifications.length !== 1 ? "s" : ""}
+              {pageInfo.count} disqualified record{pageInfo.count !== 1 ? "s" : ""}
             </div>
             <button
               onClick={handleExport}
@@ -221,6 +227,9 @@ export default function DisqualificationRegisterPage() {
           <div className={styles.emptyState}>
             <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
             <p style={{ color: "#ef4444", fontWeight: 600 }}>{error}</p>
+            <button className={styles.retryBtn} onClick={() => loadDisqualifications(page)}>
+              Try again
+            </button>
           </div>
         )}
 
@@ -229,10 +238,7 @@ export default function DisqualificationRegisterPage() {
           <div className={styles.emptyState}>
             <ShieldAlert size={28} color="#cbd5e1" strokeWidth={1.5} />
             <p className={styles.emptyTitle}>
-              {search || activeFilter !== "All"
-                ? "No matching records"
-                : "No disqualifications recorded"
-              }
+              {search || activeFilter !== "All" ? "No matching records" : "No disqualifications recorded"}
             </p>
             <p className={styles.emptySub}>
               {search || activeFilter !== "All"
@@ -256,12 +262,8 @@ export default function DisqualificationRegisterPage() {
               <div className={styles.tdStudent}>
                 <div className={styles.studentAvatar}>{getInitials(d.student?.full_name)}</div>
                 <div className={styles.studentInfo}>
-                  <span className={styles.studentName}>
-                    {d.student?.full_name || "Unknown"}
-                  </span>
-                  <span className={styles.studentMeta}>
-                    {d.student?.ward || "—"}
-                  </span>
+                  <span className={styles.studentName}>{d.student?.full_name || "Unknown"}</span>
+                  <span className={styles.studentMeta}>{d.student?.ward || "—"}</span>
                 </div>
               </div>
 
@@ -272,10 +274,7 @@ export default function DisqualificationRegisterPage() {
                 </div>
                 <div className={styles.schemeInfo}>
                   <span className={styles.schemeName}>{d.scheme?.name || "—"}</span>
-                  <span
-                    className={styles.categoryChip}
-                    style={{ color: category.color, background: category.bg }}
-                  >
+                  <span className={styles.categoryChip} style={{ color: category.color, background: category.bg }}>
                     {category.label}
                   </span>
                 </div>
@@ -296,9 +295,7 @@ export default function DisqualificationRegisterPage() {
               </div>
 
               {/* Date */}
-              <span className={styles.tdDate}>
-                {formatDate(d.submission_date)}
-              </span>
+              <span className={styles.tdDate}>{formatDate(d.submission_date)}</span>
 
               {/* View */}
               <button
@@ -312,12 +309,16 @@ export default function DisqualificationRegisterPage() {
           );
         })}
 
-        {/* FOOTER */}
-        {!loading && !error && (
-          <div className={styles.tableFooter}>
-            Showing {filtered.length} of {disqualifications.length} records
-          </div>
-        )}
+        {/* PAGINATION */}
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          totalCount={pageInfo.count}
+          hasNext={!!pageInfo.next}
+          hasPrevious={!!pageInfo.previous}
+          loading={loading}
+          onPageChange={(newPage) => loadDisqualifications(newPage)}
+        />
 
       </div>
 

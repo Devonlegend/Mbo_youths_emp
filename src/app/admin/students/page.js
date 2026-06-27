@@ -6,7 +6,10 @@ import {
   CheckCircle2, XCircle, Shield,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { getStudents } from "@/services";
+import { getStudents, getStudentStats } from "@/services";
+import Pagination from "../components/pagination/Pagination";
+
+const PAGE_SIZE = 50; // matches API_PAGE_SIZE in backend settings.py
 
 // ── SKELETON ROW ──────────────────────────────────────────────────────────────
 function SkeletonRow() {
@@ -26,36 +29,55 @@ export default function AdminStudentsPage() {
   const router = useRouter();
 
   const [students,    setStudents]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState(null);
-  const [search,      setSearch]      = useState("");
+  const [loading,      setLoading]    = useState(true);
+  const [error,        setError]      = useState(null);
+  const [search,       setSearch]     = useState("");
   const [filterVerified, setFilterVerified] = useState("all"); // "all" | "verified" | "unverified"
-  const [filterOpen,  setFilterOpen]  = useState(false);
+  const [filterOpen,   setFilterOpen] = useState(false);
 
-  // ── FETCH ─────────────────────────────────────────────────────────────────
-useEffect(() => {
-  let cancelled = false;
-  async function load() {
+  // ── PAGINATION STATE ────────────────────────────────────────────────────
+  const [page,     setPage]     = useState(1);
+  const [pageInfo, setPageInfo] = useState({ count: 0, next: null, previous: null });
+
+  // ── REAL TOTALS — from /students/stats/, NOT from the loaded page ──────
+  const [stats, setStats] = useState({ total_students: 0, verified: 0, unverified: 0 });
+
+  // ── FETCH ONE PAGE OF STUDENTS ───────────────────────────────────────────
+  async function loadStudents(targetPage) {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await getStudents();
-      if (cancelled) return;
+      const res = await getStudents(targetPage);
       setStudents(Array.isArray(res.data?.results) ? res.data.results : []);
+      setPageInfo({
+        count:    res.data?.count    ?? 0,
+        next:     res.data?.next     ?? null,
+        previous: res.data?.previous ?? null,
+      });
+      setPage(targetPage);
     } catch {
-      if (!cancelled) setError("Failed to load students. Please try again.");
+      setError("Failed to load students. Please try again.");
     } finally {
-      if (!cancelled) setLoading(false);
+      setLoading(false);
     }
   }
-  load();
-  return () => { cancelled = true; };
-}, []);
 
-  // ── COUNTS ────────────────────────────────────────────────────────────────
-  const total      = students.length;
-  const verified   = students.filter((s) => s.is_verified).length;
-  const unverified = total - verified;
+  // ── FETCH ACCURATE TOTALS (separate from pagination) ────────────────────
+  async function loadStats() {
+    try {
+      const res = await getStudentStats();
+      setStats(res.data);
+    } catch {
+      // Summary strip just falls back to "—" — not worth blocking the page for.
+    }
+  }
 
-  // ── FILTER + SEARCH ───────────────────────────────────────────────────────
+  useEffect(() => {
+    loadStudents(1);
+    loadStats();
+  }, []);
+
+  // ── FILTER + SEARCH (current page only — see note below) ────────────────
   const filtered = students.filter((s) => {
     const fullName = `${s.firstname} ${s.lastname}`.toLowerCase();
     const matchSearch = search.trim() === "" ? true :
@@ -89,12 +111,12 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* SUMMARY STRIP */}
+      {/* SUMMARY STRIP — now backed by /students/stats/, true totals */}
       <div className={styles.summaryStrip}>
         {[
-          { label: "Total Registered", value: total,      key: "all",        color: "#0f172a" },
-          { label: "Verified",         value: verified,   key: "verified",   color: "#15803d" },
-          { label: "Unverified",       value: unverified, key: "unverified", color: "#f59e0b" },
+          { label: "Total Registered", value: stats.total_students, key: "all",        color: "#0f172a" },
+          { label: "Verified",         value: stats.verified,       key: "verified",   color: "#15803d" },
+          { label: "Unverified",       value: stats.unverified,     key: "unverified", color: "#f59e0b" },
         ].map((s) => (
           <button
             key={s.key}
@@ -118,7 +140,7 @@ useEffect(() => {
             <Search size={14} className={styles.searchIcon} />
             <input
               className={styles.searchInput}
-              placeholder="Search by name, email, LGA or ward..."
+              placeholder="Search this page by name, email, LGA or ward..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -171,10 +193,7 @@ useEffect(() => {
           <div className={styles.emptyState}>
             <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
             <p style={{ color: "#ef4444", fontWeight: 600 }}>{error}</p>
-            <button
-              className={styles.retryBtn}
-              onClick={() => { setError(null); setLoading(true); }}
-            >
+            <button className={styles.retryBtn} onClick={() => loadStudents(page)}>
               Try again
             </button>
           </div>
@@ -186,7 +205,9 @@ useEffect(() => {
             <Users size={28} color="#cbd5e1" strokeWidth={1.5} />
             <p className={styles.emptyTitle}>No students found</p>
             <p className={styles.emptySub}>
-              {search ? "Try a different search term." : "No students registered yet."}
+              {search
+                ? "No match on this page — try Next to check other pages."
+                : "No students registered yet."}
             </p>
           </div>
         )}
@@ -198,11 +219,7 @@ useEffect(() => {
             (student.lastname?.[0]  || "").toUpperCase();
 
           return (
-            <div
-              key={student.user_id}
-              className={styles.tableRowData}
-            >
-              {/* Student */}
+            <div key={student.user_id} className={styles.tableRowData}>
               <div className={styles.tdStudent}>
                 <div className={styles.studentAvatar}>{initials}</div>
                 <div className={styles.studentInfo}>
@@ -210,60 +227,51 @@ useEffect(() => {
                     {student.firstname} {student.lastname}
                   </span>
                   <span className={styles.studentMeta}>
-                    {student.level || student.cgpa ? (
-                      <>
-                        {student.level ? `${student.level} Level` : ""}
-                        {student.cgpa  ? ` · CGPA ${student.cgpa}` : ""}
-                      </>
-                    ) : null}
+                    {student.level ? `${student.level} Level` : ""}
+                    {student.cgpa  ? ` · CGPA ${student.cgpa}` : ""}
                   </span>
                 </div>
               </div>
 
-              {/* Email */}
-              <span className={styles.tdEmail}>
-                {student.email || "—"}
-              </span>
+              <span className={styles.tdEmail}>{student.email || "—"}</span>
 
-              {/* LGA / Ward */}
               <div className={styles.tdLocation}>
                 <span className={styles.lgaText}>{student.lga || "—"}</span>
                 <span className={styles.wardText}>{student.ward || "—"}</span>
               </div>
 
-              {/* Verified */}
               <div className={styles.tdVerified}>
                 {student.is_verified ? (
                   <span className={styles.verifiedChip}>
-                    <CheckCircle2 size={11} strokeWidth={2.5} />
-                    Verified
+                    <CheckCircle2 size={11} strokeWidth={2.5} /> Verified
                   </span>
                 ) : (
                   <span className={styles.unverifiedChip}>
-                    <XCircle size={11} strokeWidth={2.5} />
-                    Unverified
+                    <XCircle size={11} strokeWidth={2.5} /> Unverified
                   </span>
                 )}
               </div>
 
-              {/* Action */}
               <button
                 className={styles.viewBtn}
                 onClick={() => router.push(`/admin/students/${student.user_id}`)}
               >
                 View <ArrowRight size={11} strokeWidth={2} />
               </button>
-
             </div>
           );
         })}
 
-        {/* FOOTER */}
-        {!loading && !error && (
-          <div className={styles.tableFooter}>
-            Showing {filtered.length} of {students.length} students
-          </div>
-        )}
+        {/* PAGINATION BAR — replaces the old static tableFooter */}
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          totalCount={pageInfo.count}
+          hasNext={!!pageInfo.next}
+          hasPrevious={!!pageInfo.previous}
+          loading={loading}
+          onPageChange={(newPage) => loadStudents(newPage)}
+        />
 
       </div>
 

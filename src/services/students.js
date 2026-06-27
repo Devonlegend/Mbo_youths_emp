@@ -9,8 +9,8 @@ export const updateStudentProfile = (body) =>
 export const getStudentStats = () =>
   api.get("/students/stats/");
 
-export const getStudents = () =>
-  api.get("/students/");
+export const getStudents = (page = 1) =>
+  api.get("/students/", { params: { page } });
 
 export const getStudentById = (id) =>
   api.get(`/students/${id}/`);

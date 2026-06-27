@@ -61,7 +61,9 @@ export default function AdminProvidersPage() {
   const [createError,  setCreateError]  = useState("");
   const [createSuccess, setCreateSuccess] = useState(false);
 
-  const [deleteFor,    setDeleteFor]    = useState(null);   // provider pending delete confirm
+  const [deleteFor,    setDeleteFor]    = useState(null);   
+  
+  // provider pending delete confirm
   const [deleting,     setDeleting]     = useState(false);
   const [deleteError,  setDeleteError]  = useState("");
 

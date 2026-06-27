@@ -88,17 +88,20 @@ function Stepper({ step, uiStatus }) {
 }
 
 // ── BUILD FORM FIELDS from details ────────────────────────────────────────────
-function buildFields(schemeCategory, details) {
+function buildFields(schemeCategory, details, app) {
   if (!details || Object.keys(details).length === 0) return [];
 
   const fd = details;
 
+  // self_declaration_received_support / self_declaration_details live on the
+  // application itself, NOT inside `details` (see serialize_application() in
+  // applications/serializers.py — they're top-level, sibling fields to `details`).
   const declaration = {
     section: "Self-Declaration",
     items: [{
       label: "Received External Support",
-      value: fd.self_declaration_received_support
-        ? `Yes — ${(fd.self_declaration_details || [])
+      value: app?.self_declaration_received_support
+        ? `Yes — ${(app?.self_declaration_details || [])
             .map((d) => `${d.organisation} (${d.category}, ${d.year})`)
             .join(", ") || "No details provided"}`
         : "No",
@@ -282,7 +285,7 @@ export default function AdminApplicationDetailPage() {
   const status   = statusConfig[app.status] || statusConfig.submitted;
   const uiStatus = status.label.toLowerCase();
   const step     = stepFromStatus[app.status] || 1;
-  const fields   = buildFields(catKey, app.details || {});
+  const fields   = buildFields(catKey, app.details || {}, app);
   const documentFields = schemeFields.filter((f) => f.field_type === "file");
 
   const isDecidable = [

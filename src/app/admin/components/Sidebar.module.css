@@ -156,7 +156,7 @@
 .divider {
   height: 1px;
   background: #f1f5f9;
-  margin: 8px 4px;
+  margin: 2px 4px;
   flex-shrink: 0;
 }
 
@@ -164,7 +164,7 @@
 .navItem {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   padding: 9px 10px;
   border-radius: 10px;
   cursor: pointer;
@@ -201,8 +201,8 @@
 
 /* Icon */
 .navIcon {
-  width: 36px;
-  height: 36px;
+  width: 33px;
+  height: 33px;
   display: flex;
   align-items: center;
   justify-content: center;

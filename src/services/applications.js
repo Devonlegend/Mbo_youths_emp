@@ -3,8 +3,8 @@ import api from "./axiosInstance";
 export const submitApplication = (body) =>
   api.post("/applications/submit/", body);
 
-export const getApplications = () =>
-  api.get("/applications/");
+export const getApplications = (page = 1, params = {}) =>
+  api.get("/applications/", { params: { page, ...params } });
 
 export const getApplication = (id) =>
   api.get(`/applications/${id}/`);

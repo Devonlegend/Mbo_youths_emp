@@ -34,8 +34,8 @@ export const forgotPasswordVerifyOtp = (body) =>
 export const forgotPasswordReset = (body) =>
   api.post("/auth/password/reset/confirm/", body);
 
-export const getAuditLogs = () =>
-  api.get("/audit/");
+export const getAuditLogs = (page = 1) =>
+  api.get("/audit/", { params: { page } });
 
 export const getAdminUsers = () =>
   api.get("/auth/admin-users/");

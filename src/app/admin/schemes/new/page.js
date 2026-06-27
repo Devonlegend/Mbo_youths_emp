@@ -321,6 +321,7 @@ function validate() {
         remaining_slots: parseInt(form.total_slots),
         is_published:    false,
         is_active:       true,
+        cycle_id:        activeCycle?.id ?? null,
       });
 
       const schemeId = res.data.id;

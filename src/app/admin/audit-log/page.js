@@ -8,6 +8,9 @@ import {
 import { useRoleGuard } from "@/hooks/useRoleGuard";
 import styles from "./page.module.css";
 import { getAuditLogs } from "@/services";
+import Pagination from "../components/pagination/Pagination";
+
+const PAGE_SIZE = 100; // matches AuditLogPagination.page_size
 
 // ── ENTITY TYPE CONFIG ────────────────────────────────────────────────────────
 const entityConfig = {
@@ -65,28 +68,37 @@ export default function AuditLogPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [filterOpen,   setFilterOpen]   = useState(false);
 
+  // ── PAGINATION STATE ───────────────────────────────────────────────────────
+  const [page,     setPage]     = useState(1);
+  const [pageInfo, setPageInfo] = useState({ count: 0, next: null, previous: null });
+
   // ── FETCH ─────────────────────────────────────────────────────────────────
-async function loadLogs() {
-  setLoading(true);
-  setError(null);
-  try {
-    const res  = await getAuditLogs();
-    const data = Array.isArray(res.data?.results) ? res.data.results : [];
-    setLogs(data);
-  } catch (err) {
-    setError("Failed to load audit log. Please try again.");
-  } finally {
-    setLoading(false);
+  async function loadLogs(targetPage = 1) {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getAuditLogs(targetPage);
+      setLogs(Array.isArray(res.data?.results) ? res.data.results : []);
+      setPageInfo({
+        count:    res.data?.count    ?? 0,
+        next:     res.data?.next     ?? null,
+        previous: res.data?.previous ?? null,
+      });
+      setPage(targetPage);
+    } catch {
+      setError("Failed to load audit log. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
-  useEffect(() => { loadLogs(); }, []);
+  useEffect(() => { loadLogs(1); }, []);
 
-  // ── FILTER + SEARCH ───────────────────────────────────────────────────────
+  // ── FILTER + SEARCH (current page only) ───────────────────────────────────
   const filtered = logs.filter((log) => {
     const matchSearch = search.trim() === "" ? true :
-      (log.action     || "").toLowerCase().includes(search.toLowerCase()) ||
-      (log.admin_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (log.action      || "").toLowerCase().includes(search.toLowerCase()) ||
+      (log.admin_name  || "").toLowerCase().includes(search.toLowerCase()) ||
       (log.entity_type || "").toLowerCase().includes(search.toLowerCase());
 
     const matchFilter = activeFilter === "All" ? true :
@@ -95,7 +107,7 @@ async function loadLogs() {
     return matchSearch && matchFilter;
   });
 
-    if (checking) {
+  if (checking) {
     return (
       <div style={{ padding: 60, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
         Checking access...
@@ -118,7 +130,7 @@ async function loadLogs() {
             <p className={styles.sub}>Complete record of all administrative actions. Read-only.</p>
           </div>
         </div>
-        <button className={styles.refreshBtn} onClick={loadLogs} disabled={loading}>
+        <button className={styles.refreshBtn} onClick={() => loadLogs(1)} disabled={loading}>
           <RefreshCw size={13} strokeWidth={2} className={loading ? styles.spin : ""} />
           Refresh
         </button>
@@ -128,7 +140,7 @@ async function loadLogs() {
       <div className={styles.infoBanner}>
         <Shield size={14} color="#3b82f6" strokeWidth={2} style={{ flexShrink: 0 }} />
         <span>
-          Every administrative action is permanently recorded here for accountability and audit purposes. Records areretained for a minimum of 5 years.
+          Every administrative action is permanently recorded here for accountability and audit purposes. Records are retained for a minimum of 5 years.
         </span>
       </div>
 
@@ -171,10 +183,10 @@ async function loadLogs() {
           </div>
 
           {!loading && !error && logs.length > 0 && (
-          <span className={styles.logCount}>
-            {filtered.length} entr{filtered.length !== 1 ? "ies" : "y"}
-          </span>
-        )}
+            <span className={styles.logCount}>
+              {filtered.length} entr{filtered.length !== 1 ? "ies" : "y"}
+            </span>
+          )}
         </div>
 
         {/* TABLE HEADER */}
@@ -193,21 +205,18 @@ async function loadLogs() {
           <div className={styles.emptyState}>
             <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
             <p style={{ color: "#ef4444", fontWeight: 600 }}>{error}</p>
-            <button className={styles.retryBtn} onClick={loadLogs}>
+            <button className={styles.retryBtn} onClick={() => loadLogs(page)}>
               Try again
             </button>
           </div>
         )}
 
-        {/* EMPTY — endpoint exists but no logs yet */}
+        {/* EMPTY */}
         {!loading && !error && filtered.length === 0 && (
           <div className={styles.emptyState}>
             <ScrollText size={28} color="#cbd5e1" strokeWidth={1.5} />
             <p className={styles.emptyTitle}>
-              {search || activeFilter !== "All"
-                ? "No matching entries"
-                : "No audit entries yet"
-              }
+              {search || activeFilter !== "All" ? "No matching entries" : "No audit entries yet"}
             </p>
             <p className={styles.emptySub}>
               {search || activeFilter !== "All"
@@ -245,37 +254,32 @@ async function loadLogs() {
 
               {/* Entity type */}
               <div className={styles.tdType}>
-                <div
-                  className={styles.typeChip}
-                  style={{ background: entConfig.bg }}
-                >
+                <div className={styles.typeChip} style={{ background: entConfig.bg }}>
                   <Icon size={11} strokeWidth={2} style={{ color: entConfig.color }} />
-                  <span style={{ color: entConfig.color }}>
-                    {log.entity_type || "—"}
-                  </span>
+                  <span style={{ color: entConfig.color }}>{log.entity_type || "—"}</span>
                 </div>
               </div>
 
               {/* Time */}
               <div className={styles.tdTime}>
-                <span className={styles.timeAgo}>
-                  {formatTimeAgo(log.timestamp)}
-                </span>
-                <span className={styles.timeAbsolute}>
-                  {formatDateTime(log.timestamp)}
-                </span>
+                <span className={styles.timeAgo}>{formatTimeAgo(log.timestamp)}</span>
+                <span className={styles.timeAbsolute}>{formatDateTime(log.timestamp)}</span>
               </div>
 
             </div>
           );
         })}
 
-        {/* FOOTER */}
-        {!loading && !error && logs.length > 0 && (
-          <div className={styles.tableFooter}>
-            Showing {filtered.length} of {logs.length} loaded
-          </div>
-        )}
+        {/* PAGINATION */}
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          totalCount={pageInfo.count}
+          hasNext={!!pageInfo.next}
+          hasPrevious={!!pageInfo.previous}
+          loading={loading}
+          onPageChange={(newPage) => loadLogs(newPage)}
+        />
 
       </div>
 

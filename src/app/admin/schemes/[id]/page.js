@@ -5,7 +5,7 @@ import {
   ArrowLeft, BookOpen, GraduationCap, Briefcase,
   Wrench, Banknote, AlertCircle, CheckCircle2,
   Loader2, XCircle, Edit2, Save, X,
-  Users, Calendar, DollarSign, Shield, CalendarRange,
+  Users, Calendar, DollarSign, Shield, CalendarRange, Building2,
 } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -301,6 +301,15 @@ if (checking) {
                   />
                 </div>
                 <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Provider</label>
+                  <input
+                    className={styles.input}
+                    value={scheme.provider?.name || "—"}
+                    disabled
+                    style={{ background: "#f1f5f9", color: "#64748b", cursor: "not-allowed" }}
+                  />
+                </div>
+                <div className={styles.field}>
                   <label className={styles.fieldLabel}>Scheme Name</label>
                   <input className={styles.input} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
                 </div>
@@ -346,6 +355,7 @@ if (checking) {
             ) : (
               <div className={styles.infoGrid}>
                 <InfoRow icon={CalendarRange} label="Cycle" value={scheme.cycle?.name || "—"} />
+                <InfoRow icon={Building2}     label="Provider" value={scheme.provider?.name || "—"} />
                 <InfoRow icon={BookOpen}     label="Description"      value={scheme.description} />
                 <InfoRow icon={Calendar}     label="Academic Year"    value={scheme.academic_year} />
                 <InfoRow icon={DollarSign}   label="Award Amount"     value={formatCurrency(scheme.award_amount)} />

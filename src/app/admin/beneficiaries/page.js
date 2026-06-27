@@ -3,15 +3,17 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   BadgeCheck, Search, ArrowRight, AlertCircle,
-  GraduationCap, Briefcase, Wrench, Banknote, Filter, Download,
+  GraduationCap, Briefcase, Banknote, Filter, Download,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApplications } from "@/services";
+import Pagination from "../components/pagination/Pagination";
+
+const PAGE_SIZE = 50;
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
   scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4", icon: GraduationCap },
-  // vocational:  { label: "Training",    color: "#1d4ed8", bg: "#eff6ff", icon: Wrench        },
   empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb", icon: Briefcase     },
   grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff", icon: Banknote      },
 };
@@ -57,27 +59,33 @@ export default function BeneficiaryRegisterPage() {
   const [activeFilter,  setActiveFilter]  = useState("All");
   const [filterOpen,    setFilterOpen]    = useState(false);
 
-  // ── FETCH ─────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res  = await getApplications();
-        if (cancelled) return;
-        const all  = Array.isArray(res.data?.results) ? res.data.results : [];
-        const approved = all.filter((a) => a.status === "approved");
-        setBeneficiaries(approved);
-      } catch {
-        if (!cancelled) setError("Failed to load beneficiary register.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  // ── PAGINATION STATE ───────────────────────────────────────────────────────
+  const [page,     setPage]     = useState(1);
+  const [pageInfo, setPageInfo] = useState({ count: 0, next: null, previous: null });
 
-  // ── FILTER + SEARCH ───────────────────────────────────────────────────────
+  // ── FETCH ─────────────────────────────────────────────────────────────────
+  async function loadBeneficiaries(targetPage) {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getApplications(targetPage, { status: "approved" });
+      setBeneficiaries(Array.isArray(res.data?.results) ? res.data.results : []);
+      setPageInfo({
+        count:    res.data?.count    ?? 0,
+        next:     res.data?.next     ?? null,
+        previous: res.data?.previous ?? null,
+      });
+      setPage(targetPage);
+    } catch {
+      setError("Failed to load beneficiary register.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadBeneficiaries(1); }, []);
+
+  // ── FILTER + SEARCH (current page only) ───────────────────────────────────
   const filtered = beneficiaries.filter((b) => {
     const fullName   = (b.student?.full_name || "").toLowerCase();
     const schemeName = (b.scheme?.name || "").toLowerCase();
@@ -94,7 +102,7 @@ export default function BeneficiaryRegisterPage() {
     return matchSearch && matchFilter;
   });
 
-  // ── EXPORT CSV ────────────────────────────────────────────────────────────
+  // ── EXPORT CSV (current page only) ────────────────────────────────────────
   function handleExport() {
     const headers = ["#", "Full Name", "Scheme", "Category", "Ward", "Bank Name", "Account Number", "Account Name", "Approved Date"];
     const rows = filtered.map((b, index) => [
@@ -143,7 +151,7 @@ export default function BeneficiaryRegisterPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div className={styles.countPill}>
               <BadgeCheck size={13} strokeWidth={2} />
-              {beneficiaries.length} confirmed beneficiar{beneficiaries.length !== 1 ? "ies" : "y"}
+              {pageInfo.count} confirmed beneficiar{pageInfo.count !== 1 ? "ies" : "y"}
             </div>
             <button
               onClick={handleExport}
@@ -220,6 +228,9 @@ export default function BeneficiaryRegisterPage() {
           <div className={styles.emptyState}>
             <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
             <p style={{ color: "#ef4444", fontWeight: 600 }}>{error}</p>
+            <button className={styles.retryBtn} onClick={() => loadBeneficiaries(page)}>
+              Try again
+            </button>
           </div>
         )}
 
@@ -255,12 +266,8 @@ export default function BeneficiaryRegisterPage() {
               <div className={styles.tdStudent}>
                 <div className={styles.studentAvatar}>{getInitials(b.student?.full_name)}</div>
                 <div className={styles.studentInfo}>
-                  <span className={styles.studentName}>
-                    {b.student?.full_name || "Unknown"}
-                  </span>
-                  <span className={styles.studentMeta}>
-                    #{String(index + 1).padStart(3, "0")}
-                  </span>
+                  <span className={styles.studentName}>{b.student?.full_name || "Unknown"}</span>
+                  <span className={styles.studentMeta}>#{String(index + 1).padStart(3, "0")}</span>
                 </div>
               </div>
 
@@ -271,10 +278,7 @@ export default function BeneficiaryRegisterPage() {
                 </div>
                 <div className={styles.schemeInfo}>
                   <span className={styles.schemeName}>{b.scheme?.name || "—"}</span>
-                  <span
-                    className={styles.categoryChip}
-                    style={{ color: category.color, background: category.bg }}
-                  >
+                  <span className={styles.categoryChip} style={{ color: category.color, background: category.bg }}>
                     {category.label}
                   </span>
                 </div>
@@ -298,9 +302,7 @@ export default function BeneficiaryRegisterPage() {
               </div>
 
               {/* Approved date */}
-              <span className={styles.tdDate}>
-                {formatDate(b.submission_date)}
-              </span>
+              <span className={styles.tdDate}>{formatDate(b.submission_date)}</span>
 
               {/* View */}
               <button
@@ -314,12 +316,16 @@ export default function BeneficiaryRegisterPage() {
           );
         })}
 
-        {/* FOOTER */}
-        {!loading && !error && (
-          <div className={styles.tableFooter}>
-            Showing {filtered.length} of {beneficiaries.length} beneficiaries
-          </div>
-        )}
+        {/* PAGINATION */}
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          totalCount={pageInfo.count}
+          hasNext={!!pageInfo.next}
+          hasPrevious={!!pageInfo.previous}
+          loading={loading}
+          onPageChange={(newPage) => loadBeneficiaries(newPage)}
+        />
 
       </div>
 

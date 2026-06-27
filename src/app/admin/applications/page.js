@@ -8,6 +8,9 @@ import {
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApplications } from "@/services";
+import Pagination from "../components/pagination/Pagination";
+
+const PAGE_SIZE = 50;
 
 // ── STATUS MAPPING ────────────────────────────────────────────────────────────
 const statusConfig = {
@@ -69,28 +72,37 @@ export default function AdminApplicationsPage() {
   const [activeTab,    setActiveTab]    = useState(initialTab);
   const [search,       setSearch]       = useState("");
 
+  // ── PAGINATION STATE ───────────────────────────────────────────────────────
+  const [page,     setPage]     = useState(1);
+  const [pageInfo, setPageInfo] = useState({ count: 0, next: null, previous: null });
+
   // ── FETCH ─────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res  = await getApplications();
-        if (cancelled) return;
-        const data = Array.isArray(res.data?.results) ? res.data.results : [];
-        setApplications(data);
-      } catch {
-        if (!cancelled) setError("Failed to load applications. Please try again.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+  async function loadApplications(targetPage) {
+    setLoading(true);
+    setError(null);
+    try {
+      const res  = await getApplications(targetPage);
+      setApplications(Array.isArray(res.data?.results) ? res.data.results : []);
+      setPageInfo({
+        count:    res.data?.count    ?? 0,
+        next:     res.data?.next     ?? null,
+        previous: res.data?.previous ?? null,
+      });
+      setPage(targetPage);
+    } catch {
+      setError("Failed to load applications. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    load();
-    return () => { cancelled = true; };
+  }
+
+  useEffect(() => {
+    loadApplications(1);
   }, []);
 
-  // ── DERIVED COUNTS ────────────────────────────────────────────────────────
+  // ── DERIVED COUNTS (current page only) ───────────────────────────────────
   const counts = {
-    total:    applications.length,
+    total:    pageInfo.count,
     pending:  applications.filter((a) =>
       ["submitted", "eligibility_check", "document_review",
        "shortlisted", "draft"].includes(a.status)
@@ -102,7 +114,7 @@ export default function AdminApplicationsPage() {
     ).length,
   };
 
-  // ── FILTER BY TAB + SEARCH ────────────────────────────────────────────────
+  // ── FILTER BY TAB + SEARCH (current page only) ────────────────────────────
   const filtered = applications.filter((app) => {
     const tabMatch =
       activeTab === "all"     ? true :
@@ -214,7 +226,7 @@ export default function AdminApplicationsPage() {
               <p style={{ color: "#ef4444", fontWeight: 600 }}>{error}</p>
               <button
                 className={styles.retryBtn}
-                onClick={() => { setError(null); setLoading(true); }}
+                onClick={() => loadApplications(page)}
               >
                 Try again
               </button>
@@ -326,12 +338,16 @@ export default function AdminApplicationsPage() {
 
         </div>
 
-        {/* Row count */}
-        {!loading && !error && (
-          <div className={styles.tableFooter}>
-            Showing {filtered.length} of {applications.length} applications
-          </div>
-        )}
+        {/* PAGINATION */}
+        <Pagination
+          page={page}
+          pageSize={PAGE_SIZE}
+          totalCount={pageInfo.count}
+          hasNext={!!pageInfo.next}
+          hasPrevious={!!pageInfo.previous}
+          loading={loading}
+          onPageChange={(newPage) => loadApplications(newPage)}
+        />
 
       </div>
 
