@@ -71,12 +71,12 @@ function ConfirmModal({ type, user, onConfirm, onCancel, loading }) {
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modal}>
-        <div className={styles.modalIcon} style={{ background: isDeactivate ? "#fef2f2" : "#f0fdf4", border: `1.5px solid ${isDeactivate ? "#fecaca" : "#bbf7d0"}` }}>
-          {isDeactivate
-            ? <UserX size={22} color="#ef4444" strokeWidth={1.8} />
-            : <UserCheck size={22} color="#15803d" strokeWidth={1.8} />
-          }
-        </div>
+        <div className={styles.modalIcon} style={{ background: isDeactivate ? "var(--color-error-bg)" : "var(--color-primary-light)", border: `1.5px solid ${isDeactivate ? "var(--color-error-border)" : "var(--color-primary-border)"}` }}>
+        {isDeactivate
+          ? <UserX size={22} color="var(--color-error)" strokeWidth={1.8} />
+          : <UserCheck size={22} color="var(--color-primary)" strokeWidth={1.8} />
+        }
+      </div>
         <h2 className={styles.modalTitle}>
           {isDeactivate ? "Deactivate account?" : "Reactivate account?"}
         </h2>
@@ -331,9 +331,9 @@ async function handleConfirmModal() {
       )}
 
       <div className={styles.pageHeader}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Settings size={20} color="#15803d" strokeWidth={1.8} />
-        </div>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Settings size={20} color="var(--color-primary)" strokeWidth={1.8} />
+      </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
           <h1 className={styles.title}>Settings</h1>
           <p className={styles.sub}>Manage your account and portal configuration.</p>
@@ -343,9 +343,9 @@ async function handleConfirmModal() {
       {/* SYSTEM STATUS */}
       <div className={styles.statusStrip}>
         {[
-          { label: "Total Schemes",      value: stats.schemes,      color: "#15803d" },
-          { label: "Total Students",     value: stats.students,     color: "#1d4ed8" },
-          { label: "Total Applications", value: stats.applications, color: "#b45309" },
+          { label: "Total Schemes",      value: stats.schemes,      color: "var(--color-primary)" },
+          { label: "Total Students",     value: stats.students,     color: "#60a5fa"               },
+          { label: "Total Applications", value: stats.applications, color: "#fbbf24"               },
         ].map((s) => (
           <div key={s.label} className={styles.statusItem}>
             <span className={styles.statusValue} style={{ color: s.color }}>

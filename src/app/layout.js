@@ -1,5 +1,7 @@
+
 import { Sora, DM_Sans } from "next/font/google";
 import "./globals.css";
+import AdminThemeProvider from "./admin/components/AdminThemeProvider";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -20,9 +22,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={sora.variable + " " + dmSans.variable}>
-        {children}
+        <AdminThemeProvider>
+          {children}
+        </AdminThemeProvider>
       </body>
     </html>
   );

@@ -14,15 +14,15 @@ import { getStudentById, getApplications, verifyStudent } from "@/services";
 
 // ── STATUS CONFIG ─────────────────────────────────────────────────────────────
 const statusConfig = {
-  submitted:         { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  eligibility_check: { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  document_review:   { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  shortlisted:       { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  draft:             { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  double_dip_flag:   { label: "Flagged",  color: "#ef4444", bg: "#fef2f2" },
-  approved:          { label: "Approved", color: "#15803d", bg: "#f0fdf4" },
-  rejected:          { label: "Rejected", color: "#64748b", bg: "#f8fafc" },
-  withdrawn:         { label: "Rejected", color: "#64748b", bg: "#f8fafc" },
+  submitted:         { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  eligibility_check: { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  document_review:   { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  shortlisted:       { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  draft:             { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  double_dip_flag:   { label: "Flagged",  color: "#ef4444", bg: "rgba(239,68,68,0.1)"   },
+  approved:          { label: "Approved", color: "#4ade80", bg: "rgba(74,222,128,0.1)"  },
+  rejected:          { label: "Rejected", color: "#64748b", bg: "rgba(100,116,139,0.1)" },
+  withdrawn:         { label: "Rejected", color: "#64748b", bg: "rgba(100,116,139,0.1)" },
 };
 
 // ── CATEGORY ICON ─────────────────────────────────────────────────────────────

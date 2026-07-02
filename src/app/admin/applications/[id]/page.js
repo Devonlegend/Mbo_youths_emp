@@ -12,15 +12,15 @@ import { getApplication, reviewApplication, getSchemeFields } from "@/services";
 
 // ── STATUS MAPPING ────────────────────────────────────────────────────────────
 const statusConfig = {
-  submitted:         { label: "Pending",     color: "#f59e0b", bg: "#fffbeb" },
-  eligibility_check: { label: "Pending",     color: "#f59e0b", bg: "#fffbeb" },
-  document_review:   { label: "Pending",     color: "#f59e0b", bg: "#fffbeb" },
-  shortlisted:       { label: "Shortlisted", color: "#3b82f6", bg: "#eff6ff" },
-  draft:             { label: "Pending",     color: "#f59e0b", bg: "#fffbeb" },
-  double_dip_flag:   { label: "Flagged",     color: "#ef4444", bg: "#fef2f2" },
-  approved:          { label: "Approved",    color: "#15803d", bg: "#f0fdf4" },
-  rejected:          { label: "Rejected",    color: "#64748b", bg: "#f8fafc" },
-  withdrawn:         { label: "Rejected",    color: "#64748b", bg: "#f8fafc" },
+  submitted:         { label: "Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  eligibility_check: { label: "Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  document_review:   { label: "Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  shortlisted:       { label: "Shortlisted", color: "#3b82f6", bg: "rgba(59,130,246,0.1)"  },
+  draft:             { label: "Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  double_dip_flag:   { label: "Flagged",     color: "#ef4444", bg: "rgba(239,68,68,0.1)"   },
+  approved:          { label: "Approved",    color: "#4ade80", bg: "rgba(74,222,128,0.1)"  },
+  rejected:          { label: "Rejected",    color: "#64748b", bg: "rgba(100,116,139,0.1)" },
+  withdrawn:         { label: "Rejected",    color: "#64748b", bg: "rgba(100,116,139,0.1)" },
 };
 // NOTE: "shortlisted" entry above is left in place intentionally. Existing
 // applications that were shortlisted before this change (if any) still need
@@ -29,9 +29,9 @@ const statusConfig = {
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
-  scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4", icon: GraduationCap },
-  empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb", icon: Briefcase     },
-  grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff", icon: Banknote      },
+  scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
+  empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
+  grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
 };
 
 // ── STEPPER ───────────────────────────────────────────────────────────────────
@@ -625,13 +625,13 @@ export default function AdminApplicationDetailPage() {
           display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999,
         }}>
           <div style={{
-            background: "#fff", borderRadius: 16, padding: 32, maxWidth: 400, width: "90%",
+            background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 16, padding: 32, maxWidth: 400, width: "90%",
           }}>
-            <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>
+            <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: "var(--color-text)" }}>
               {confirmModal === "approved" ? "Approve Application?" : "Reject Application?"}
               {/* "shortlisted" branch removed along with the Shortlist button above */}
             </h3>
-            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>
+            <p style={{ fontSize: 13, color: "var(--color-text-muted)", marginBottom: 24 }}>
               This action is permanent and cannot be undone.
             </p>
             <div style={{ display: "flex", gap: 12 }}>
@@ -639,8 +639,8 @@ export default function AdminApplicationDetailPage() {
                 onClick={() => setConfirmModal(null)}
                 style={{
                   flex: 1, padding: "10px 0", borderRadius: 8,
-                  border: "1px solid #e2e8f0", background: "#fff",
-                  fontSize: 13, cursor: "pointer", color: "#374151",
+                  border: "1px solid var(--color-border)", background: "var(--color-subtle)",
+                  fontSize: 13, cursor: "pointer", color: "var(--color-text-secondary)",
                 }}
               >
                 Cancel

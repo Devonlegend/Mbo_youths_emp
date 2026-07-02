@@ -28,3 +28,80 @@
     font-family: var(--font-inter), sans-serif;
   }
 }
+
+/* ══════════════════════════════════════════════
+   ADMIN PORTAL — CSS VARIABLES
+   Scoped to .adminShell for dark mode isolation
+══════════════════════════════════════════════ */
+
+:root {
+  /* Primary */
+  --color-primary:        #15803d;
+  --color-primary-hover:  #166534;
+  --color-primary-light:  #f0fdf4;
+  --color-primary-border: #bbf7d0;
+
+  /* Backgrounds */
+  --color-bg:             #f8fafc;
+  --color-card:           #ffffff;
+  --color-subtle:         #f1f5f9;
+
+  /* Borders */
+  --color-border:         #e2e8f0;
+  --color-border-subtle:  #f1f5f9;
+
+  /* Text */
+  --color-text:           #0f172a;
+  --color-text-secondary: #374151;
+  --color-text-muted:     #94a3b8;
+  --color-text-placeholder: #cbd5e1;
+
+  /* Status */
+  --color-error:          #ef4444;
+  --color-error-bg:       #fef2f2;
+  --color-error-border:   #fecaca;
+  --color-warning:        #f59e0b;
+  --color-warning-bg:     #fffbeb;
+  --color-info:           #3b82f6;
+  --color-info-bg:        #eff6ff;
+
+  /* Fonts */
+  --font-heading: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  --font-body:    var(--font-inter), 'Inter', sans-serif;
+}
+
+[data-theme="dark"] {
+  /* Primary */
+  --color-primary:        #4ade80;
+  --color-primary-hover:  #22c55e;
+  --color-primary-light:  rgba(74, 222, 128, 0.08);
+  --color-primary-border: rgba(74, 222, 128, 0.2);
+
+  /* Backgrounds */
+  --color-bg:             #111111;
+  --color-card:           #1a1a1a;
+  --color-subtle:         #222222;
+
+  /* Borders */
+  --color-border:         #2e2e2e;
+  --color-border-subtle:  #1f1f1f;
+
+  /* Text */
+  --color-text:           #ededed;
+  --color-text-secondary: #a1a1a1;
+  --color-text-muted:     #717171;
+  --color-text-placeholder: #4a4a4a;
+
+  /* Status */
+  --color-error:          #f87171;
+  --color-error-bg:       rgba(248, 113, 113, 0.08);
+  --color-error-border:   rgba(248, 113, 113, 0.2);
+  --color-warning:        #fbbf24;
+  --color-warning-bg:     rgba(251, 191, 36, 0.08);
+  --color-info:           #60a5fa;
+  --color-info-bg:        rgba(96, 165, 250, 0.08);
+
+  /* Fonts stay the same */
+  --font-heading: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  --font-body:    var(--font-inter), 'Inter', sans-serif;
+}

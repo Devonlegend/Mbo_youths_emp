@@ -14,22 +14,22 @@ const PAGE_SIZE = 50;
 
 // ── STATUS MAPPING ────────────────────────────────────────────────────────────
 const statusConfig = {
-  submitted:         { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  eligibility_check: { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  document_review:   { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  shortlisted:       { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  draft:             { label: "Pending",  color: "#f59e0b", bg: "#fffbeb" },
-  double_dip_flag:   { label: "Flagged",  color: "#ef4444", bg: "#fef2f2" },
-  approved:          { label: "Approved", color: "#15803d", bg: "#f0fdf4" },
-  rejected:          { label: "Rejected", color: "#64748b", bg: "#f8fafc" },
-  withdrawn:         { label: "Rejected", color: "#64748b", bg: "#f8fafc" },
+  submitted:         { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+  eligibility_check: { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+  document_review:   { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+  shortlisted:       { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+  draft:             { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
+  double_dip_flag:   { label: "Flagged",  color: "#ef4444", bg: "rgba(239,68,68,0.1)"  },
+  approved:          { label: "Approved", color: "#4ade80", bg: "rgba(74,222,128,0.1)"  },
+  rejected:          { label: "Rejected", color: "#64748b", bg: "rgba(100,116,139,0.1)" },
+  withdrawn:         { label: "Rejected", color: "#64748b", bg: "rgba(100,116,139,0.1)" },
 };
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
-  scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4" },
-  empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb" },
-  grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff" },
+  scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)"  },
+  empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)"  },
+  grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)" },
 };
 
 function formatDate(dateStr) {
@@ -138,9 +138,9 @@ export default function AdminApplicationsPage() {
       {/* PAGE HEADER */}
       <div className={styles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <ClipboardList size={20} color="#15803d" strokeWidth={1.8} />
-          </div>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <ClipboardList size={20} color="var(--color-primary)" strokeWidth={1.8} />
+        </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
             <h1 className={styles.title}>Applications</h1>
             <p className={styles.sub}>Review and manage all programme applications.</p>
@@ -154,7 +154,7 @@ export default function AdminApplicationsPage() {
           { label: "Total",    value: counts.total,    key: "all"     },
           { label: "Pending",  value: counts.pending,  key: "pending", color: "#f59e0b" },
           { label: "Flagged",  value: counts.flagged,  key: "flagged", color: "#ef4444" },
-          { label: "Approved", value: counts.approved, key: null,      color: "#15803d" },
+          { label: "Approved", value: counts.approved, key: null,      color: "#4ade80" },
           { label: "Rejected", value: counts.rejected, key: null,      color: "#64748b" },
         ].map((s) => (
           <button
@@ -163,7 +163,7 @@ export default function AdminApplicationsPage() {
             onClick={() => s.key && setActiveTab(s.key)}
             style={{ cursor: s.key ? "pointer" : "default" }}
           >
-            <span className={styles.summaryValue} style={{ color: s.color || "#0f172a" }}>
+            <span className={styles.summaryValue} style={{ color: s.color || "var(--color-text)" }}>
               {loading ? "—" : s.value}
             </span>
             <span className={styles.summaryLabel}>{s.label}</span>
@@ -236,10 +236,10 @@ export default function AdminApplicationsPage() {
           {/* Empty — flagged queue clear */}
           {!loading && !error && activeTab === "flagged" && filtered.length === 0 && (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIconWrap} style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0" }}>
-                <CheckCircle2 size={24} color="#15803d" strokeWidth={1.8} />
+              <div className={styles.emptyIconWrap} style={{ background: "rgba(74,222,128,0.1)", border: "1.5px solid rgba(74,222,128,0.2)" }}>
+                <CheckCircle2 size={24} color="#4ade80" strokeWidth={1.8} />
               </div>
-              <p className={styles.emptyTitle} style={{ color: "#15803d" }}>Flagged queue is clear</p>
+              <p className={styles.emptyTitle} style={{ color: "#4ade80" }}>Flagged queue is clear</p>
               <p className={styles.emptySub}>No conflict or false declaration flags at this time.</p>
             </div>
           )}
@@ -247,10 +247,10 @@ export default function AdminApplicationsPage() {
           {/* Empty — pending queue clear */}
           {!loading && !error && activeTab === "pending" && filtered.length === 0 && (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIconWrap} style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0" }}>
-                <CheckCircle2 size={24} color="#15803d" strokeWidth={1.8} />
+              <div className={styles.emptyIconWrap} style={{ background: "rgba(74,222,128,0.1)", border: "1.5px solid rgba(74,222,128,0.2)" }}>
+                <CheckCircle2 size={24} color="#4ade80" strokeWidth={1.8} />
               </div>
-              <p className={styles.emptyTitle} style={{ color: "#15803d" }}>All caught up</p>
+              <p className={styles.emptyTitle} style={{ color: "#4ade80" }}>All caught up</p>
               <p className={styles.emptySub}>No pending applications waiting for review.</p>
             </div>
           )}

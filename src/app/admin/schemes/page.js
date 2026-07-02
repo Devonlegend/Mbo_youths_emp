@@ -14,9 +14,9 @@ import { getSchemes, getMe } from "@/services";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
-  scholarship: { label: "Scholarship", color: "#15803d", bg: "#f0fdf4", icon: GraduationCap },
-  empowerment: { label: "Empowerment", color: "#b45309", bg: "#fffbeb", icon: Briefcase     },
-  grant:       { label: "Grant",       color: "#7e22ce", bg: "#faf5ff", icon: Banknote      },
+  scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
+  empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
+  grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
 };
 
 function formatDate(dateStr) {
@@ -106,8 +106,8 @@ if (checking) {
       {/* PAGE HEADER */}
       <div className={styles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <BookOpen size={20} color="#15803d" strokeWidth={1.8} />
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <BookOpen size={20} color="var(--color-primary)" strokeWidth={1.8} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
             <h1 className={styles.title}>Schemes</h1>
@@ -136,10 +136,10 @@ if (checking) {
       {/* SUMMARY STRIP */}
       <div className={styles.summaryStrip}>
         {[
-          { label: "Total Schemes", value: schemes.length, color: "#0f172a" },
-          { label: "Open",          value: openCount,       color: "#15803d" },
-          { label: "Draft",         value: draftCount,      color: "#f59e0b" },
-          { label: "Closed",        value: closedCount,     color: "#64748b" },
+          { label: "Total Schemes", value: schemes.length, color: "var(--color-text)"    },
+          { label: "Open",          value: openCount,       color: "var(--color-primary)" },
+          { label: "Draft",         value: draftCount,      color: "#f59e0b"              },
+          { label: "Closed",        value: closedCount,     color: "var(--color-text-muted)" },
         ].map((s) => (
           <div key={s.label} className={styles.summaryItem}>
             <span className={styles.summaryValue} style={{ color: s.color }}>

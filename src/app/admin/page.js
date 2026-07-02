@@ -146,12 +146,12 @@ export default function AdminOverviewPage() {
   }, []);
 
   const statCards = [
-    { icon: ClipboardList, label: "Total Applications", value: stats?.total      ?? 0, iconBg: "#eff6ff", iconColor: "#3b82f6" },
-    { icon: Clock,         label: "Pending Review",     value: stats?.pending    ?? 0, iconBg: "#fffbeb", iconColor: "#f59e0b" },
-    { icon: AlertCircle,   label: "Flagged",            value: stats?.flagged    ?? 0, iconBg: "#fef2f2", iconColor: "#ef4444" },
-    { icon: CheckCircle2,  label: "Approved",           value: stats?.approved   ?? 0, iconBg: "#f0fdf4", iconColor: "#15803d" },
-    { icon: XCircle,       label: "Rejected",           value: stats?.rejected   ?? 0, iconBg: "#f8fafc", iconColor: "#64748b" },
-    { icon: BookOpen,      label: "Open Schemes",       value: stats?.openSchemes ?? 0, iconBg: "#f0fdf4", iconColor: "#15803d" },
+    { icon: ClipboardList, label: "Total Applications", value: stats?.total       ?? 0, iconBg: "rgba(59,130,246,0.1)",  iconColor: "#3b82f6" },
+    { icon: Clock,         label: "Pending Review",     value: stats?.pending     ?? 0, iconBg: "rgba(245,158,11,0.1)",  iconColor: "#f59e0b" },
+    { icon: AlertCircle,   label: "Flagged",            value: stats?.flagged     ?? 0, iconBg: "rgba(239,68,68,0.1)",   iconColor: "#ef4444" },
+    { icon: CheckCircle2,  label: "Approved",           value: stats?.approved    ?? 0, iconBg: "rgba(21,128,61,0.1)",   iconColor: "#4ade80" },
+    { icon: XCircle,       label: "Rejected",           value: stats?.rejected    ?? 0, iconBg: "rgba(100,116,139,0.1)", iconColor: "#64748b" },
+    { icon: BookOpen,      label: "Open Schemes",       value: stats?.openSchemes ?? 0, iconBg: "rgba(21,128,61,0.1)",   iconColor: "#4ade80" },
   ];
 
   return (
@@ -160,9 +160,9 @@ export default function AdminOverviewPage() {
       {/* PAGE HEADER */}
       <div className={styles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <LayoutDashboard size={20} color="#15803d" strokeWidth={1.8} />
-          </div>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <LayoutDashboard size={20} color="var(--color-primary)" strokeWidth={1.8} />
+        </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
             <h1 className={styles.title}>Overview</h1>
             <p className={styles.sub}>Here's what's happening today</p>
@@ -208,26 +208,27 @@ export default function AdminOverviewPage() {
               <p>No application data yet this cycle.</p>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={220} style={{ background: "transparent" }}>
               <BarChart
                 data={chartData}
                 margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
                 barSize={36}
+                style={{ background: "transparent" }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 12, fill: "#94a3b8", fontFamily: "Inter, sans-serif" }}
+                  tick={{ fontSize: 12, fill: "var(--color-text-muted)", fontFamily: "Inter, sans-serif" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 12, fill: "#94a3b8", fontFamily: "Inter, sans-serif" }}
+                  tick={{ fontSize: 12, fill: "var(--color-text-muted)", fontFamily: "Inter, sans-serif" }}
                   axisLine={false}
                   tickLine={false}
                   allowDecimals={false}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f8fafc" }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--color-subtle)" }} />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {chartData.map((entry, i) => (
                     <Cell key={i} fill={entry.fill} />
@@ -248,12 +249,12 @@ export default function AdminOverviewPage() {
           </div>
           <div className={styles.quickList}>
             {[
-              { label: "Review pending applications", href: "/admin/applications",             icon: ClipboardList, color: "#f59e0b", bg: "#fffbeb", roles: ["admin", "superadmin", "verifier"] },
-              { label: "View flagged applications",   href: "/admin/applications?tab=flagged", icon: AlertCircle,   color: "#ef4444", bg: "#fef2f2", roles: ["admin", "superadmin", "verifier"] },
-              { label: "Manage students",             href: "/admin/students",                 icon: Users,         color: "#3b82f6", bg: "#eff6ff", roles: ["admin", "superadmin", "verifier"] },
-              { label: "Manage schemes",              href: "/admin/schemes",                  icon: BookOpen,      color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin"] },
-              { label: "Beneficiary register",        href: "/admin/beneficiaries",            icon: BadgeCheck,    color: "#15803d", bg: "#f0fdf4", roles: ["admin", "superadmin", "verifier"] },
-              { label: "Disqualification register",   href: "/admin/disqualifications",        icon: ShieldAlert,   color: "#ef4444", bg: "#fef2f2", roles: ["admin", "superadmin", "verifier"] },
+              { label: "Review pending applications", href: "/admin/applications",             icon: ClipboardList, color: "#f59e0b", bg: "rgba(245,158,11,0.1)",  roles: ["admin", "superadmin", "verifier"] },
+              { label: "View flagged applications",   href: "/admin/applications?tab=flagged", icon: AlertCircle,   color: "#ef4444", bg: "rgba(239,68,68,0.1)",   roles: ["admin", "superadmin", "verifier"] },
+              { label: "Manage students",             href: "/admin/students",                 icon: Users,         color: "#3b82f6", bg: "rgba(59,130,246,0.1)",  roles: ["admin", "superadmin", "verifier"] },
+              { label: "Manage schemes",              href: "/admin/schemes",                  icon: BookOpen,      color: "#4ade80", bg: "rgba(21,128,61,0.1)",   roles: ["admin", "superadmin"] },
+              { label: "Beneficiary register",        href: "/admin/beneficiaries",            icon: BadgeCheck,    color: "#4ade80", bg: "rgba(21,128,61,0.1)",   roles: ["admin", "superadmin", "verifier"] },
+              { label: "Disqualification register",   href: "/admin/disqualifications",        icon: ShieldAlert,   color: "#ef4444", bg: "rgba(239,68,68,0.1)",   roles: ["admin", "superadmin", "verifier"] },
             ].filter((q) => q.roles.includes(user?.role)).map((q) => {
               const Icon = q.icon;
               return (

@@ -9,11 +9,11 @@ import { getProviders, createProvider, deleteProvider } from "@/services";
 import { useRoleGuard } from "@/hooks/useRoleGuard";
 
 const providerTypeConfig = {
-  lga:       { label: "LGA Council",        color: "#15803d", bg: "#f0fdf4" },
-  state:     { label: "State Government",   color: "#1d4ed8", bg: "#eff6ff" },
-  corporate: { label: "Corporate / CSR",     color: "#7e22ce", bg: "#faf5ff" },
-  ngo:       { label: "NGO / Foundation",    color: "#b45309", bg: "#fffbeb" },
-  federal:   { label: "Federal Government",  color: "#0f172a", bg: "#f8fafc" },
+  lga:       { label: "LGA Council",        color: "#4ade80", bg: "rgba(74,222,128,0.1)"  },
+  state:     { label: "State Government",   color: "#60a5fa", bg: "rgba(96,165,250,0.1)"  },
+  corporate: { label: "Corporate / CSR",     color: "#a78bfa", bg: "rgba(167,139,250,0.1)" },
+  ngo:       { label: "NGO / Foundation",    color: "#fbbf24", bg: "rgba(251,191,36,0.1)"  },
+  federal:   { label: "Federal Government",  color: "#94a3b8", bg: "rgba(148,163,184,0.1)" },
 };
 
 // ── DELETE CONFIRM MODAL ──────────────────────────────────────────────────────
@@ -223,8 +223,8 @@ export default function AdminProvidersPage() {
       {/* SUMMARY STRIP */}
       <div className={styles.summaryStrip}>
         {[
-          { label: "Total Providers", value: totalProviders, color: "#0f172a" },
-          { label: "Types In Use",    value: typesInUse,      color: "#15803d" },
+          { label: "Total Providers", value: totalProviders, color: "var(--color-text)"    },
+          { label: "Types In Use",    value: typesInUse,      color: "var(--color-primary)" },
         ].map((s) => (
           <div key={s.label} className={styles.summaryItem}>
             <span className={styles.summaryValue} style={{ color: s.color }}>

@@ -114,8 +114,8 @@ export default function AdminStudentsPage() {
       {/* SUMMARY STRIP — now backed by /students/stats/, true totals */}
       <div className={styles.summaryStrip}>
         {[
-          { label: "Total Registered", value: stats.total_students, key: "all",        color: "#0f172a" },
-          { label: "Verified",         value: stats.verified,       key: "verified",   color: "#15803d" },
+          { label: "Total Registered", value: stats.total_students, key: "all",        color: "var(--color-text)" },
+          { label: "Verified",         value: stats.verified,       key: "verified",   color: "var(--color-primary)" },
           { label: "Unverified",       value: stats.unverified,     key: "unverified", color: "#f59e0b" },
         ].map((s) => (
           <button

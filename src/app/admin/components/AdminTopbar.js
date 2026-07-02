@@ -1,7 +1,8 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, Settings, LogOut, ChevronDown, Search } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { Menu, Settings, LogOut, ChevronDown, Search, Sun, Moon, Monitor} from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useTheme } from "next-themes";
 import styles from "./Topbar.module.css";
 import { logout } from "@/services";
 
@@ -22,6 +23,23 @@ export default function AdminTopbar({ user, onMenuOpen }) {
     user?.role === "superadmin" ? "Super Admin" :
     user?.role === "verifier"   ? "Verifier"    :
     "Admin";
+
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const themes = ["system", "light", "dark"];
+  const themeIcons = {
+    system: <Monitor size={15} strokeWidth={1.8} />,
+    light:  <Sun     size={15} strokeWidth={1.8} />,
+    dark:   <Moon    size={15} strokeWidth={1.8} />,
+  };
+
+  function cycleTheme() {
+    const current = themes.indexOf(theme);
+    const next = themes[(current + 1) % themes.length];
+    setTheme(next);
+  }
 
   useEffect(() => {
     function handleClick(e) {
@@ -84,6 +102,18 @@ export default function AdminTopbar({ user, onMenuOpen }) {
             <Search size={15} strokeWidth={2} />
           </button>
         </div>
+
+        {/* Theme toggle */}
+        {mounted && (
+          <button
+            className={styles.themeBtn}
+            onClick={cycleTheme}
+            aria-label={`Switch theme (current: ${theme})`}
+            title={`Theme: ${theme}`}
+          >
+            {themeIcons[theme] || themeIcons.system}
+          </button>
+        )}
 
         <div className={styles.sep} />
 

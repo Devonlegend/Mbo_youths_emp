@@ -15,11 +15,12 @@ const navMain = [
   { label: "Dashboard",       href: "/dashboard",              icon: LayoutDashboard },
   { label: "Programmes",      href: "/dashboard/programmes",   icon: FileText },
   { label: "My Applications", href: "/dashboard/applications", icon: ClipboardList },
+  // { label: "My Documents",    href: "/dashboard/documents",    icon: Files }
 ];
 
 const navAccount = [
   { label: "My Profile",    href: "/dashboard/profile",       icon: UserCircle },
-  { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
+  // { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
 ];
 
 const navInfo = [

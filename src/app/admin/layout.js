@@ -52,7 +52,7 @@ export default function AdminLayout({ children }) {
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className={styles.loadingShell}>
+      <div className={`${styles.loadingShell} adminShell`}>
         <div className={styles.loadingSpinner} />
       </div>
     );

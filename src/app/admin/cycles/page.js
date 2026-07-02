@@ -252,9 +252,9 @@ if (checking) {
       {/* SUMMARY STRIP */}
       <div className={styles.summaryStrip}>
         {[
-          { label: "Total Cycles",    value: totalCycles,    color: "#0f172a" },
-          { label: "Active",          value: activeCycle ? 1 : 0, color: "#15803d" },
-          { label: "Inactive",        value: inactiveCycles, color: "#64748b" },
+          { label: "Total Cycles",    value: totalCycles,         color: "var(--color-text)"    },
+          { label: "Active",          value: activeCycle ? 1 : 0, color: "var(--color-primary)" },
+          { label: "Inactive",        value: inactiveCycles,      color: "var(--color-text-muted)" },
         ].map((s) => (
           <div key={s.label} className={styles.summaryItem}>
             <span className={styles.summaryValue} style={{ color: s.color }}>
