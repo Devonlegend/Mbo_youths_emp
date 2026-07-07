@@ -323,6 +323,13 @@
   border-radius: 8px;
   padding: 8px 12px;
   width: fit-content;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.fileChip:hover {
+  background: #dcfce7;
+  border-color: #86efac;
 }
 
 .fileName {

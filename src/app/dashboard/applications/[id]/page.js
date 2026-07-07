@@ -36,10 +36,22 @@ const colorMap = {
 
 const STEPS = ["Submitted", "Verified", "Review", "Decision"];
 
-function buildFields(schemeType, formData) {
+function buildFields(schemeType, formData, documents) {
   if (!formData || Object.keys(formData).length === 0) return [];
 
   const fd = formData;
+
+  const docItems = Object.entries(documents || {})
+    .filter(([, url]) => !!url)
+    .map(([key, url]) => ({
+      label: key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      value: url,
+      type: "file",
+    }));
+
+  const documentsSection = docItems.length > 0
+    ? { section: "Uploaded Documents", items: docItems }
+    : null;
 
   const declaration = {
     section: "Self-Declaration",
@@ -78,6 +90,7 @@ function buildFields(schemeType, formData) {
         ],
       },
       ...(bankDetails ? [bankDetails] : []),
+      ...(documentsSection ? [documentsSection] : []),
       declaration,
     ];
   }
@@ -95,6 +108,7 @@ function buildFields(schemeType, formData) {
         ],
       },
       ...(bankDetails ? [bankDetails] : []),
+      ...(documentsSection ? [documentsSection] : []),
       declaration,
     ];
   }
@@ -111,11 +125,12 @@ function buildFields(schemeType, formData) {
         ],
       },
       ...(bankDetails ? [bankDetails] : []),
+      ...(documentsSection ? [documentsSection] : []),
       declaration,
     ];
   }
 
-  return [declaration];
+  return [...(documentsSection ? [documentsSection] : []), declaration];
 }
 
 function StatusBadge({ status }) {
@@ -220,7 +235,7 @@ export default function ApplicationDetailPage() {
             : "Under admin review. No action needed from you at this time.",
           rejectionReason: data.rejection_reason || "",
           reviewerNotes:   data.reviewer_notes   || "",
-          fields:          buildFields(catKey, data.details || {}),
+          fields:          buildFields(catKey, data.details || {}, data.documents || {}),
         });
 
       } catch (err) {
@@ -320,14 +335,19 @@ export default function ApplicationDetailPage() {
                   {sec.items.map((item, ii) => (
                     <div
                       key={ii}
-                      className={`${styles.fieldItem} ${item.value?.length > 80 ? styles.fieldItemFull : ""}`}
+                      className={`${styles.fieldItem} ${item.type !== "file" && item.value?.length > 80 ? styles.fieldItemFull : ""}`}
                     >
                       <div className={styles.fieldLabel}>{item.label}</div>
                       {item.type === "file" ? (
-                        <div className={styles.fileChip}>
+                        <a
+                          href={item.value}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={styles.fileChip}
+                        >
                           <FileText size={14} color="#15803d" />
-                          <span className={styles.fileName}>{item.value}</span>
-                        </div>
+                          <span className={styles.fileName}>{item.label}</span>
+                        </a>
                       ) : (
                         <div className={styles.fieldValue}>{item.value}</div>
                       )}
