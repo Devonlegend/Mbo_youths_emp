@@ -304,12 +304,18 @@ class ApplicationViewSet(viewsets.ViewSet):
         if not scheme.has_slots():
             return Response({"error": "No slots remaining for this scheme"}, status=400)
 
-        # Get student
+        
+       # Get student
         student = getattr(request.user, 'student_profile', None)
         if not student:
             return Response(
                 {"error": "No student profile found. Complete your profile first."},
                 status=400
+            )
+        if not student.is_verified:
+            return Response(
+                {"error": "Your account must be verified by an admin before you can submit applications."},
+                status=403
             )
 
         model = get_application_model(scheme)

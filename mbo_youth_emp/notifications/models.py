@@ -4,20 +4,22 @@ from accounts.models import User
 
 class Notification(models.Model):
     TYPE_CHOICES = [
-        ('application', 'Application'),
-        ('deadline',    'Deadline'),
-        ('programme',   'Programme'),
-        ('profile',     'Profile'),
-        ('system',      'System'),
-        ('alert',       'Alert'),
-        ('welcome',     'Welcome'),
+        ('application',            'Application'),
+        ('deadline',               'Deadline'),
+        ('programme',              'Programme'),
+        ('profile',                'Profile'),
+        ('system',                 'System'),
+        ('alert',                  'Alert'),
+        ('welcome',                'Welcome'),
+        ('verification_approved',  'Verification Approved'),
+        ('verification_rejected',  'Verification Rejected'),
     ]
 
     id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user       = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     title      = models.CharField(max_length=200)
     message    = models.TextField()
-    type       = models.CharField(max_length=20, choices=TYPE_CHOICES, default='system')
+    type       = models.CharField(max_length=30, choices=TYPE_CHOICES, default='system')
     read       = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

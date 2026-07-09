@@ -2,12 +2,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, inline_serializer
+
+import logging
+logger = logging.getLogger(__name__)
 
 from .models import Student, AcademicRecord
 from .serializers import StudentSerializer, StudentCreateSerializer, AcademicRecordSerializer
 from accounts.permissions import IsAdmin, IsStudent, IsVerifier
 
+from django.utils import timezone
+from rest_framework import serializers as drf_serializers
 
 class StudentViewSet(viewsets.ModelViewSet):
     queryset           = Student.objects.all().order_by('firstname')
@@ -24,10 +29,13 @@ class StudentViewSet(viewsets.ModelViewSet):
             Different actions need different permissions.
             Students can only see their own profile.
             Verifiers and admins can list everyone; only admins can delete.
+            Only admins can approve/reject verification.
             """
             if self.action == 'list':
                 return [IsVerifier()]
             if self.action == 'destroy':
+                return [IsAdmin()]
+            if self.action in ('verify', 'pending'):
                 return [IsAdmin()]
             return [IsAuthenticated()]
 
@@ -144,3 +152,86 @@ class StudentViewSet(viewsets.ModelViewSet):
             "account_number": student.bank_account_number,
             "account_name": student.bank_account_name,
         })
+    
+    @extend_schema(
+        summary="Approve or reject a student's verification",
+        request=inline_serializer(
+            name='StudentVerifyRequest',
+            fields={
+                'decision': drf_serializers.ChoiceField(choices=['approved', 'rejected']),
+                'notes': drf_serializers.CharField(required=False, allow_blank=True, default=''),
+            },
+        ),
+        responses=OpenApiResponse(description='{ id, is_verified, verification_rejection_reason }'),
+    )
+    @action(detail=True, methods=['patch'], url_path='verify')
+    def verify(self, request, pk=None):
+        """PATCH /students/{id}/verify/  Body: { decision, notes? }"""
+        student = self.get_object()
+        decision = request.data.get('decision')
+        notes = (request.data.get('notes') or '').strip()
+
+        if decision not in ('approved', 'rejected'):
+            return Response({"error": "decision must be 'approved' or 'rejected'"},
+                             status=status.HTTP_400_BAD_REQUEST)
+        if decision == 'rejected' and not notes:
+            return Response({"error": "notes is required when rejecting"},
+                             status=status.HTTP_400_BAD_REQUEST)
+
+        student.verification_reviewed_at = timezone.now()
+
+        if decision == 'approved':
+            student.is_verified = True
+            student.verification_rejection_reason = ''
+        else:
+            student.is_verified = False
+            student.verification_rejection_reason = notes
+
+        student.save(update_fields=[
+            'is_verified', 'verification_rejection_reason', 'verification_reviewed_at'
+        ])
+
+        from notifications.models import Notification
+        from accounts.services import send_verification_decision_email
+
+        if decision == 'approved':
+            title, message = (
+                'Account Verified',
+                'Your account has been verified. You can now apply for available programmes.',
+            )
+        else:
+            title, message = (
+                'Verification Update Required',
+                f'Your account verification was not approved. Reason: {notes}',
+            )
+
+        Notification.objects.create(
+            user=student.user,
+            type='verification_approved' if decision == 'approved' else 'verification_rejected',
+            title=title,
+            message=message,
+        )
+
+        try:
+            send_verification_decision_email(student.user.email, decision, notes)
+        except Exception:
+            logger.exception("Failed to send verification decision email to %s", student.user.email)
+            # Decision is already saved — don't fail the request over an email hiccup.
+
+        return Response({
+            "id": str(student.pk),
+            "is_verified": student.is_verified,
+            "verification_rejection_reason": student.verification_rejection_reason,
+        })
+
+    @extend_schema(
+        summary="List students pending verification",
+        responses=OpenApiResponse(description='{ count, next, previous, results: [...] }'),
+    )
+    @action(detail=False, methods=['get'], url_path='pending')
+    def pending(self, request):
+        """GET /students/pending/"""
+        queryset = Student.objects.filter(is_verified=False).order_by('firstname')
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page, many=True)
+        return self.get_paginated_response(serializer.data)

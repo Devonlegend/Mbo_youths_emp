@@ -172,7 +172,13 @@
   gap: 16px;
 }
 
-.rightCol { position: sticky; top: 76px; }
+.rightCol { position: sticky; top: 76px; }.rightCol {
+  position: sticky;
+  top: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
 /* ── CARD ── */
 .card {
@@ -359,6 +365,197 @@
   color: var(--color-primary);
 }
 
+/* ── VERIFICATION DECISION CARD ── */
+.decisionCard {
+  gap: 14px;
+}
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-error-bg, #fef2f2);
+  border: 1px solid var(--color-error-border, #fecaca);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--color-error, #ef4444);
+}
+
+.noteWrap { display: flex; flex-direction: column; gap: 6px; }
+
+.noteLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.noteRequired {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.noteInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-subtle);
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  line-height: 1.5;
+  box-sizing: border-box;
+  min-height: 90px;
+}
+
+.noteInput:focus {
+  border-color: var(--color-primary-border);
+  background: var(--color-card);
+}
+
+.noteInputError { border-color: var(--color-error, #ef4444); }
+
+.noteErrorText {
+  font-size: 11.5px;
+  color: var(--color-error, #ef4444);
+}
+
+.decisionActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.approveBtn,
+.rejectBtnFull {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.approveBtn {
+  background: #15803d;
+  color: #ffffff;
+}
+.approveBtn:hover:not(:disabled) { background: #166534; }
+.approveBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.rejectBtnFull {
+  background: var(--color-subtle);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+.rejectBtnFull:hover:not(:disabled) {
+  background: var(--color-error-bg, #fef2f2);
+  color: var(--color-error, #ef4444);
+  border-color: var(--color-error-border, #fecaca);
+}
+.rejectBtnFull:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.decisionWarning {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+/* ── CONFIRM MODAL ── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--color-card, #ffffff);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 8px;
+}
+
+.modalDesc {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+.modalActions {
+  display: flex;
+  gap: 10px;
+}
+
+.modalCancel {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.modalCancel:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.modalConfirmApprove {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #15803d;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+}
+.modalConfirmApprove:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.modalConfirmReject {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #ef4444;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+}
+.modalConfirmReject:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* ══════════════════════════════════════════════
    RESPONSIVE — 1024px
 ══════════════════════════════════════════════ */
@@ -369,7 +566,7 @@
 
   .rightCol {
     position: static;
-    order: -1;
+    /* order: -1; */
   }
 
   .infoGrid {

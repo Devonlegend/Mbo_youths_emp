@@ -30,5 +30,5 @@ export const updateBankDetail = (data) =>
 export const addBankDetail = (body) =>
   api.post("/students/bank-detail/", body);
 
-export const verifyStudent = (id) => 
-  api.post(`/students/${id}/verify/`);
+export const verifyStudent = (id, body) => 
+  api.patch(`/students/${id}/verify/`, body);

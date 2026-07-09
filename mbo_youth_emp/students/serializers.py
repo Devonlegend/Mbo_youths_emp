@@ -25,7 +25,7 @@ class StudentSerializer(serializers.ModelSerializer):
         fields = [
             'user_id', 'firstname', 'lastname', 'email', 'phone_number', 'gender',
             'ward', 'lga', 'level', 'cgpa',
-            'is_verified',
+            'is_verified', 'verification_rejection_reason', 'verification_reviewed_at',
             'active_award', 'has_active_award', 'academic_records',
             'passport', 'certificate',
         ]

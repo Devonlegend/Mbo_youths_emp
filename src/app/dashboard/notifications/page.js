@@ -4,7 +4,7 @@ import {
   Bell, Search, CheckCheck, Trash2,
   CheckCircle2, XCircle, ShieldCheck,
   FileText, ShieldAlert, CalendarClock, Sparkles,
-  UserCircle, Megaphone, AlertCircle, Loader2, GraduationCap,
+  UserCircle, Megaphone, AlertCircle, Loader2, GraduationCap, Clock,
 } from "lucide-react";
 import styles from "./page.module.css";
 import {
@@ -23,6 +23,7 @@ const TYPE_META = {
   system:      { bg: "#f0fdf4", border: "#bbf7d0", icon: "#15803d" },
   alert:       { bg: "#fef2f2", border: "#fecaca", icon: "#dc2626" },
   welcome:     { bg: "#fffbeb", border: "#fde68a", icon: "#d97706" },
+  review:      { bg: "#fffbeb", border: "#fde68a", icon: "#b45309" },
 };
 
 const TYPE_ICONS = {
@@ -218,6 +219,7 @@ export default function NotificationsPage() {
             title.includes("rejected")  ? "alert"       :
             title.includes("submitted") ? "application" :
             title.includes("verified")  ? "system"      :
+            title.includes("review")    ? "review"      :
             title.includes("eligible")  ? "alert"       :
             title.includes("programme") ? "programme"   :
             title.includes("waiver")    ? "deadline"    :
@@ -230,6 +232,7 @@ export default function NotificationsPage() {
             title.includes("rejected")  ? XCircle       :
             title.includes("submitted") ? FileText       :
             title.includes("verified")  ? ShieldCheck    :
+            title.includes("review")    ? Clock          :
             title.includes("eligible")  ? ShieldAlert    :
             title.includes("programme") ? CalendarClock  :
             title.includes("waiver")    ? FileText       :

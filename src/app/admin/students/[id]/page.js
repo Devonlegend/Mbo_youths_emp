@@ -7,7 +7,7 @@ import {
   ClipboardList, CheckCircle2, Clock, XCircle,
   AlertCircle, ArrowRight, Loader2, GraduationCap,
   Briefcase, Wrench, Banknote, Fingerprint, 
-  FileText, Image as ImageIcon,
+  FileText, Image as ImageIcon, Check, X, AlertTriangle,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getStudentById, getApplications, verifyStudent } from "@/services";
@@ -70,8 +70,12 @@ export default function StudentDetailPage() {
   const [applications,  setApplications]  = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState(null);
-  // const [verifying,     setVerifying]     = useState(false);
-  // const [verifyError,   setVerifyError]   = useState("");
+  const [verifying,     setVerifying]     = useState(false);
+  const [verifyError,   setVerifyError]   = useState("");
+  const [note,          setNote]          = useState("");
+  const [noteError,     setNoteError]     = useState("");
+  const [confirmModal,  setConfirmModal]  = useState(null); 
+  // "approved" | "rejected" | null
 
   // ── FETCH ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -112,19 +116,33 @@ export default function StudentDetailPage() {
     return () => { cancelled = true; };
   }, [params.id]);
 
-  // ── TOGGLE VERIFICATION 
-// async function handleToggleVerification() {
-//   setVerifying(true);
-//   setVerifyError("");
-//   try {
-//     const res = await verifyStudent(params.id);
-//     setStudent((s) => ({ ...s, is_verified: res.data.is_verified }));
-//   } catch {
-//     setVerifyError("Failed to update verification status.");
-//   } finally {
-//     setVerifying(false);
-//   }
-// }
+  // ── VERIFY / REJECT ──────────────────────────────────────────────────────
+  function openConfirm(decision) {
+    if (decision === "rejected" && note.trim().length < 5) {
+      setNoteError("Please provide a reason (at least 5 characters).");
+      return;
+    }
+    setNoteError("");
+    setConfirmModal(decision);
+  }
+
+  async function handleDecision(decision) {
+    setVerifying(true);
+    setVerifyError("");
+    try {
+      const res = await verifyStudent(params.id, { decision, notes: note.trim() });
+      setStudent((s) => ({
+        ...s,
+        is_verified: res.data.is_verified,
+        verification_rejection_reason: res.data.verification_rejection_reason,
+      }));
+      setNote("");
+    } catch (err) {
+      setVerifyError(err?.response?.data?.error || "Action failed. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   // ── LOADING ───────────────────────────────────────────────────────────────
   if (loading) {
@@ -172,7 +190,7 @@ export default function StudentDetailPage() {
           </div>
         </div>
 
-        {/* Verification toggle */}
+        {/* Verification status badge only — decision panel moved below */}
         <div className={styles.verifyWrap}>
           <span className={`${styles.verifyBtn} ${student.is_verified ? styles.verifyBtnVerified : styles.verifyBtnUnverified}`}>
             {student.is_verified ? (
@@ -259,13 +277,83 @@ export default function StudentDetailPage() {
               <InfoRow icon={ShieldCheck} label="Verification Status" value={
                 student.is_verified ? "Verified" : "Not Verified"
               } />
+              {!student.is_verified && student.verification_rejection_reason && (
+                <InfoRow icon={AlertCircle} label="Last Rejection Reason" value={
+                  student.verification_rejection_reason
+                } />
+              )}
             </div>
           </div>
 
         </div>
 
-        {/* RIGHT — application history */}
+        {/* RIGHT — decision panel + application history */}
         <div className={styles.rightCol}>
+
+          {!student.is_verified && (
+            <div className={`${styles.card} ${styles.decisionCard}`}>
+              <h2 className={styles.cardTitle}>Verification Decision</h2>
+              <p className={styles.cardSub}>
+                Review the student's documents and information before deciding.
+              </p>
+
+              {verifyError && (
+                <div className={styles.errorBanner}>
+                  <AlertCircle size={14} color="#dc2626" strokeWidth={2} />
+                  {verifyError}
+                </div>
+              )}
+
+              <div className={styles.noteWrap}>
+                <label className={styles.noteLabel}>
+                  Note
+                  <span className={styles.noteRequired}>Required if rejecting</span>
+                </label>
+                <textarea
+                  className={`${styles.noteInput} ${noteError ? styles.noteInputError : ""}`}
+                  rows={4}
+                  placeholder="Add a note required when rejecting, shown to the student..."
+                  value={note}
+                  onChange={(e) => { setNote(e.target.value); setNoteError(""); }}
+                />
+                {noteError && <span className={styles.noteErrorText}>{noteError}</span>}
+              </div>
+
+              <div className={styles.decisionActions}>
+                <button
+                  className={styles.approveBtn}
+                  onClick={() => openConfirm("approved")}
+                  disabled={verifying}
+                >
+                  {verifying
+                    ? <Loader2 size={15} strokeWidth={2} className={styles.spin} />
+                    : <Check size={15} strokeWidth={2} />
+                  }
+                  Approve
+                </button>
+                <button
+                  className={styles.rejectBtnFull}
+                  onClick={() => openConfirm("rejected")}
+                  disabled={verifying}
+                >
+                  {verifying
+                    ? <Loader2 size={15} strokeWidth={2} className={styles.spin} />
+                    : <X size={15} strokeWidth={2} />
+                  }
+                  Reject
+                </button>
+              </div>
+
+              <div className={styles.decisionWarning}>
+                <AlertTriangle size={12} color="#f59e0b" strokeWidth={2} />
+                <span>
+                  Approving unlocks programme applications for this student.
+                  Rejecting notifies them with your note and keeps their account unverified.
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className={styles.card}>
             <div className={styles.cardHead}>
               <div>
@@ -327,6 +415,38 @@ export default function StudentDetailPage() {
         </div>
 
       </div>
+
+      {/* CONFIRM MODAL */}
+      {confirmModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <h3 className={styles.modalTitle}>
+              {confirmModal === "approved" ? "Approve this student?" : "Reject this student?"}
+            </h3>
+            <p className={styles.modalDesc}>
+              {confirmModal === "approved"
+                ? "They will be notified by email and can immediately apply for programmes."
+                : "They will be notified by email with your note and remain unverified."}
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                className={styles.modalCancel}
+                onClick={() => setConfirmModal(null)}
+                disabled={verifying}
+              >
+                Cancel
+              </button>
+              <button
+                className={confirmModal === "approved" ? styles.modalConfirmApprove : styles.modalConfirmReject}
+                onClick={() => { const d = confirmModal; setConfirmModal(null); handleDecision(d); }}
+                disabled={verifying}
+              >
+                {confirmModal === "approved" ? "Yes, Approve" : "Yes, Reject"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

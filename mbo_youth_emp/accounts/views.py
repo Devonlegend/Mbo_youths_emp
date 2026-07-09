@@ -174,7 +174,19 @@ def register(request):
             date_of_birth=date_of_birth,
             nin_hash=nin_hash,
             passport=passport,
-            certificate=certificate
+            certificate=certificate,
+            is_verified=False,
+        )
+
+        Notification.objects.create(
+            user=user,
+            type='system',
+            title='Account Under Review',
+            message=(
+                'Thanks for registering! An admin needs to review your documents '
+                'before you can apply for programmes. We\'ll notify you as soon as '
+                'your account is verified.'
+            ),
         )
 
     # No JWT cookies here — the client must complete the OTP flow

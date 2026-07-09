@@ -149,6 +149,20 @@ export default function DashboardPage() {
         </h1>
       </div>
 
+      {/* VERIFICATION BANNER */}
+      {user && !user.is_verified && (
+        <div className={styles.verifyBanner}>
+          <AlertCircle size={16} strokeWidth={2} className={styles.verifyBannerIcon} />
+          <div className={styles.verifyBannerText}>
+            <span className={styles.verifyBannerTitle}>Account pending verification</span>
+            <span className={styles.verifyBannerDesc}>
+              An admin is reviewing your registration documents. You'll be able to apply for
+              programmes once your account is verified this usually doesn't take long.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* CYCLE BANNER */}
       <div className={styles.cycleBanner}>
         <div className={styles.cycleLeft}>

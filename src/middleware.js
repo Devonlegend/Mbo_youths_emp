@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 const PROTECTED = ["/dashboard", "/admin"];
 const PUBLIC    = ["/login", "/register", "/forgot-password", "/"];
 
-export function proxy(request) {
+export function middleware(request) {
   const { pathname } = request.nextUrl;
 
   // Check if this is a protected route
