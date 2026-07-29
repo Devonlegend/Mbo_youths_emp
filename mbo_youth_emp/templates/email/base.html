@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ subject }}</title>
+  <style>
+    /* ── Design-system colours ── */
+    :root {
+      --mbo-forest: #15803d;
+      --mbo-forest-deep: #166534;
+      --ink-primary: #0f172a;
+      --ink-secondary: #374151;
+      --ink-tertiary: #64748b;
+      --ink-muted: #94a3b8;
+      --surface-white: #ffffff;
+      --surface-page: #f9fafb;
+      --border-default: #e2e8f0;
+      --green-tint-bg: #f0fdf4;
+      --green-tint-border: #bbf7d0;
+      --red-tint-bg: #fef2f2;
+      --amber-tint-bg: #fffbeb;
+    }
+    body {
+      margin: 0; padding: 0;
+      background-color: var(--surface-page);
+      font-family: 'DM Sans', Arial, Helvetica, sans-serif;
+      font-size: 14px; line-height: 1.65;
+      color: var(--ink-secondary);
+      -webkit-font-smoothing: antialiased;
+    }
+    .email-wrapper {
+      max-width: 560px; margin: 32px auto;
+      background-color: var(--surface-white);
+      border-radius: 16px;
+      border: 1px solid var(--border-default);
+      overflow: hidden;
+    }
+    .email-header {
+      background-color: var(--mbo-forest);
+      padding: 28px 32px;
+      text-align: center;
+    }
+    .email-header h1 {
+      margin: 0;
+      font-family: 'Sora', Arial, Helvetica, sans-serif;
+      font-weight: 800; font-size: 18px;
+      color: #ffffff; letter-spacing: -0.02em;
+    }
+    .email-header p {
+      margin: 4px 0 0;
+      font-size: 12px; color: rgba(255,255,255,0.75);
+    }
+    .email-body {
+      background: #ffffff;
+      color: #1f2937;           /* Gray 800 */
+      padding: 32px;
+      font-family: "DM Sans", Arial, sans-serif;
+    }
+    .email-body h2 {
+      margin: 0 0 12px;
+      font-family: 'Sora', Arial, Helvetica, sans-serif;
+      font-weight: 800; font-size: 20px;
+      color: var(--ink-primary); letter-spacing: -0.02em;
+    }
+    .email-body p {
+      margin: 0 0 12px;
+    }
+    .email-body p:last-child {
+      margin-bottom: 0;
+    }
+    /* ── Shared components ── */
+    .detail-table {
+      width: 100%; border-collapse: collapse;
+      margin: 16px 0;
+      background-color: var(--surface-page);
+      border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--border-default);
+    }
+    .detail-table td {
+      padding: 10px 14px; vertical-align: top;
+    }
+    .detail-table td:first-child {
+      width: 130px; font-weight: 700; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--ink-tertiary);
+    }
+    .detail-table td:last-child {
+      color: var(--ink-primary);
+    }
+    .reference {
+      display: inline-block; margin: 8px 0 16px;
+      background-color: var(--green-tint-bg);
+      color: var(--mbo-forest); border: 1px solid var(--green-tint-border);
+      padding: 6px 14px; border-radius: 100px;
+      font-size: 13px; font-weight: 700;
+      font-family: monospace; letter-spacing: 0.05em;
+    }
+    .otp-code {
+      display: inline-block; margin: 16px 0;
+      font-family: monospace; font-size: 32px; font-weight: 800;
+      letter-spacing: 10px; color: var(--ink-primary);
+      background-color: var(--amber-tint-bg);
+      padding: 14px 24px; border-radius: 10px;
+    }
+    .cta-button {
+      display: inline-block; margin: 16px 0;
+      background-color: var(--mbo-forest);
+      color: #ffffff !important; text-decoration: none;
+      padding: 14px 32px; border-radius: 10px;
+      font-family: 'Sora', Arial, sans-serif;
+      font-weight: 700; font-size: 14px;
+    }
+    .info-box {
+      margin: 16px 0; padding: 14px 18px;
+      border-radius: 10px; border: 1px solid;
+    }
+    .info-box--green {
+      background-color: var(--green-tint-bg);
+      border-color: var(--green-tint-border);
+      color: var(--mbo-forest-deep);
+    }
+    .info-box--red {
+      background-color: var(--red-tint-bg);
+      border-color: #fecaca;
+      color: #b91c1c;
+    }
+    .info-box--amber {
+      background-color: var(--amber-tint-bg);
+      border-color: #fde68a;
+      color: #92400e;
+    }
+    .email-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+      font-size: 13px;
+      color: #6b7280;           /* Gray 500 */
+    }
+    .email-footer p {
+      margin: 0;
+    }
+    .email-footer a {
+      color: #15803d;           /* MBO Forest */
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .email-footer a:hover {
+      color: #166534;           /* MBO Forest Deep */
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-header">
+      <img
+        src="{{ portal_url }}/mboyouths.png"
+        alt="RMHCDT Youth Portal"
+        width="56" height="56"
+        style="display:block;margin:0 auto 12px;border-radius:50%;object-fit:cover;"
+      />
+      <h1>RMHCDT Youth Portal</h1>
+      <p>Royal Mbo Host Community Development Trust</p>
+    </div>
+
+    <div class="email-body">
+      {% block content %}{% endblock %}
+    </div>
+
+    <div class="email-footer">
+      <p>
+        &copy; Royal Mbo Host Community Development Trust<br>
+        <a href="{{ portal_url }}">RMHCDT Youth Portal</a>
+        &ensp;&middot;&ensp;
+        <a href="mailto:{{ support_email }}">{{ support_email }}</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

@@ -78,7 +78,7 @@ class ScholarshipScheme(models.Model):
         "min_cgpa": 2.20,
         "allowed_levels": ["200", "300", "400"],
         "ward_restriction": ["effiat", "ewang"],
-        "disability_relaxation": true,
+       
         "max_prior_awards": 1
     }
 
@@ -88,7 +88,7 @@ class ScholarshipScheme(models.Model):
         "max_age": 35,
         "allowed_trades": ["welding", "tailoring", "ICT"],
         "ward_restriction": null,
-        "disability_relaxation": true,
+        
         "max_prior_awards": 1
     }
 

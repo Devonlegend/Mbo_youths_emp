@@ -3,20 +3,7 @@ from django.conf import settings
 
 
 class PaystackVerificationService:
-    """
-    Verifies a bank account number using the Paystack API.
-    Resolves the account to get the registered name,
-    then matches it against the student's full name.
-
-    Usage:
-        result = PaystackVerificationService.resolve_account("0123456789", "058")
-        if result["success"]:
-            print(result["account_name"])
-
-        match = PaystackVerificationService.name_match("EFFIONG MONDAY AMOS", "Effiong M. Amos")
-        print(match["passed"])  # True
-    """
-
+  
     BASE_URL = "https://api.paystack.co"
 
     @classmethod

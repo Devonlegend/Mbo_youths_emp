@@ -107,3 +107,50 @@ def send_double_dip_flagged_email(self, application_id: str, scheme_id: str):
     except Exception as exc:
         logger.warning(f"Failed to send double dip email for App {application_id}. Retrying...")
         raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_welcome_email(self, user_id: str):
+    """Send welcome email after first OTP verification."""
+    from accounts.models import User
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        logger.error(f"[Task Error] User {user_id} not found for welcome email.")
+        return
+    try:
+        EmailService.send_welcome(user)
+    except Exception as exc:
+        logger.warning(f"Failed to send welcome email to {user.email}. Retrying...")
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_student_verified_email(self, student_id: str):
+    """Send verification-approved email after admin verifies a student."""
+    from students.models import Student
+    try:
+        student = Student.objects.get(pk=student_id)
+    except Student.DoesNotExist:
+        logger.error(f"[Task Error] Student {student_id} not found for verified email.")
+        return
+    try:
+        EmailService.send_student_verified(student)
+    except Exception as exc:
+        logger.warning(f"Failed to send verified email to student {student_id}. Retrying...")
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_password_reset_email(self, email: str, otp: str, name: str = ''):
+    """Send password reset code via template-based EmailService."""
+    try:
+        EmailService._send(
+            to_email=email,
+            subject='Reset your Mbo Portal password',
+            template='password_reset',
+            context={'otp': otp, 'name': name or email.split('@')[0]},
+        )
+    except Exception as exc:
+        logger.warning(f"Failed to send password reset email to {email}. Retrying...")
+        raise self.retry(exc=exc)

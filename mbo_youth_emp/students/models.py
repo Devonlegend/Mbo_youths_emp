@@ -20,21 +20,23 @@ class Student(models.Model):
     # primary_key=True so the Student row reuses the User's UUID as its PK —
     # student.pk == user.id, matching the contract the register view relies on.
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='student')
+    email = models.EmailField(max_length=100)
     firstname    = models.CharField(max_length=50, blank=True, default='')
     lastname     = models.CharField(max_length=50, blank=True, default='')
+    phone_number = models.CharField(max_length=20, blank=True, default='')
     cgpa = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     level = models.IntegerField(null=True, blank=True)
+    gender = models.CharField(max_length=10, blank=True, default='Male')
     is_verified = models.BooleanField(default=False)
     verification_rejection_reason = models.TextField(blank=True, default='')
     verification_reviewed_at = models.DateTimeField(null=True, blank=True)
     active_award = models.CharField(max_length=300, blank=True)
-    nin_hash = models.CharField(max_length=20, blank=True, default='')
+    nin_hash = models.CharField(max_length=64, blank=True, default='')
     lga = models.CharField(max_length=80, blank=True)
     passport = models.FileField(null=True, blank=True)
     ward        = models.CharField(max_length=40, blank=True)
     date_of_birth = models.DateField(null=True)
     certificate = models.FileField(null=True, blank=True)
-
     bank_name = models.CharField(max_length=100, blank=True, default='')
     bank_code = models.CharField(max_length=10, blank=True, default='')
     bank_account_number = models.CharField(max_length=10, blank=True, default='')
@@ -50,11 +52,3 @@ class Student(models.Model):
     def has_active_award(self):
         return bool(self.active_award)
 
-
-class AcademicRecord(models.Model):
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='academic_records')
-    institution_name = models.CharField(max_length=100)
-    course_of_study = models.CharField(max_length=100)
-    current_level = models.CharField(max_length=100)
-    cgpa = models.DecimalField(max_digits=4, decimal_places=2, null=True)
-    admission_year = models.IntegerField(null=True, blank=True)

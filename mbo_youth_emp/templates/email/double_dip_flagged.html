@@ -1,0 +1,40 @@
+{% extends "email/base.html" %}
+{% block content %}
+  <h2>Action Required &mdash; Award Conflict</h2>
+  <p>
+    {{ student_name }}, your application for <strong>{{ scheme_name }}</strong>
+    has been flagged because of a potential conflict with an existing award.
+  </p>
+
+  <span class="reference">Ref: #{{ reference }}</span>
+
+  <table class="detail-table">
+    <tr><td>New Application</td><td>{{ scheme_name }} ({{ award_type }})</td></tr>
+    <tr><td>Conflicting Award</td><td>{{ conflicting_scheme }}</td></tr>
+    <tr><td>Conflict Reason</td><td>{{ conflict_reason }}</td></tr>
+    <tr><td>Academic Year</td><td>{{ academic_year }}</td></tr>
+  </table>
+
+  <div class="info-box info-box--amber">
+    <strong>What this means:</strong><br>
+    The system detected that you may already hold an active award. This does
+    not mean your application is rejected. You can submit a waiver explaining
+    your circumstances, and an administrator will review it manually.
+  </div>
+
+  <p>
+    <strong>To proceed, you must submit a waiver.</strong> Without it, your
+    application cannot move forward.
+  </p>
+
+  <div style="text-align:center;">
+    <a href="{{ portal_url }}/dashboard/applications" class="cta-button">
+      Submit a Waiver
+    </a>
+  </div>
+
+  <p style="font-size: 12px; color: #94a3b8; margin-top: 16px;">
+    If you believe this flag is an error, the waiver process is the fastest
+    way to have an administrator review your situation directly.
+  </p>
+{% endblock %}

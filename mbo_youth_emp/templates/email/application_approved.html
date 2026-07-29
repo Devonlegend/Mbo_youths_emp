@@ -1,0 +1,37 @@
+{% extends "email/base.html" %}
+{% block content %}
+  <h2>Congratulations, {{ student_name }}!</h2>
+  <p>
+    We are pleased to inform you that your application for
+    <strong>{{ scheme_name }}</strong> has been <strong>approved</strong>.
+  </p>
+
+  <span class="reference">Ref: #{{ reference }}</span>
+
+  <table class="detail-table">
+    <tr><td>Scheme</td><td>{{ scheme_name }}</td></tr>
+    <tr><td>Award Type</td><td>{{ award_type }}</td></tr>
+    <tr><td>Award Amount</td><td>&#8358;{{ award_amount }}</td></tr>
+    <tr><td>Provider</td><td>{{ provider_name }}</td></tr>
+    <tr><td>Academic Year</td><td>{{ academic_year }}</td></tr>
+    <tr><td>Approved On</td><td>{{ approved_date }}</td></tr>
+  </table>
+
+  {% if reviewer_notes %}
+  <div class="info-box info-box--green">
+    <strong>Reviewer Notes:</strong><br>
+    {{ reviewer_notes }}
+  </div>
+  {% endif %}
+
+  <p style="margin-top: 16px;">
+    This award has been recorded on your profile. You can view the details
+    and track disbursement by visiting your applications dashboard.
+  </p>
+
+  <div style="text-align:center;">
+    <a href="{{ portal_url }}/dashboard/applications" class="cta-button">
+      View My Awards
+    </a>
+  </div>
+{% endblock %}

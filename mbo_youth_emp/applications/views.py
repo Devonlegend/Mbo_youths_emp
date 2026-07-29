@@ -1,19 +1,21 @@
+import json
 import logging
+import uuid
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
+from django.core.files.storage import default_storage
 from django.utils import timezone
-
-from notifications.models import Notification
-from audit.models import AuditLog
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+
+from accounts.validators import validate_upload, FileValidationError
 
 logger = logging.getLogger(__name__)
 
-from .models import ApplicationStatus, ApplicationStatusHistory, REVIEWABLE_STATUSES
+from .models import ApplicationStatus, ApplicationStatusHistory, REVIEWABLE_STATUSES, PendingApplicationNotification
 from .serializers import (
     ApplicationStatusHistorySerializer,
     ApplicationSubmitSerializer,
@@ -32,14 +34,22 @@ from .dynamic import (
 )
 from .services.creation import create_application
 from schemes.models import ScholarshipScheme
-from accounts.permissions import IsVerifier
+from accounts.permissions import IsVerifier, IsAdmin
 
 # ── Notification tasks ────────────────────────────────────────────────────────
+# send_application_rejected_email is intentionally NOT imported: rejection emails
+# are deprecated. Approval emails are deferred until a scheme is Published.
 from verification.tasks import (
     send_application_submitted_email,
     send_application_approved_email,
-    send_application_rejected_email,
     send_double_dip_flagged_email,
+)
+from notifications.helpers import (
+    notify_application_submitted,
+    notify_award_conflict,
+    notify_application_status_update,
+    notify_approval_published,
+    notify_new_application_in_queue,
 )
 
 
@@ -136,7 +146,9 @@ class ApplicationViewSet(viewsets.ViewSet):
     @extend_schema(
         summary="Retrieve one application",
         description='Full application detail. Students may only read their own.',
-        responses=OpenApiResponse(description='Full application object (see FRONTEND_GUIDE.md for the shape).'),
+        parameters=[OpenApiParameter('id', uuid.UUID, location=OpenApiParameter.PATH,
+                                     description='Application UUID')],
+        responses=OpenApiResponse(description='Full application object.'),
     )
     def retrieve(self, request, pk=None):
         found = find_application(pk)
@@ -245,6 +257,12 @@ class ApplicationViewSet(viewsets.ViewSet):
             qs = qs.filter(status=status_filter)
 
         apps = list(qs)
+        # Live counts: how many still need a decision, and how many approval
+        # emails are staged for the Publish button.
+        pending_review = model.objects.filter(status__in=REVIEWABLE_STATUSES).count()
+        unpublished = PendingApplicationNotification.objects.filter(
+            scheme=scheme, sent_at__isnull=True
+        ).count()
         return Response({
             "scheme": {
                 "id":         str(scheme.id),
@@ -252,7 +270,9 @@ class ApplicationViewSet(viewsets.ViewSet):
                 "award_type": scheme.award_type,
                 "total":      len(apps),
             },
-            "applications": [serialize_application(a) for a in apps],
+            "pending_review": pending_review,
+            "unpublished":    unpublished,
+            "applications":   [serialize_application(a) for a in apps],
         })
 
     # ── Status history ────────────────────────────────────────────────────────
@@ -288,8 +308,21 @@ class ApplicationViewSet(viewsets.ViewSet):
         POST /applications/submit/
 
         Creates the application row in THIS scheme's dedicated table.
+
+        Accepts multipart: a `payload` text part with the JSON body, plus each
+        document as a file part keyed by its field name. Falls back to a plain
+        JSON body (no files) for non-browser callers.
         """
-        submit_serializer = ApplicationSubmitSerializer(data=request.data)
+        raw = request.data.get('payload')
+        if raw is not None:
+            try:
+                parsed = json.loads(raw)
+            except (TypeError, ValueError):
+                return Response({"error": "Malformed payload."}, status=400)
+        else:
+            parsed = request.data
+
+        submit_serializer = ApplicationSubmitSerializer(data=parsed)
         if not submit_serializer.is_valid():
             return Response(submit_serializer.errors, status=400)
 
@@ -304,18 +337,12 @@ class ApplicationViewSet(viewsets.ViewSet):
         if not scheme.has_slots():
             return Response({"error": "No slots remaining for this scheme"}, status=400)
 
-        
-       # Get student
+        # Get student
         student = getattr(request.user, 'student_profile', None)
         if not student:
             return Response(
                 {"error": "No student profile found. Complete your profile first."},
                 status=400
-            )
-        if not student.is_verified:
-            return Response(
-                {"error": "Your account must be verified by an admin before you can submit applications."},
-                status=403
             )
 
         model = get_application_model(scheme)
@@ -340,10 +367,26 @@ class ApplicationViewSet(viewsets.ViewSet):
                 status=400,
             )
 
+        # ── Upload documents to Cloudinary, build the {key: url} dict ──────────
+        # Same mechanism as passport/certificate on register: validate at the
+        # request boundary, then save through default_storage (Cloudinary).
+        # Uploaded files win; any URLs in the JSON payload are a fallback for
+        # non-browser callers that pass already-hosted documents.
+        documents = dict(data.get('documents', {}))
+        for doc_key, uploaded in request.FILES.items():
+            try:
+                validate_upload(uploaded, doc_key, required=True)
+            except FileValidationError as exc:
+                return Response({"error": str(exc)}, status=400)
+            stored = default_storage.save(
+                f"application_documents/{doc_key}/{uploaded.name}", uploaded
+            )
+            documents[doc_key] = default_storage.url(stored)
+
         # ── Validate required documents per award type ─────────────────────────
         missing_docs = []
         for doc_key, doc_label in REQUIRED_DOCUMENTS.get(scheme.award_type, []):
-            if not data.get('documents', {}).get(doc_key, '').strip():
+            if not documents.get(doc_key, '').strip():
                 missing_docs.append(
                     dict(key=doc_key, label=f"Please upload your {doc_label}.")
                 )
@@ -374,31 +417,32 @@ class ApplicationViewSet(viewsets.ViewSet):
             self_declaration_received_support = data['self_declaration_received_support'],
             self_declaration_details          = data.get('self_declaration_details', []),
             attestation_agreed = data['attestation_agreed'],
-            documents          = data.get('documents', {}),
+            documents          = documents,
             changed_by         = request.user,
             history_reason     = 'Auto-evaluated by EligibilityEngine on submission',
         )
         initial_status = application.status
 
         # ── Send notifications ────────────────────────────────────────────────
-        # A conflict routes to the waiver flow; every other submission (eligible
-        # or not) is now received and pending verifier review, so it gets the
-        # standard submission confirmation.
+
         if result['has_conflict']:
             _dispatch_email(send_double_dip_flagged_email, application, scheme)
+            try:
+                notify_award_conflict(request.user, application)
+            except Exception:
+                logger.exception("Failed to create conflict notification")
         else:
             _dispatch_email(send_application_submitted_email, application, scheme)
+            try:
+                notify_application_submitted(request.user, application)
+            except Exception:
+                logger.exception("Failed to create submission notification")
 
-        Notification.objects.create(
-            user=request.user,
-            type='alert' if result['has_conflict'] else 'application',
-            title='Application Submitted' if not result['has_conflict'] else 'Conflict Detected',
-            message=(
-                f"Your application for {scheme.name} has been submitted and is under review."
-                if not result['has_conflict'] else
-                f"A conflict was detected for your {scheme.name} application. Please submit a waiver."
-            ),
-        )
+        # Alert all verifier/admin staff that a new application is in the queue.
+        try:
+            notify_new_application_in_queue(application)
+        except Exception:
+            logger.exception("Failed to create staff queue alert")
 
         return Response({
             "application_id":   str(application.id),
@@ -408,6 +452,136 @@ class ApplicationViewSet(viewsets.ViewSet):
             "conflict_details": result['conflict_scheme_ids'],
             "checks":           result['checks'],
             "message":          self._status_message(initial_status),
+        }, status=status.HTTP_201_CREATED)
+
+    # ── Staff create (admin) ─────────────────────────────────────────────────
+    @extend_schema(
+        summary="Create an application (staff/admin)",
+        description=(
+            "Admin creates an application on behalf of a student. Accepts a "
+            "student_id instead of using the authenticated user's profile. "
+            "Skips scheme-open, slot, and duplicate checks. Optional "
+            "status_override sets the initial status directly."
+        ),
+        request=ApplicationSubmitSerializer,
+        responses={201: OpenApiResponse(description=(
+            '{ application_id, status, eligible, has_conflict, checks, message }'
+        ))},
+    )
+    @action(detail=False, methods=['post'], url_path='staff-create', permission_classes=[IsAdmin])
+    def staff_create(self, request):
+        raw = request.data.get('payload')
+        if raw is not None:
+            try:
+                parsed = json.loads(raw)
+            except (TypeError, ValueError):
+                return Response({"error": "Malformed payload."}, status=400)
+        else:
+            parsed = request.data
+
+        # Require student_id
+        student_id = parsed.get('student_id')
+        if not student_id:
+            return Response({"error": "student_id is required."}, status=400)
+
+        from students.models import Student
+        try:
+            student = Student.objects.get(pk=student_id)
+        except (Student.DoesNotExist, ValueError):
+            return Response({"error": "Student not found."}, status=404)
+
+        submit_serializer = ApplicationSubmitSerializer(data=parsed)
+        if not submit_serializer.is_valid():
+            return Response(submit_serializer.errors, status=400)
+
+        data = submit_serializer.validated_data
+
+        scheme = ScholarshipScheme.objects.filter(id=data['scheme_id']).first()
+        if not scheme:
+            return Response({"error": "Scheme not found"}, status=404)
+
+        model = get_application_model(scheme)
+
+        # ── Validate programme_answers against award type ──────────────────
+        answer_serializer_cls = PROGRAMME_ANSWER_SERIALIZERS.get(scheme.award_type)
+        if answer_serializer_cls is None:
+            return Response(
+                {"error": f"Unknown award type '{scheme.award_type}'"},
+                status=400,
+            )
+
+        answers_serializer = answer_serializer_cls(data=data['programme_answers'])
+        if not answers_serializer.is_valid():
+            return Response(
+                {"error": "Invalid application details", "fields": answers_serializer.errors},
+                status=400,
+            )
+
+        # ── Upload documents to Cloudinary ─────────────────────────────────
+        documents = dict(data.get('documents', {}))
+        for doc_key, uploaded in request.FILES.items():
+            try:
+                validate_upload(uploaded, doc_key, required=True)
+            except FileValidationError as exc:
+                return Response({"error": str(exc)}, status=400)
+            stored = default_storage.save(
+                f"application_documents/{doc_key}/{uploaded.name}", uploaded
+            )
+            documents[doc_key] = default_storage.url(stored)
+
+        # ── Build bank fields ──────────────────────────────────────────────
+        bank_fields = {
+            'account_number':    data['bank_account_number'],
+            'bank_code':         data['bank_code'],
+            'bank_name':         data['bank_name'],
+            'account_name':      data['bank_account_name'],
+            'name_match_passed': data['bank_name_match_passed'],
+        }
+
+        # ── Create through the shared pipeline ─────────────────────────────
+        answers = answers_serializer.validated_data
+        application, result = create_application(
+            scheme    = scheme,
+            student   = student,
+            answers   = answers,
+            bank      = bank_fields,
+            self_declaration_received_support = data['self_declaration_received_support'],
+            self_declaration_details          = data.get('self_declaration_details', []),
+            attestation_agreed = data['attestation_agreed'],
+            documents          = documents,
+            changed_by         = request.user,
+            history_reason     = f'Created by admin {request.user.get_full_name() or request.user.email}',
+        )
+
+        # ── Optional status override ───────────────────────────────────────
+        status_override = parsed.get('status_override')
+        valid_overrides = {s.value for s in ApplicationStatus}
+        if status_override and status_override in valid_overrides:
+            from_status = application.status
+            application.status = status_override
+            if status_override == ApplicationStatus.APPROVED:
+                student.active_award = scheme.name
+                student.save(update_fields=['active_award'])
+                scheme.remaining_slots = max(0, scheme.remaining_slots - 1)
+                scheme.save(update_fields=['remaining_slots'])
+            application.save()
+            ApplicationStatusHistory.objects.create(
+                application_id = application.id,
+                scheme         = scheme,
+                from_status    = from_status,
+                to_status      = status_override,
+                changed_by     = request.user,
+                reason         = f'Admin set initial status to {status_override}',
+            )
+
+        return Response({
+            "application_id":   str(application.id),
+            "status":           application.status,
+            "eligible":         result['eligible'],
+            "has_conflict":     result['has_conflict'],
+            "conflict_details": result['conflict_scheme_ids'],
+            "checks":           result['checks'],
+            "message":          self._status_message(application.status),
         }, status=status.HTTP_201_CREATED)
 
     # ── Waiver ────────────────────────────────────────────────────────────────
@@ -531,38 +705,133 @@ class ApplicationViewSet(viewsets.ViewSet):
             reason         = reason,
         )
 
-        AuditLog.objects.create(
-            admin=request.user,
-            action=f"{decision.capitalize()} application for '{scheme.name}' — {student.full_name}",
-            entity_type="Application",
-            entity_id=str(application.id),
-        )
-
-        # ── Send notifications ────────────────────────────────────────────────
+        # ── Notifications ─────────────────────────────────────────────────────
+        # Approval emails are NOT sent here. They are staged as a pending
+        # notification and dispatched in bulk when a reviewer Publishes the
+        # scheme (see the `publish` action). Rejection emails are deprecated
+        # entirely and never sent.
         if decision == 'approved':
-            _dispatch_email(send_application_approved_email, application, scheme)
-        elif decision == 'rejected':
-            _dispatch_email(send_application_rejected_email, application, scheme)
-            
-        if decision == 'approved':
-            Notification.objects.create(
-                user=student.user,
-                type='application',
-                title='Application Approved',
-                message=f"Congratulations! Your application for {scheme.name} has been approved.",
+            PendingApplicationNotification.objects.create(
+                application_id   = application.id,
+                scheme           = scheme,
+                notification_type = 'approved',
             )
-        elif decision == 'rejected':
-            Notification.objects.create(
-                user=student.user,
-                type='alert',
-                title='Application Rejected',
-                message=f"Your application for {scheme.name} was not successful. {notes}",
-            )    
+
+        # In-app notification for the student.
+        try:
+            notify_application_status_update(student.user, application, decision)
+        except Exception:
+            logger.exception("Failed to create status update notification")
 
         return Response({
             "message": f"Application {decision} successfully.",
             "status":  application.status,
+            "note":    ("Approval email will be sent when this scheme is published."
+                        if decision == 'approved' else None),
         })
+
+    # ── Publish scheme approvals ──────────────────────────────────────────────
+    @extend_schema(
+        summary="Publish approval emails for a scheme",
+        description=(
+            "Sends all staged approval emails for one scheme that have not yet "
+            "been sent. Idempotent — already-sent notifications are skipped. "
+            "Verifier/admin only."
+        ),
+        request=None,
+        responses=OpenApiResponse(description='{ sent, scheme }'),
+    )
+    @action(detail=False, methods=['post'],
+            url_path='publish/(?P<scheme_id>[^/.]+)',
+            permission_classes=[IsVerifier])
+    def publish(self, request, scheme_id=None):
+        """
+        POST /applications/publish/{scheme_id}/
+
+        Dispatches approval emails for every unsent PendingApplicationNotification
+        for the given scheme. Marks each row's `sent_at` on success.
+        """
+        scheme = ScholarshipScheme.objects.filter(id=scheme_id).first()
+        if not scheme:
+            return Response({"error": "Scheme not found"}, status=404)
+
+        pending = PendingApplicationNotification.objects.filter(
+            scheme=scheme, sent_at__isnull=True,
+        ).select_related('scheme')
+
+        sent = 0
+        model = None
+        for notification in pending:
+            if model is None and scheme.table_name:
+                model = get_application_model(scheme)
+            # Resolve the application row (may have been deleted, skip gracefully)
+            if model:
+                row = model.objects.filter(id=notification.application_id).first()
+            else:
+                row = None
+            if row is not None:
+                _dispatch_email(send_application_approved_email, row, scheme)
+                try:
+                    notify_approval_published(row.student.user, row)
+                except Exception:
+                    logger.exception(
+                        "Failed to create publish notification for app %s", row.id)
+                sent += 1
+            notification.sent_at = timezone.now()
+            notification.save(update_fields=['sent_at'])
+
+        return Response({
+            "sent":   sent,
+            "scheme": scheme.name,
+        })
+
+    # ── Schemes overview (for scheme-card grid) ──────────────────────────────
+    @extend_schema(
+        summary="Schemes overview with pending counts",
+        description=(
+            "Returns every scheme that has applications, with counts of pending "
+            "review and unpublished approval notifications. Verifier/admin only."
+        ),
+        responses=OpenApiResponse(description='[{ scheme, pending_review, unpublished }]'),
+    )
+    @action(detail=False, methods=['get'],
+            url_path='schemes-overview',
+            permission_classes=[IsVerifier])
+    def schemes_overview(self, request):
+        """
+        GET /applications/schemes-overview/
+
+        Drives the scheme-card grid on the verifier/admin dashboard. For every
+        scheme whose table exists, returns the scheme metadata plus how many
+        applications still need review and how many approved emails are staged
+        but not yet published.
+        """
+        result = []
+        for scheme, model in iter_application_models():
+            total_in_scheme = model.objects.count()
+            if total_in_scheme == 0:
+                continue
+
+            pending_review = model.objects.filter(
+                status__in=REVIEWABLE_STATUSES,
+            ).count()
+            unpublished = PendingApplicationNotification.objects.filter(
+                scheme=scheme, sent_at__isnull=True,
+            ).count()
+
+            result.append({
+                "scheme": {
+                    "id":           str(scheme.id),
+                    "name":         scheme.name,
+                    "award_type":   scheme.award_type,
+                    "total_slots":  scheme.total_slots,
+                    "remaining_slots": scheme.remaining_slots,
+                },
+                "pending_review": pending_review,
+                "unpublished":    unpublished,
+            })
+
+        return Response(result)
 
     # ── Helpers ───────────────────────────────────────────────────────────────
     @staticmethod

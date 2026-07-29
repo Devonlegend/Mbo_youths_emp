@@ -32,7 +32,16 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, firstname, lastname, nin_hash, phone_number, password):
-        user = self.create_user(email, firstname, lastname, phone_number, Role.SUPERADMIN, nin_hash, password)
+        # `createsuperuser` prompts for the raw 11-digit NIN (the prompt is labelled from
+        # REQUIRED_FIELDS); hash it here so CLI-created superusers are stored the same way
+        # as users registered through /auth/register/. `nin_hash` is the raw NIN here.
+        from accounts.utils import hash_nin
+        try:
+            hashed = hash_nin(nin_hash)
+        except ValueError:
+            # Surface a clean message on the management command instead of a traceback.
+            raise ValueError("NIN must be exactly 11 digits")
+        user = self.create_user(email, firstname, lastname, phone_number, Role.SUPERADMIN, hashed, password)
         user.is_staff     = True
         user.is_superuser = True
         user.save(using=self._db)
@@ -51,7 +60,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     created_at   = models.DateTimeField(auto_now_add=True)
     firstname    = models.CharField(max_length=50)
     lastname     = models.CharField(max_length=50)
-    nin_hash     = models.CharField(max_length=20, blank=False)
+    nin_hash     = models.CharField(max_length=64, unique=True)
     email_verified = models.BooleanField(default=False)
     passport = models.FileField(null= False)
 

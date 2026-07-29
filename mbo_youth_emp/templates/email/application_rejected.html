@@ -1,0 +1,37 @@
+{% extends "email/base.html" %}
+{% block content %}
+  <h2>Application Update</h2>
+  <p>
+    Thank you for your interest, {{ student_name }}. After careful review,
+    your application for <strong>{{ scheme_name }}</strong> was not selected
+    at this time.
+  </p>
+
+  <span class="reference">Ref: #{{ reference }}</span>
+
+  <table class="detail-table">
+    <tr><td>Scheme</td><td>{{ scheme_name }}</td></tr>
+    <tr><td>Award Type</td><td>{{ award_type }}</td></tr>
+    <tr><td>Provider</td><td>{{ provider_name }}</td></tr>
+    <tr><td>Academic Year</td><td>{{ academic_year }}</td></tr>
+    <tr><td>Decision Date</td><td>{{ decision_date }}</td></tr>
+  </table>
+
+  {% if rejection_reason %}
+  <div class="info-box info-box--red">
+    <strong>Reason:</strong><br>
+    {{ rejection_reason }}
+  </div>
+  {% endif %}
+
+  <p>
+    This decision does not affect your eligibility for future programmes.
+    New schemes are published regularly &mdash; we encourage you to apply again.
+  </p>
+
+  <div style="text-align:center;">
+    <a href="{{ portal_url }}/dashboard/programmes" class="cta-button">
+      Browse Other Programmes
+    </a>
+  </div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "email/base.html" %}
+{% block content %}
+  <h2>Application Received</h2>
+  <p>
+    Thank you, {{ student_name }}. Your application for
+    <strong>{{ scheme_name }}</strong> has been received.
+  </p>
+
+  <span class="reference">Ref: #{{ reference }}</span>
+
+  <table class="detail-table">
+    <tr><td>Scheme</td><td>{{ scheme_name }}</td></tr>
+    <tr><td>Award Type</td><td>{{ award_type }}</td></tr>
+    <tr><td>Award Amount</td><td>&#8358;{{ award_amount }}</td></tr>
+    <tr><td>Provider</td><td>{{ provider_name }}</td></tr>
+    <tr><td>Academic Year</td><td>{{ academic_year }}</td></tr>
+    <tr><td>Submitted</td><td>{{ submission_date }}</td></tr>
+  </table>
+
+  <div class="info-box info-box--green">
+    Your application is now in the review queue. A verification officer will
+    evaluate your eligibility and supporting documents. You will be notified
+    at each stage of the process.
+  </div>
+
+  <div style="text-align:center;">
+    <a href="{{ portal_url }}/dashboard/applications" class="cta-button">
+      Track Your Application
+    </a>
+  </div>
+{% endblock %}

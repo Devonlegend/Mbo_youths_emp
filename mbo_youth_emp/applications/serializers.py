@@ -31,9 +31,7 @@ class SchemeNestedSerializer(serializers.Serializer):
 class StudentNestedSerializer(serializers.Serializer):
     id                = serializers.UUIDField(source='user_id')
     full_name         = serializers.CharField()
-    email             = serializers.CharField(source='user.email')
     ward              = serializers.CharField()
-    lga               = serializers.CharField()
     level             = serializers.CharField(allow_null=True)
     cgpa              = serializers.DecimalField(max_digits=4, decimal_places=2, allow_null=True)
     nimc_verified     = serializers.BooleanField(source='is_verified')
@@ -160,10 +158,8 @@ def serialize_application_list(row):
         'eligibility_passed': row.eligibility_passed,
         'has_conflict':       row.has_conflict,
         'waiver_submitted':   row.waiver_submitted,
-        'rejection_reason':   row.rejection_reason,
         'can_waive':          _can_waive(row),
         'created_at':         row.created_at,
-        'details':            {f: getattr(row, f, None) for f in BANK_FIELDS},
     }
 
 

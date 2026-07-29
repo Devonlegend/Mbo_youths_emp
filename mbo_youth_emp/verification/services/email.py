@@ -10,6 +10,9 @@ Docs:     https://github.com/sendinblue/APIv3-python-library
 """
 
 import logging
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
+
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
@@ -30,8 +33,9 @@ class EmailService:
         """
         # Add global context available in every template
         context.update({
-            'subject':    subject,
-            'portal_url': getattr(settings, 'PORTAL_URL', 'http://localhost:3000'),
+            'subject':       subject,
+            'portal_url':    getattr(settings, 'PORTAL_URL', 'http://localhost:3000'),
+            'support_email': getattr(settings, 'SUPPORT_EMAIL', 'support@mboempowerment.com'),
         })
 
         try:
@@ -61,9 +65,6 @@ class EmailService:
         """
         Sends via Brevo. Raises Exceptions if the API fails so Celery can retry.
         """
-        import sib_api_v3_sdk
-        from sib_api_v3_sdk.rest import ApiException
-
         configuration = sib_api_v3_sdk.Configuration()
         configuration.api_key['api-key'] = settings.BREVO_API_KEY
 
@@ -135,7 +136,7 @@ class EmailService:
                 'student_name':    student.full_name,
                 'scheme_name':     scheme.name,
                 'award_type':      scheme.get_award_type_display(),
-                'award_amount':    f'{float(scheme.award_amount):,.0f}',
+                'award_amount':    f'{float(scheme.award_amount or 0):,.0f}',
                 'provider_name':   scheme.provider.name,
                 'academic_year':   scheme.academic_year,
                 'submission_date': application.submission_date.strftime('%d %B %Y, %I:%M %p')
@@ -157,7 +158,7 @@ class EmailService:
                 'student_name':   student.full_name,
                 'scheme_name':    scheme.name,
                 'award_type':     scheme.get_award_type_display(),
-                'award_amount':   f'{float(scheme.award_amount):,.0f}',
+                'award_amount':   f'{float(scheme.award_amount or 0):,.0f}',
                 'provider_name':  scheme.provider.name,
                 'academic_year':  scheme.academic_year,
                 'approved_date':  timezone.now().strftime('%d %B %Y'),
@@ -202,10 +203,11 @@ class EmailService:
                 conflict = ScholarshipScheme.objects.filter(id=conflict_scheme_ids[0]).first()
                 if conflict:
                     conflicting_name = conflict.name
-                    if scheme.award_type != conflict.award_type:
+                    # Standardizing string format comparison across choice fields
+                    if scheme.get_award_type_display() != conflict.get_award_type_display():
                         conflict_reason = (
-                            f'You cannot hold a {scheme.award_type} award '
-                            f'and a {conflict.award_type} award simultaneously'
+                            f'You cannot hold a {scheme.get_award_type_display()} award '
+                            f'and a {conflict.get_award_type_display()} award simultaneously'
                         )
                     else:
                         conflict_reason = 'Stacking policy — both awards exceed the major award threshold'
@@ -224,5 +226,17 @@ class EmailService:
                 'conflict_reason':    conflict_reason,
                 'academic_year':      scheme.academic_year,
                 'reference':          str(application.id)[:8].upper(),
+            }
+        )
+
+    @classmethod
+    def send_student_verified(cls, student) -> bool:
+        """Send when admin approves a student's identity verification."""
+        return cls._send(
+            to_email=student.user.email,
+            subject='Your Profile Has Been Verified — Start Applying Now',
+            template='student_verified',
+            context={
+                'student_name': student.full_name,
             }
         )

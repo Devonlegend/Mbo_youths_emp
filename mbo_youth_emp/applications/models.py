@@ -57,3 +57,29 @@ class ApplicationStatusHistory(models.Model):
 
     def __str__(self):
         return f"{self.application_id}: {self.from_status} → {self.to_status}"
+
+
+class PendingApplicationNotification(models.Model):
+    """Approval emails held back until a reviewer Publishes a scheme.
+
+    Applications live in per-scheme `managed=False` tables whose shape is fixed,
+    so we track "approved but not yet emailed" here instead of adding a column
+    to every dynamic table. A row is created when `review` approves an
+    application; `sent_at` is stamped when the Publish endpoint enqueues the
+    approval email. Rejection emails are deprecated and never tracked here.
+    """
+    id               = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    application_id   = models.UUIDField(db_index=True)
+    scheme           = models.ForeignKey('schemes.ScholarshipScheme', on_delete=models.CASCADE,
+                                         related_name='pending_notifications')
+    notification_type = models.CharField(max_length=10, choices=[('approved', 'Approved')])
+    created_at       = models.DateTimeField(auto_now_add=True)
+    sent_at          = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [models.Index(fields=['scheme', 'sent_at'])]
+
+    def __str__(self):
+        state = 'sent' if self.sent_at else 'pending'
+        return f"{self.notification_type} {self.application_id} ({state})"

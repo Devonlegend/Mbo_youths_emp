@@ -2,17 +2,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import serializers
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, inline_serializer
 
 import logging
-logger = logging.getLogger(__name__)
 
-from .models import Student, AcademicRecord
-from .serializers import StudentSerializer, StudentCreateSerializer, AcademicRecordSerializer
+from .models import Student
+from .serializers import StudentSerializer, StudentCreateSerializer
 from accounts.permissions import IsAdmin, IsStudent, IsVerifier
 
-from django.utils import timezone
-from rest_framework import serializers as drf_serializers
+logger = logging.getLogger(__name__)
+
 
 class StudentViewSet(viewsets.ModelViewSet):
     queryset           = Student.objects.all().order_by('firstname')
@@ -25,19 +25,14 @@ class StudentViewSet(viewsets.ModelViewSet):
         return StudentSerializer
 
     def get_permissions(self):
-            """
-            Different actions need different permissions.
-            Students can only see their own profile.
-            Verifiers and admins can list everyone; only admins can delete.
-            Only admins can approve/reject verification.
-            """
-            if self.action == 'list':
-                return [IsVerifier()]
-            if self.action == 'destroy':
-                return [IsAdmin()]
-            if self.action in ('verify', 'pending'):
-                return [IsAdmin()]
-            return [IsAuthenticated()]
+        """
+        Different actions need different permissions.
+        Students can only see their own profile.
+        Admins can see everyone.
+        """
+        if self.action in ['list', 'destroy']:
+            return [IsAdmin()]
+        return [IsAuthenticated()]
 
     @extend_schema(
         summary="Quick eligibility pre-check",
@@ -88,7 +83,7 @@ class StudentViewSet(viewsets.ModelViewSet):
     )
     @action(detail=False, methods=['get'], url_path='stats')
     def stats(self, request):
-        """GET /students/stats/"""
+        # /students/stats/
         from django.db.models import Count
 
         total        = Student.objects.count()
@@ -96,7 +91,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         with_award   = Student.objects.exclude(active_award='').count()
 
         by_ward = {}
-        for student in Student.objects.values('ward').annotate(count=Count('user_id')):
+        for student in Student.objects.values('ward').annotate(count=Count('id')):
             by_ward[student['ward']] = student['count']
 
         return Response({
@@ -116,31 +111,28 @@ class StudentViewSet(viewsets.ModelViewSet):
     def me(self, request):
         """GET /students/me/ — return current user's student profile."""
         user = request.user
-        student = getattr(user, 'student', None)
+        student = getattr(user, 'student_profile', None)
         if student is None:
             return Response({"error": "No student profile found"}, status=status.HTTP_404_NOT_FOUND)
         serializer = self.get_serializer(student)
         return Response(serializer.data)
-        
-    @action(detail=False, methods=['get'], url_path='bank')
-    def bank(self, request):
-        """GET /students/bank/ — current user's saved bank details."""
-        student = getattr(request.user, 'student', None)
-        if student is None:
-            return Response({"error": "No student profile found"}, status=404)
-        return Response({
-            "bank_name": student.bank_name,
-            "bank_code": student.bank_code,
-            "account_number": student.bank_account_number,
-            "account_name": student.bank_account_name,
-        })
 
-    @bank.mapping.patch
-    def update_bank(self, request):
-        """PATCH /students/bank/ — save/update bank details."""
-        student = getattr(request.user, 'student', None)
+    @action(detail=False, methods=['get', 'patch'], url_path='bank')
+    def bank(self, request):
+        """GET /students/bank/ or PATCH /students/bank/ — get/update bank details."""
+        student = getattr(request.user, 'student_profile', None)
         if student is None:
             return Response({"error": "No student profile found"}, status=404)
+        
+        if request.method == 'GET':
+            return Response({
+                "bank_name": student.bank_name,
+                "bank_code": student.bank_code,
+                "account_number": student.bank_account_number,
+                "account_name": student.bank_account_name,
+            })
+        
+        # PATCH
         student.bank_name = request.data.get('bank_name', student.bank_name)
         student.bank_code = request.data.get('bank_code', student.bank_code)
         student.bank_account_number = request.data.get('account_number', student.bank_account_number)
@@ -152,21 +144,22 @@ class StudentViewSet(viewsets.ModelViewSet):
             "account_number": student.bank_account_number,
             "account_name": student.bank_account_name,
         })
-    
+
     @extend_schema(
         summary="Approve or reject a student's verification",
         request=inline_serializer(
             name='StudentVerifyRequest',
             fields={
-                'decision': drf_serializers.ChoiceField(choices=['approved', 'rejected']),
-                'notes': drf_serializers.CharField(required=False, allow_blank=True, default=''),
+                'decision': serializers.ChoiceField(choices=['approved', 'rejected']),
+                'notes': serializers.CharField(required=False, allow_blank=True, default=''),
             },
         ),
-        responses=OpenApiResponse(description='{ id, is_verified, verification_rejection_reason }'),
+        responses=OpenApiResponse(description='{ is_verified, verification_rejection_reason }'),
     )
-    @action(detail=True, methods=['patch'], url_path='verify')
+    @action(detail=True, methods=['patch'], url_path='verify', permission_classes=[IsVerifier])
     def verify(self, request, pk=None):
-        """PATCH /students/{id}/verify/  Body: { decision, notes? }"""
+        """PATCH /students/{id}/verify/ — Body: { decision, notes? }"""
+        from django.utils import timezone
         student = self.get_object()
         decision = request.data.get('decision')
         notes = (request.data.get('notes') or '').strip()
@@ -191,47 +184,24 @@ class StudentViewSet(viewsets.ModelViewSet):
             'is_verified', 'verification_rejection_reason', 'verification_reviewed_at'
         ])
 
-        from notifications.models import Notification
-        from accounts.services import send_verification_decision_email
-
+        # ── Notifications ──────────────────────────────────────────────────
         if decision == 'approved':
-            title, message = (
-                'Account Verified',
-                'Your account has been verified. You can now apply for available programmes.',
-            )
-        else:
-            title, message = (
-                'Verification Update Required',
-                f'Your account verification was not approved. Reason: {notes}',
-            )
+            from verification.tasks import send_student_verified_email
+            from notifications.helpers import notify_profile_verified
 
-        Notification.objects.create(
-            user=student.user,
-            type='verification_approved' if decision == 'approved' else 'verification_rejected',
-            title=title,
-            message=message,
-        )
+            try:
+                send_student_verified_email.delay(student_id=str(student.pk))
+            except Exception:
+                logger.exception(
+                    "Failed to enqueue verified email for student %s", student.pk)
 
-        try:
-            send_verification_decision_email(student.user.email, decision, notes)
-        except Exception:
-            logger.exception("Failed to send verification decision email to %s", student.user.email)
-            # Decision is already saved — don't fail the request over an email hiccup.
+            try:
+                notify_profile_verified(student.user)
+            except Exception:
+                logger.exception(
+                    "Failed to create verified notification for student %s", student.pk)
 
         return Response({
-            "id": str(student.pk),
             "is_verified": student.is_verified,
             "verification_rejection_reason": student.verification_rejection_reason,
         })
-
-    @extend_schema(
-        summary="List students pending verification",
-        responses=OpenApiResponse(description='{ count, next, previous, results: [...] }'),
-    )
-    @action(detail=False, methods=['get'], url_path='pending')
-    def pending(self, request):
-        """GET /students/pending/"""
-        queryset = Student.objects.filter(is_verified=False).order_by('firstname')
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True)
-        return self.get_paginated_response(serializer.data)

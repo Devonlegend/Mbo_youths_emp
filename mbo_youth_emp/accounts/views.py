@@ -1,9 +1,10 @@
-import logging
+﻿import logging
 import secrets
 from datetime import timedelta
 
 from django.conf import settings
-from django.db import transaction
+from django.core.exceptions import ValidationError
+from django.db import transaction, IntegrityError
 from django.db.models import F
 from django.utils import timezone
 from rest_framework import status
@@ -18,19 +19,18 @@ from rest_framework import serializers as drf_serializers
 from accounts.models import EmailOTP, PasswordResetOTP, Role
 from students.models import Student
 
-from accounts.permissions import IsSuperAdmin  
-from rest_framework.pagination import PageNumberPagination
-
 from .authentication import ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME
-from .services import ApiException, send_otp_email, send_password_reset_email
+from verification.tasks import send_email_task, send_welcome_email, send_password_reset_email as send_password_reset_task
+from notifications.helpers import notify_welcome, notify_password_changed
 from .validators import validate_upload, FileValidationError
 from .throttles import OTPThrottle, AuthThrottle
-from notifications.models import Notification
+from .utils import hash_nin
+
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-# ──────────────────────────── cookie helpers ────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ cookie helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _cookie_flags():
     """Resolve secure/samesite from settings, with sane DEBUG defaults."""
@@ -71,14 +71,23 @@ def _clear_jwt_cookies(response):
     response.delete_cookie(REFRESH_COOKIE_NAME, path='/')
 
 
-# ──────────────────────────── endpoints ────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+def _delete_unverified_user(**filters):
+    """Delete a User that was created but never finished OTP verification.
+
+    Called before register() creates a new account so abandoned sign-ups
+    don't permanently squat an email / NIN / phone number.
+    """
+    User.objects.filter(email_verified=False, **filters).delete()
+
 
 @extend_schema(
     summary="Register a new account",
     description=(
         "Creates a User + Student (multipart/form-data for the passport/certificate "
-        "files). NIN must be pre-hashed client-side. Does NOT log in — the client "
-        "must complete the OTP flow next."
+        "files). Send the raw 11-digit NIN; it is hashed server-side and only the hash "
+        "is stored. Does NOT log in â€” the client must complete the OTP flow next."
     ),
     request=inline_serializer(
         name='RegisterRequest',
@@ -88,7 +97,7 @@ def _clear_jwt_cookies(response):
             'lastname': drf_serializers.CharField(),
             'phone_number': drf_serializers.CharField(),
             'password': drf_serializers.CharField(),
-            'nin_hash': drf_serializers.CharField(),
+            'nin': drf_serializers.CharField(),
             'date_of_birth': drf_serializers.DateField(required=False),
             'gender': drf_serializers.CharField(required=False),
             'ward': drf_serializers.CharField(required=False),
@@ -105,9 +114,11 @@ def _clear_jwt_cookies(response):
 def register(request):
     """
     POST /auth/register/
-    Body: { email, firstname, lastname, phone_number, password, nin_hash,
+    Body: { email, firstname, lastname, phone_number, password, nin,
             date_of_birth?, ward?, gender?, lga?, passport?, certificate? }
 
+    `nin` is the raw 11-digit NIN; it is hashed server-side (accounts.utils.hash_nin)
+    and only the hash is stored â€” the raw NIN never touches the database.
     Every registered user is also created as a Student (multi-table inheritance),
     so request.user.student_profile is always available after registration.
     On success, JWTs are set as httpOnly cookies (access_token, refresh_token).
@@ -118,15 +129,22 @@ def register(request):
     phone_number = request.data.get('phone_number')
     password     = request.data.get('password')
     date_of_birth = request.data.get('date_of_birth')
-    nin_hash     = request.data.get('nin_hash')
+    nin          = request.data.get('nin')
     ward         = request.data.get('ward', '')
     gender       = request.data.get('gender')
     lga          = request.data.get('lga', '')
     passport    = request.FILES.get('passport')
     certificate = request.FILES.get('certificate')
 
-    if not all([email, firstname, lastname, phone_number, password, nin_hash]):
+    if not all([email, firstname, lastname, phone_number, password, nin]):
         return Response({"error": "All fields are required"},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    # Hash the NIN server-side so the client can't forge or pre-collide it.
+    try:
+        nin_hash = hash_nin(nin)
+    except ValueError:
+        return Response({"error": "Enter a valid 11-digit NIN"},
                         status=status.HTTP_400_BAD_REQUEST)
 
     try:
@@ -135,62 +153,63 @@ def register(request):
     except FileValidationError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
+    # Allow re-registration over an unverified skeleton account so abandoned
+    # sign-ups don't permanently squat an email / NIN / phone number.
+    _delete_unverified_user(email=email)
+    _delete_unverified_user(nin_hash=nin_hash)
+
     if User.objects.filter(email=email).exists():
         return Response({"error": "Email already registered"},
                         status=status.HTTP_400_BAD_REQUEST)
+    # Friendly pre-check for a nicer message; the unique constraint on nin_hash is the
+    # real guard against the concurrent-registration race (handled below).
     if User.objects.filter(nin_hash=nin_hash).exists():
-        return Response({"error": "NIN already in use"},
+        return Response({"error": "NIN already in use", "code": "nin_taken"},
                         status=status.HTTP_400_BAD_REQUEST)
 
     # Every self-registered user is initially a Student. Role is forced here
     # (ignoring any client-supplied role) so privileged roles can't be claimed
-    # via the public endpoint — admins promote users to other roles later.
+    # via the public endpoint â€” admins promote users to other roles later.
     # User and Student are created together in a transaction so the registered
     # user always has a matching student row keyed by the same UUID.
-    with transaction.atomic():
-        user = User.objects.create_user(
-            email=email,
-            phone_number=phone_number,
-            role=Role.STUDENT,
-            password=password,
-            firstname=firstname,
-            lastname=lastname,
-            nin_hash=nin_hash,
-            date_of_birth=date_of_birth,
-            gender=gender,
-            passport=passport,
-        )
-        if passport:
-            passport.seek(0)
-        if certificate:
-            certificate.seek(0)   
-         
-        Student.objects.create(
-            user=user,
-            firstname=firstname,
-            lastname=lastname,
-            ward=ward or '',
-            lga=lga or '',
-            date_of_birth=date_of_birth,
-            nin_hash=nin_hash,
-            passport=passport,
-            certificate=certificate,
-            is_verified=False,
-        )
+    try:
+        with transaction.atomic():
+            user = User.objects.create_user(
+                email=email,
+                phone_number=phone_number,
+                role=Role.STUDENT,
+                password=password,
+                firstname=firstname,
+                lastname=lastname,
+                nin_hash=nin_hash,
+                date_of_birth=date_of_birth,
+                gender=gender,
+                passport=passport,
+            )
+            Student.objects.create(
+                user=user,
+                email=email,
+                firstname=firstname,
+                lastname=lastname,
+                phone_number=phone_number,
+                ward=ward or '',
+                lga=lga or '',
+                gender=gender,
+                date_of_birth=date_of_birth,
+                nin_hash=nin_hash,
+                certificate=certificate
+            )
+    except IntegrityError:
+        # Lost the race to another concurrent registration with the same NIN
+        # (or email/phone). Surface the NIN case with the same friendly code.
+        if User.objects.filter(nin_hash=nin_hash).exists():
+            return Response({"error": "NIN already in use", "code": "nin_taken"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Account already exists"},
+                        status=status.HTTP_400_BAD_REQUEST)
 
-        Notification.objects.create(
-            user=user,
-            type='system',
-            title='Account Under Review',
-            message=(
-                'Thanks for registering! An admin needs to review your documents '
-                'before you can apply for programmes. We\'ll notify you as soon as '
-                'your account is verified.'
-            ),
-        )
-
-    # No JWT cookies here — the client must complete the OTP flow
-    # (/auth/otp/send/ → /auth/otp/verify/) before being logged in.
+    # No JWT cookies here â€” the client must complete the OTP flow
+    # (/auth/otp/send/ â†’ /auth/otp/verify/) before being logged in.
     return Response(
         {"message": "Account created. Please verify your email.", "email": user.email},
         status=status.HTTP_201_CREATED,
@@ -233,7 +252,7 @@ def login(request):
     return Response({"otp_required": True, "email": user.email})
 
 
-# ──────────────────────────── OTP ────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ OTP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _generate_code() -> str:
     """Cryptographically-random 6-digit code, zero-padded."""
@@ -287,12 +306,9 @@ def _issue_otp(email):
         )
 
     try:
-        send_otp_email(user.email, code)
-    except ApiException:
-        logger.exception("Brevo send_transac_email failed for %s", user.email)
-        return {"error": "Failed to send OTP email"}, status.HTTP_502_BAD_GATEWAY
+        send_email_task.delay(email=user.email, template_name='otp', otp=code)
     except Exception:
-        logger.exception("Unexpected error sending OTP email to %s", user.email)
+        logger.exception("Failed to enqueue OTP email for %s", user.email)
         return {"error": "Failed to send OTP email"}, status.HTTP_502_BAD_GATEWAY
 
     return None, status.HTTP_200_OK
@@ -301,7 +317,7 @@ def _issue_otp(email):
 @extend_schema(
     summary="Send login/verification OTP",
     request=inline_serializer(name='OtpSendRequest', fields={'email': drf_serializers.EmailField()}),
-    responses=OpenApiResponse(description='{ message } — or 429 { error, retry_after_seconds } during cooldown.'),
+    responses=OpenApiResponse(description='{ message } â€” or 429 { error, retry_after_seconds } during cooldown.'),
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -317,7 +333,7 @@ def otp_send(request):
 @extend_schema(
     summary="Resend login/verification OTP",
     request=inline_serializer(name='OtpResendRequest', fields={'email': drf_serializers.EmailField()}),
-    responses=OpenApiResponse(description='{ message } — or 429 { error, retry_after_seconds } during cooldown.'),
+    responses=OpenApiResponse(description='{ message } â€” or 429 { error, retry_after_seconds } during cooldown.'),
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -331,7 +347,7 @@ def otp_resend(request):
 
 
 @extend_schema(
-    summary="Verify OTP (step 2 of 2 — sets cookies)",
+    summary="Verify OTP (step 2 of 2 â€” sets cookies)",
     description='On success marks the email verified and sets the httpOnly JWT cookies.',
     request=inline_serializer(
         name='OtpVerifyRequest',
@@ -387,24 +403,25 @@ def otp_verify(request):
     EmailOTP.objects.filter(pk=otp.pk, used_at__isnull=True).update(used_at=now)
 
     if not user.email_verified:
-            user.email_verified = True
-            user.save(update_fields=['email_verified'])
-            Notification.objects.create(
-                user=user,
-                type='welcome',
-                title='Welcome to RMHCDT Youth Portal',
-                message='Your account has been verified successfully. You can now apply for available programmes.',
-            )
-
-    user.last_login = now
-    user.save(update_fields=['last_login'])
+        user.email_verified = True
+        user.save(update_fields=['email_verified'])
+        # Fire once on first verification — welcome email + in-app notification.
+        try:
+            send_welcome_email.delay(user_id=str(user.id))
+        except Exception:
+            logger.exception("Failed to enqueue welcome email for %s", user.email)
+        try:
+            notify_welcome(user)
+        except Exception:
+            logger.exception("Failed to create welcome notification for %s", user.email)
 
     refresh = RefreshToken.for_user(user)
     response = Response({"message": "Verified"})
     _set_jwt_cookies(response, refresh)
     return response
 
-# ──────────────────────────── identity ────────────────────────────
+
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ identity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @extend_schema(
     summary="Current user identity",
@@ -413,7 +430,7 @@ def otp_verify(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def me(request):
-    """GET /auth/me/ — who am I?"""
+    """GET /auth/me/ â€” who am I?"""
     passport_url =request.user.passport.url if request.user.passport else None
     return Response({
         "id":           str(request.user.id),
@@ -422,10 +439,9 @@ def me(request):
         "lastname":     request.user.lastname,
         "phone_number": request.user.phone_number,
         "role":         request.user.role,
-        "date_of_birth": request.user.date_of_birth,
-        "gender":       request.user.gender,
         "passport":     passport_url,
-        "last_login":   request.user.last_login,
+        "gender":      request.user.gender,
+        "date_of_birth": request.user.date_of_birth,
     })
 
 
@@ -484,7 +500,7 @@ def logout(request):
     return response
 
 
-# ──────────────────────────── password reset ────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ password reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 # Generic message returned by request/verify/confirm so an attacker can't probe
 # which emails are registered.
@@ -509,7 +525,7 @@ def password_reset_request(request):
     """
     email = (request.data.get('email') or '').strip().lower()
     if not email:
-        # Even bad input gets the generic response — no info leak.
+        # Even bad input gets the generic response â€” no info leak.
         return Response(_RESET_GENERIC_OK)
 
     try:
@@ -543,11 +559,9 @@ def password_reset_request(request):
         )
 
     try:
-        send_password_reset_email(user.email, code)
-    except ApiException:
-        logger.exception("Brevo send_password_reset_email failed for %s", user.email)
+        send_password_reset_task.delay(email=user.email, otp=code)
     except Exception:
-        logger.exception("Unexpected error sending password reset email to %s", user.email)
+        logger.exception("Failed to enqueue password reset email for %s", user.email)
 
     return Response(_RESET_GENERIC_OK)
 
@@ -586,7 +600,7 @@ def _find_valid_reset_otp(email, code):
 
 @extend_schema(
     summary="Verify a password reset code",
-    description='Validates the code without consuming it — gates the "enter new password" step.',
+    description='Validates the code without consuming it â€” gates the "enter new password" step.',
     request=inline_serializer(
         name='PasswordResetVerify',
         fields={'email': drf_serializers.EmailField(), 'code': drf_serializers.CharField()},
@@ -600,7 +614,7 @@ def password_reset_verify(request):
     """
     POST /auth/password/reset/verify/  Body: { email, code }
 
-    Validates the OTP without consuming it — the client uses this to gate the
+    Validates the OTP without consuming it â€” the client uses this to gate the
     "enter new password" step before calling confirm.
     """
     otp, err, http_status = _find_valid_reset_otp(
@@ -663,200 +677,13 @@ def password_reset_confirm(request):
         for token in OutstandingToken.objects.filter(user=user):
             BlacklistedToken.objects.get_or_create(token=token)
 
+    # Notify the user of the password change.
+    try:
+        notify_password_changed(user)
+    except Exception:
+        logger.exception("Failed to create password-changed notification for %s", user.email)
+
     response = Response({"message": "Password has been reset. Please log in."})
     # Also clear cookies on this response in case the caller was logged in.
     _clear_jwt_cookies(response)
     return response
-
-
-# ──────────────────────────── admin users: list ────────────────────────────
- 
-@extend_schema(
-    summary="List admin/verifier/superadmin users",
-    description="Superadmin-only. Returns paginated staff accounts (excludes plain students).",
-    responses=OpenApiResponse(description='{ count, next, previous, results: [...] }'),
-)
-@api_view(['GET'])
-@permission_classes([IsSuperAdmin])
-def admin_users_list(request):
-    """GET /auth/admin-users/"""
-    queryset = User.objects.filter(
-        role__in=['admin', 'verifier', 'superadmin']
-    ).order_by('firstname')
- 
-    paginator = PageNumberPagination()
-    paginator.page_size = 50
-    page = paginator.paginate_queryset(queryset, request)
- 
-    data = [
-        {
-            "id":         str(u.id),
-            "firstname":  u.firstname,
-            "lastname":   u.lastname,
-            "email":      u.email,
-            "role":       u.role,
-            "is_active":  u.is_active,
-            "last_login": u.last_login,
-        }
-        for u in page
-    ]
-    return paginator.get_paginated_response(data)
- 
- 
-# ──────────────────────────── admin users: create ────────────────────────────
- 
-@extend_schema(
-    summary="Create an admin or verifier account",
-    description=(
-        "Superadmin-only. Creates a staff account directly (no OTP flow — "
-        "the account is active immediately). role must be 'admin' or "
-        "'verifier'; 'superadmin' cannot be created through this endpoint."
-    ),
-    request=inline_serializer(
-        name='AdminUserCreateRequest',
-        fields={
-            'firstname':    drf_serializers.CharField(),
-            'lastname':     drf_serializers.CharField(),
-            'email':        drf_serializers.EmailField(),
-            'phone_number': drf_serializers.CharField(),
-            'nin_hash':     drf_serializers.CharField(),
-            'password':     drf_serializers.CharField(),
-            'role':         drf_serializers.ChoiceField(choices=['admin', 'verifier']),
-        },
-    ),
-    responses={201: OpenApiResponse(description='{ id, email, role }')},
-)
-@api_view(['POST'])
-@permission_classes([IsSuperAdmin])
-def admin_users_create(request):
-    """POST /auth/admin-users/create/"""
-    firstname    = request.data.get('firstname')
-    lastname     = request.data.get('lastname')
-    email        = request.data.get('email')
-    phone_number = request.data.get('phone_number')
-    nin_hash     = request.data.get('nin_hash')
-    password     = request.data.get('password')
-    role         = request.data.get('role')
- 
-    if not all([firstname, lastname, email, phone_number, nin_hash, password, role]):
-        return Response({"error": "All fields are required"},
-                        status=status.HTTP_400_BAD_REQUEST)
- 
-    # Only admin/verifier may be created here — superadmin is reserved for
-    # `python manage.py createsuperuser` so it can never be granted over the API.
-    if role not in ('admin', 'verifier'):
-        return Response({"error": "role must be 'admin' or 'verifier'"},
-                        status=status.HTTP_400_BAD_REQUEST)
- 
-    if User.objects.filter(email=email).exists():
-        return Response({"error": "Email already registered"},
-                        status=status.HTTP_400_BAD_REQUEST)
-    if User.objects.filter(nin_hash=nin_hash).exists():
-        return Response({"error": "NIN already in use"},
-                        status=status.HTTP_400_BAD_REQUEST)
- 
-    # Staff accounts don't get a Student row — unlike the public register
-    # view, this is the one place a User is created without one.
-    user = User.objects.create_user(
-        email=email,
-        phone_number=phone_number,
-        role=role,
-        password=password,
-        firstname=firstname,
-        lastname=lastname,
-        nin_hash=nin_hash,
-    )
-    user.email_verified = True  # staff accounts skip the OTP flow
-    user.save(update_fields=['email_verified'])
- 
-    return Response(
-        {"id": str(user.id), "email": user.email, "role": user.role},
-        status=status.HTTP_201_CREATED,
-    )
- 
- 
-# ──────────────────────────── admin users: update role ────────────────────────────
- 
-@extend_schema(
-    summary="Change a staff user's role",
-    description="Superadmin-only. Cannot promote/demote to 'superadmin', and cannot change your own role.",
-    request=inline_serializer(
-        name='AdminUserRoleRequest',
-        fields={'role': drf_serializers.ChoiceField(choices=['admin', 'verifier'])},
-    ),
-    responses=OpenApiResponse(description='{ id, role }'),
-)
-@api_view(['PATCH'])
-@permission_classes([IsSuperAdmin])
-def admin_users_update_role(request, user_id):
-    """PATCH /auth/admin-users/{id}/role/"""
-    new_role = request.data.get('role')
-    if new_role not in ('admin', 'verifier'):
-        return Response({"error": "role must be 'admin' or 'verifier'"},
-                        status=status.HTTP_400_BAD_REQUEST)
- 
-    try:
-        target = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
- 
-    if target.id == request.user.id:
-        return Response({"error": "You cannot change your own role"},
-                        status=status.HTTP_400_BAD_REQUEST)
-    if target.role == 'superadmin':
-        return Response({"error": "Cannot change a superadmin's role"},
-                        status=status.HTTP_400_BAD_REQUEST)
- 
-    target.role = new_role
-    target.save(update_fields=['role'])
-    return Response({"id": str(target.id), "role": target.role})
- 
- 
-# ──────────────────────────── admin users: deactivate / reactivate ────────────────────────────
- 
-@extend_schema(
-    summary="Deactivate a staff account",
-    description="Superadmin-only. Cannot deactivate yourself or a superadmin.",
-    request=None,
-    responses=OpenApiResponse(description='{ id, is_active }'),
-)
-@api_view(['PATCH'])
-@permission_classes([IsSuperAdmin])
-def admin_users_deactivate(request, user_id):
-    """PATCH /auth/admin-users/{id}/deactivate/"""
-    try:
-        target = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
- 
-    if target.id == request.user.id:
-        return Response({"error": "You cannot deactivate your own account"},
-                        status=status.HTTP_400_BAD_REQUEST)
-    if target.role == 'superadmin':
-        return Response({"error": "Cannot deactivate a superadmin"},
-                        status=status.HTTP_400_BAD_REQUEST)
- 
-    target.is_active = False
-    target.save(update_fields=['is_active'])
-    return Response({"id": str(target.id), "is_active": target.is_active})
- 
- 
-@extend_schema(
-    summary="Reactivate a staff account",
-    description="Superadmin-only.",
-    request=None,
-    responses=OpenApiResponse(description='{ id, is_active }'),
-)
-@api_view(['PATCH'])
-@permission_classes([IsSuperAdmin])
-def admin_users_reactivate(request, user_id):
-    """PATCH /auth/admin-users/{id}/reactivate/"""
-    try:
-        target = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
- 
-    target.is_active = True
-    target.save(update_fields=['is_active'])
-    return Response({"id": str(target.id), "is_active": target.is_active})
- 
