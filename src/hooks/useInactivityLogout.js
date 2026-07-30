@@ -10,12 +10,17 @@ export function useInactivityLogout() {
 
   useEffect(() => {
     function resetTimer() {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(async () => {
-        await logout();
-        router.push("/login");
-      }, TIMEOUT_MS);
-    }
+          if (timerRef.current) clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(async () => {
+            try {
+              await logout();
+            } catch {}
+            finally {
+              router.push("/login");
+            }
+          }, TIMEOUT_MS);
+        }
+
 
     const events = [
       "mousemove",
