@@ -65,9 +65,10 @@ export default function AdminTopbar({ user, onMenuOpen }) {
       await logout();
     } catch {}
     finally {
-      window.location.href = "/login";
+      router.push("/login");
     }
   }
+
 
   return (
     <header className={styles.topbar}>

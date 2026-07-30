@@ -73,10 +73,16 @@ export default function DashboardLayout({ children }) {
         });
 
       } catch (err) {
-        router.replace("/login");
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          router.replace("/login");
+        } else {
+          console.error("Failed to load user:", err);
+        }
       } finally {
         setLoading(false);
       }
+      
     }
 
     loadUser();

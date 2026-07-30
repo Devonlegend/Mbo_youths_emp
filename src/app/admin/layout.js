@@ -29,10 +29,16 @@ export default function AdminLayout({ children }) {
         }
 
         setUser(u);
-      } catch {
-        // Not authenticated — send to login
-        router.replace("/login");
-      } finally {
+      } catch (err) {
+          const status = err?.response?.status;
+          if (status === 401 || status === 403) {
+            router.replace("/login");
+          } else {
+            console.error("Failed to load admin user:", err);
+          }
+        }
+        
+    finally {
         if (!cancelled) setLoading(false);
       }
     }

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, FileText, ClipboardList,
   Files, UserCircle, Bell, BookOpen,
@@ -50,6 +50,8 @@ function NavItem({ item, active, onClick, badge }) {
 
 export default function Sidebar({ isOpen, onClose }) {
   const pathname = usePathname();
+  const router = useRouter();
+
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -74,9 +76,10 @@ export default function Sidebar({ isOpen, onClose }) {
     } catch (err) {
       // Even if the call fails, we still clear local state and redirect
     } finally {
-      window.location.href = "/login";
+      router.push("/login");
     }
   }
+
 
   return (
     <>
