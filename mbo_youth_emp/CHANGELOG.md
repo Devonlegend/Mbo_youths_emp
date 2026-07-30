@@ -150,7 +150,7 @@ Students no longer need admin verification before submitting applications — th
 the bank details check is now a must , it must match your name before u can submit
 ---
 
-## 🧹 Removals
+## Removals
 
 | Removed | Why |
 |---|---|
@@ -164,7 +164,7 @@ the bank details check is now a must , it must match your name before u can subm
 
 ---
 
-## 🗄️ Django Admin Hardening
+##  Django Admin Hardening
 
 **`accounts/admin.py`** rewritten from a bare `UserAdmin(admin.ModelAdmin): pass`:
 
@@ -175,7 +175,7 @@ the bank details check is now a must , it must match your name before u can subm
 
 ---
 
-## 🚢 Production Readiness
+## Production Readiness
 
 ### Docker
 
@@ -202,7 +202,7 @@ the bank details check is now a must , it must match your name before u can subm
 
 ---
 
-## 🔧 Student Model Changes
+## Student Model Changes
 
 - **New fields on Student:** `email`, `phone_number`, `gender` — previously only on User, now mirrored on Student for direct access
 - **`nin_hash`** — max_length 20 → 64 (matches User)
@@ -214,14 +214,13 @@ the bank details check is now a must , it must match your name before u can subm
 
 ---
 
-## 🔀 Other Changes
+##  Other Changes
 
 - **Audit log:** simplified from paginated `ListAPIView` back to `APIView` returning the latest 100 entries (fixed slice)
 - **Audit log creation removed** from application review — no audit entry on approve/reject
 - **`me` endpoint** response reordered: `gender` before `date_of_birth`, `last_login` removed
 - **`upload_document` endpoint** and its Cloudinary import removed
 - **Bank resolution** no longer persists details to the Student row (submit carries the values)
-- **Section dividers** in code changed from `# ──` to `# ──` (ASCII box-drawing artifacts in some editors)
 - **Template dirs** configured: `BASE_DIR / 'templates'` added to `TEMPLATES[0]['DIRS']`
 
 
