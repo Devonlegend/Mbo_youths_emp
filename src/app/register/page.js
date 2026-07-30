@@ -175,11 +175,13 @@ function handleCertificateChange(e) {
       formData.append("phone_number", form.phone);
 
       // nin hashed
-      const ninBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(form.nin));
-      const fullHash = Array.from(new Uint8Array(ninBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-      const ninHash = fullHash.slice(0, 20);
-      formData.append("nin_hash", ninHash);
+      //const ninBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(form.nin));
+      //const fullHash = Array.from(new Uint8Array(ninBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+      //const ninHash = fullHash.slice(0, 20);
+      //formData.append("nin_hash", ninHash);
 
+
+      formData.append("nin", form.nin);
       formData.append("date_of_birth", form.dob);
       formData.append("gender", form.gender);
       formData.append("ward", form.ward);
