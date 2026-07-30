@@ -7,7 +7,7 @@ import {
   UploadCloud, FileText, Trash2, Loader2, CheckCircle2,
 } from "lucide-react";
 import styles from "./apply-form.module.css";
-import { getScheme, getSchemeFields, submitApplication, uploadDocument, getBanks, verifyBank, getBankDetail } from "@/services";
+import { getScheme, getSchemeFields, submitApplication, getBanks, verifyBank, getBankDetail } from "@/services";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
@@ -141,11 +141,6 @@ function DynamicField({ field, value, onChange, error, fileValue, onFileChange, 
             <span className={styles.uploadTitle}>Click to upload</span>
             <span className={styles.uploadHint}>PDF, JPG or PNG · Max 5MB</span>
           </label>
-        ) : fileValue.uploading ? (
-          <div className={styles.filePreview}>
-            <Loader2 size={18} color="#15803d" style={{ animation: "spin 0.7s linear infinite" }} />
-            <span style={{ fontSize: 13, color: "#64748b" }}>Uploading...</span>
-          </div>
         ) : (
           <div className={styles.filePreview}>
             <FileText size={18} color="#15803d" />
@@ -267,22 +262,13 @@ export default function DynamicApplyPage() {
     setApiError("");
   }
 
-  async function handleFileChange(fieldName, file) {
+  // File is only staged locally now — the actual upload happens as part of the
+  // multipart submit request, not as a separate step.
+  function handleFileChange(fieldName, file) {
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) { alert("File must not exceed 5MB."); return; }
-
-    setFiles((f) => ({ ...f, [fieldName]: { file, uploading: true, url: null } }));
+    setFiles((f) => ({ ...f, [fieldName]: { file, uploading: false, url: null } }));
     setErrors((er) => ({ ...er, [fieldName]: "" }));
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await uploadDocument(formData);
-      setFiles((f) => ({ ...f, [fieldName]: { file, uploading: false, url: res.data.url } }));
-    } catch {
-      setFiles((f) => ({ ...f, [fieldName]: null }));
-      setErrors((er) => ({ ...er, [fieldName]: "Upload failed. Please try again." }));
-    }
   }
 
   function handleFileRemove(fieldName) {
@@ -352,7 +338,7 @@ export default function DynamicApplyPage() {
     for (const field of fields) {
       if (!field.is_required) continue;
       if (field.field_type === "file") {
-        if (!files[field.field_name]?.url) e[field.field_name] = "This document is required.";
+        if (!files[field.field_name]?.file) e[field.field_name] = "This document is required.";
       } else if (field.field_type === "checkbox") {
         if (!values[field.field_name]) e[field.field_name] = "Required.";
       } else {
@@ -388,14 +374,6 @@ export default function DynamicApplyPage() {
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
-    const stillUploading = fields.some(
-      (f) => f.field_type === "file" && files[f.field_name]?.uploading
-    );
-    if (stillUploading) {
-      setApiError("Please wait for all files to finish uploading.");
-      return;
-    }
-
     setSubmitting(true);
     setApiError("");
 
@@ -407,13 +385,6 @@ export default function DynamicApplyPage() {
         }
       }
 
-      const documents = {};
-      for (const field of fields) {
-        if (field.field_type === "file" && files[field.field_name]?.url) {
-          documents[field.field_name] = files[field.field_name].url;
-        }
-      }
-
       const self_declaration_details = declaredExternal === "yes"
         ? declarationRows.map((r) => ({
             organisation: r.organisation.trim(),
@@ -422,7 +393,10 @@ export default function DynamicApplyPage() {
           }))
         : [];
 
-      await submitApplication({
+      // Build multipart: a `payload` JSON part with everything except files,
+      // plus each document attached as its own file part keyed by field name.
+      const formData = new FormData();
+      formData.append("payload", JSON.stringify({
         scheme_id:                         schemeId,
         programme_answers,
         bank_account_number:               accountNumber,
@@ -433,8 +407,16 @@ export default function DynamicApplyPage() {
         self_declaration_received_support: declaredExternal === "yes",
         self_declaration_details,
         attestation_agreed:                attested,
-        documents,
-      });
+        documents: {},
+      }));
+
+      for (const field of fields) {
+        if (field.field_type === "file" && files[field.field_name]?.file) {
+          formData.append(field.field_name, files[field.field_name].file);
+        }
+      }
+
+      await submitApplication(formData);
 
       setSubmitted(true);
 
@@ -715,17 +697,6 @@ export default function DynamicApplyPage() {
                   Name does not match your registered name. You must verify an account registered in your own name before you can submit.
                 </p>
               )}
-              {/* <button
-                type="button"
-                onClick={() => { setBankResult(null); setBankCode(""); setBankName(""); setAccountNumber(""); }}
-                style={{
-                  alignSelf: "flex-start", fontSize: 12, color: "#64748b",
-                  background: "none", border: "none", cursor: "pointer",
-                  padding: 0, textDecoration: "underline",
-                }}
-              >
-                Use a different account
-              </button> */}
             </div>
           )}
 
