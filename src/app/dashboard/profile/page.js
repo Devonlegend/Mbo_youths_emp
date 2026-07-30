@@ -10,7 +10,8 @@ import {
 import styles from "./page.module.css";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { getMe, getStudentProfile, updateStudentProfile, getBanks, verifyBank } from "@/services";
-import { getBankDetail } from "@/services/students";
+import { getBankDetail, updateBankDetail } from "@/services/students";
+
 
 function ReadField({ icon: Icon, label, value, dimmed }) {
   return (
@@ -194,20 +195,33 @@ export default function ProfilePage() {
     }
   }
 
-  function handleBankSave() {
-    // Data is already persisted by verifyBank — just update local display state.
-    setBank({
-      bank_name:      bankVerified.bank_name      || "",
-      bank_code:      bankVerified.bank_code      || bankCode,
-      account_number: bankVerified.account_number || accountDraft,
-      account_name:   bankVerified.account_name   || "",
-    });
-    setBankSaved(true);
-    setBankEditing(false);
-    setBankVerified(null);
-    setBankCode("");
-    setAccountDraft("");
+  async function handleBankSave() {
+    try {
+      await updateBankDetail({
+        bank_name:      bankVerified.bank_name      || "",
+        bank_code:      bankVerified.bank_code      || bankCode,
+        account_number: bankVerified.account_number || accountDraft,
+        account_name:   bankVerified.account_name   || "",
+      });
+      setBank({
+        bank_name:      bankVerified.bank_name      || "",
+        bank_code:      bankVerified.bank_code      || bankCode,
+        account_number: bankVerified.account_number || accountDraft,
+        account_name:   bankVerified.account_name   || "",
+      });
+      setBankSaved(true);
+      setBankEditing(false);
+      setBankVerified(null);
+      setBankCode("");
+      setAccountDraft("");
+    } 
+    catch (err) {
+      setBankError(
+        err?.response?.data?.error || "Failed to save bank details. Please try again."
+      );
+    }
   }
+
 
   if (loading) return <LoadingSpinner fullPage />;
 
