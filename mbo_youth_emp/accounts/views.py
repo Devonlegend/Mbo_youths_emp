@@ -169,7 +169,7 @@ def register(request):
 
     # Every self-registered user is initially a Student. Role is forced here
     # (ignoring any client-supplied role) so privileged roles can't be claimed
-    # via the public endpoint â€” admins promote users to other roles later.
+    # via the public endpoint  admins promote users to other roles later.
     # User and Student are created together in a transaction so the registered
     # user always has a matching student row keyed by the same UUID.
     try:

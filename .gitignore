@@ -222,3 +222,8 @@ __pycache__/
 
 # Test Frontend
 testone/
+.claude/
+.github/
+.codex/
+.cursor/
+.impeccable/

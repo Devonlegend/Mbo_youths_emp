@@ -5,7 +5,6 @@ from rest_framework import serializers
 from .models import ApplicationStatus, ApplicationStatusHistory, REVIEWABLE_STATUSES
 
 
-# ── Nested serializers ────────────────────────────────────────────────────────
 
 class SchemeProviderNestedSerializer(serializers.Serializer):
     id            = serializers.UUIDField()
