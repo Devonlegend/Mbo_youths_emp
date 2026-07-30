@@ -107,9 +107,10 @@ export default function Topbar({ user, activeCycle, onMenuOpen }) {
   }
 
   async function handleLogout() {
-    try { await logout(); } catch {}
-    finally { window.location.href = "/login"; }
-  }
+  try { await logout(); } catch {}
+  finally { router.push("/login"); }
+}
+
 
   // Show top 4 unread first, then read
   const preview = [
