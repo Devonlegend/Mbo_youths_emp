@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, ClipboardList, Users, BookOpen,
   BadgeCheck, ShieldAlert, ScrollText, Settings,
@@ -25,15 +25,6 @@ const navRecords = [
   { label: "Audit Log",         href: "/admin/audit-log",         icon: ScrollText,  roles: ["superadmin"] },
 ];
 
-  async function handleLogout() {
-    try {
-      await logout();
-    } catch {}
-    finally {
-      window.location.href = "/login";
-    }
-  }
-
 // ── NAV ITEM ──────────────────────────────────────────────────────────────────
 function NavItem({ item, active, onClick }) {
   const Icon = item.icon;
@@ -55,6 +46,16 @@ function NavItem({ item, active, onClick }) {
 // ── SIDEBAR ───────────────────────────────────────────────────────────────────
 export default function AdminSidebar({ isOpen, onClose, user }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    try {
+      await logout();
+    } catch {}
+    finally {
+      router.push("/login");
+    }
+  }
 
   function isActive(href) {
     if (href === "/admin") return pathname === "/admin";
