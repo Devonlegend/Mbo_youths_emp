@@ -4,7 +4,7 @@
 
 ---
 
-## 🔐 NIN Hashing Moved Server-Side
+##  NIN Hashing Moved Server-Side
 
 **The raw 11-digit NIN is now hashed on the server, not the client.** Previously the frontend pre-hashed the NIN before sending it — now the client should send the raw NIN as `"nin"` and the backend hashes it with a secret pepper before storage.
 
@@ -27,7 +27,7 @@
 
 ---
 
-## ✉️ Email System Overhaul
+## Email System Overhaul
 
 ### All email dispatch moved to Celery tasks
 
@@ -63,7 +63,7 @@
 
 ---
 
-## 📬 Approval Notification Deferral ("Publish" Flow)
+##  Approval Notification Deferral ("Publish" Flow)
 
 **Approval emails are no longer sent at the moment of review.** Instead they are staged and dispatched in bulk when a reviewer "publishes" a scheme's results.
 
@@ -88,7 +88,7 @@ Rejection emails are no longer sent. `send_application_rejected_email` is intent
 
 ---
 
-## 🆕 Staff-Create Application Endpoint
+##  Staff-Create Application Endpoint
 
 **`POST /applications/staff-create/`** — Admin creates an application on behalf of a student.
 
@@ -100,7 +100,7 @@ Rejection emails are no longer sent. `send_application_rejected_email` is intent
 
 ---
 
-## 🔔 Notification System Refactored
+##  Notification System Refactored
 
 ### New: `notifications/helpers.py` (160 lines)
 
@@ -137,7 +137,7 @@ Files are validated (`validate_upload`) and uploaded through `default_storage` (
 
 ### Removed `is_verified` gate
 
-Students no longer need admin verification before submitting applications — the `is_verified` check on the submit endpoint is gone.
+Students no longer need admin verification before submitting applications — the `is_verified` check on the submit endpoint is gone. why? there's already a check on dashboard to prevent students from accessing application, so the check here is redundant
 
 ### `by-scheme` response enriched
 
@@ -147,7 +147,7 @@ Students no longer need admin verification before submitting applications — th
 
 - `StudentNestedSerializer` — removed `email`, `lga` (not needed on the list view)
 - `serialize_application_list` — removed `rejection_reason`, `details` (bank fields)
-
+the bank details check is now a must , it must match your name before u can submit
 ---
 
 ## 🧹 Removals
@@ -223,7 +223,7 @@ Students no longer need admin verification before submitting applications — th
 - **Bank resolution** no longer persists details to the Student row (submit carries the values)
 - **Section dividers** in code changed from `# ──` to `# ──` (ASCII box-drawing artifacts in some editors)
 - **Template dirs** configured: `BASE_DIR / 'templates'` added to `TEMPLATES[0]['DIRS']`
-- **`.impeccable/live/config.json`** — design system integration config
+
 
 ---
 
