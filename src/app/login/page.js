@@ -143,17 +143,38 @@ export default function LoginPage() {
   }
 
   async function handleResend() {
-    if (!canResend) return;
-    setOtp(["", "", "", "", "", ""]);
-    setOtpError("");
+  if (!canResend) return;
+  setOtp(["", "", "", "", "", ""]);
+  setOtpError("");
+  inputs.current[0]?.focus();
+
+  try {
+    await otpResend({ email: form.email });
     startCountdown();
-    inputs.current[0]?.focus();
-    try {
-      await otpResend({ email: form.email });
-    } catch (err) {
-      setOtpError(err?.response?.data?.message || "Failed to resend code. Please try again.");
+  } catch (err) {
+    const retryAfter = err?.response?.data?.retry_after_seconds;
+    if (retryAfter) {
+      setCountdown(retryAfter);
+      setCanResend(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      countdownRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownRef.current);
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
+    setOtpError(
+      err?.response?.data?.error ||
+      "Failed to resend code. Please try again."
+    );
   }
+}
+
 
   async function handleOtpSubmit(e) {
     e.preventDefault();
