@@ -7,7 +7,10 @@ import {
   Shield, ShieldAlert, UserX, Settings, UserCheck, RefreshCw,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { getMe, getAdminUsers, createAdminUser, updateUserRole, deactivateUser, reactivateUser } from "@/services/auth";
+import { getMe } from "@/services/auth";
+// Admin user management (getAdminUsers, createAdminUser, updateUserRole,
+// deactivateUser, reactivateUser) is commented out below — these endpoints
+// were removed from the backend; admin-user management now lives in Django Admin.
 import { getSchemes, getStudents, getApplications } from "@/services";
 
 // ── PASSWORD STRENGTH ─────────────────────────────────────────────────────────
@@ -65,7 +68,7 @@ function RoleBadge({ role }) {
   );
 }
 
-// Modal 
+/* ── Modal — kept for reference, only used by the commented-out Admin Users section ──
 function ConfirmModal({ type, user, onConfirm, onCancel, loading }) {
   const isDeactivate = type === "deactivate";
   return (
@@ -107,6 +110,7 @@ function ConfirmModal({ type, user, onConfirm, onCancel, loading }) {
     </div>
   );
 }
+*/
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function AdminSettingsPage() {
@@ -126,7 +130,7 @@ export default function AdminSettingsPage() {
   const [pwdError,     setPwdError]     = useState("");
   const [editingPwd, setEditingPwd] = useState(false);
 
-  // Admin users state (super admin only)
+  /* ── Admin users state (super admin only) — commented out with the section below ──
   const [adminUsers,   setAdminUsers]   = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -140,6 +144,7 @@ export default function AdminSettingsPage() {
   const [roleUpdating, setRoleUpdating] = useState({});
   const [confirmModal, setConfirmModal] = useState(null);
   const [deactivating, setDeactivating] = useState({});
+  */
 
   const [stats, setStats] = useState({ schemes: 0, students: 0, applications: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
@@ -187,7 +192,8 @@ export default function AdminSettingsPage() {
   loadStats();
 }, []);
 
-  // ── LOAD ADMIN USERS (super admin only) ───────────────────────────────────
+  /* ── Admin users loading + handlers — commented out, endpoints no longer exist ──
+
   useEffect(() => {
     if (!isSuperAdmin) return;
     loadAdminUsers();
@@ -205,6 +211,7 @@ export default function AdminSettingsPage() {
       setLoadingUsers(false);
     }
   }
+  */
 
   // ── CHANGE PASSWORD ───────────────────────────────────────────────────────
   async function handleChangePassword(e) {
@@ -232,7 +239,8 @@ export default function AdminSettingsPage() {
     }
   }
 
-  // ── CREATE ADMIN USER ─────────────────────────────────────────────────────
+  /* ── Admin user create/role/deactivate handlers — commented out with the section ──
+
   async function handleCreateUser(e) {
     e.preventDefault();
     setCreateError("");
@@ -263,51 +271,50 @@ export default function AdminSettingsPage() {
     }
   }
 
-  // ── UPDATE ROLE ───────────────────────────────────────────────────────────
-async function handleRoleChange(id, newRole) {
-  if (!confirm(`Change this user's role to ${newRole}?`)) return;
-  
-  setRoleUpdating((p) => ({ ...p, [id]: true }));
-  try {
-    await updateUserRole(id, { role: newRole });
-    setAdminUsers((prev) => prev.map((u) =>
-      u.id === id ? { ...u, role: newRole } : u
-    ));
-  } catch {
-    // Fail silently for now
-  } finally {
-    setRoleUpdating((p) => ({ ...p, [id]: false }));
-  }
-}
+  async function handleRoleChange(id, newRole) {
+    if (!confirm(`Change this user's role to ${newRole}?`)) return;
 
-  // ── DEACTIVATE & ACTIVATE USER ───────────────────────────────────────────────────────
-async function handleDeactivate(u) {
-  setConfirmModal({ type: "deactivate", user: u });
-}
-
-async function handleReactivate(u) {
-  setConfirmModal({ type: "reactivate", user: u });
-}
-
-async function handleConfirmModal() {
-  if (!confirmModal) return;
-  const { type, user: u } = confirmModal;
-  setDeactivating((p) => ({ ...p, [u.id]: true }));
-  try {
-    if (type === "deactivate") {
-      await deactivateUser(u.id);
-      setAdminUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, is_active: false } : x));
-    } else {
-      await reactivateUser(u.id);
-      setAdminUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, is_active: true } : x));
+    setRoleUpdating((p) => ({ ...p, [id]: true }));
+    try {
+      await updateUserRole(id, { role: newRole });
+      setAdminUsers((prev) => prev.map((u) =>
+        u.id === id ? { ...u, role: newRole } : u
+      ));
+    } catch {
+      // Fail silently for now
+    } finally {
+      setRoleUpdating((p) => ({ ...p, [id]: false }));
     }
-    setConfirmModal(null);
-  } catch {
-    // fail silently
-  } finally {
-    setDeactivating((p) => ({ ...p, [u.id]: false }));
   }
-}
+
+  async function handleDeactivate(u) {
+    setConfirmModal({ type: "deactivate", user: u });
+  }
+
+  async function handleReactivate(u) {
+    setConfirmModal({ type: "reactivate", user: u });
+  }
+
+  async function handleConfirmModal() {
+    if (!confirmModal) return;
+    const { type, user: u } = confirmModal;
+    setDeactivating((p) => ({ ...p, [u.id]: true }));
+    try {
+      if (type === "deactivate") {
+        await deactivateUser(u.id);
+        setAdminUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, is_active: false } : x));
+      } else {
+        await reactivateUser(u.id);
+        setAdminUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, is_active: true } : x));
+      }
+      setConfirmModal(null);
+    } catch {
+      // fail silently
+    } finally {
+      setDeactivating((p) => ({ ...p, [u.id]: false }));
+    }
+  }
+  */
 
   if (loadingUser) {
     return (
@@ -320,6 +327,7 @@ async function handleConfirmModal() {
   return (
     <div className={styles.page}>
 
+      {/* Admin user confirm modal — commented out with the section it belongs to
       {confirmModal && (
         <ConfirmModal
           type={confirmModal.type}
@@ -329,6 +337,7 @@ async function handleConfirmModal() {
           onCancel={() => setConfirmModal(null)}
         />
       )}
+      */}
 
       <div className={styles.pageHeader}>
         <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -534,21 +543,24 @@ async function handleConfirmModal() {
           </>
         )}
       </Section> */}
-      
-      {/* ── SECTION 3: ADMIN USERS (super admin only) ── */}
+
+      {/* ── SECTION 3: ADMIN USERS (super admin only) — commented out ──
+          Backend admin-user endpoints (getAdminUsers, createAdminUser, updateUserRole,
+          deactivateUser, reactivateUser) were removed; admin-user management now
+          lives in Django Admin. Uncomment this section only if those endpoints
+          come back in some form.
+
       {isSuperAdmin && (
         <Section
           title="Admin Users"
           sub="Manage all administrators and verifiers on the portal."
         >
-          {/* Create success banner */}
           {createSuccess && (
             <div className={styles.successBanner}>
               <ShieldCheck size={14} strokeWidth={2} /> New admin user created successfully.
             </div>
           )}
 
-          {/* Header row */}
           <div className={styles.usersHeader}>
             <span className={styles.usersCount}>
               {loadingUsers ? "Loading..." : `${adminUsers.length} user${adminUsers.length !== 1 ? "s" : ""}`}
@@ -571,7 +583,6 @@ async function handleConfirmModal() {
             </div>
           </div>
 
-          {/* Create user form */}
           {showCreateForm && (
             <div className={styles.createForm}>
               <h3 className={styles.createFormTitle}>Create Admin User</h3>
@@ -645,7 +656,6 @@ async function handleConfirmModal() {
             </div>
           )}
 
-          {/* Admin users table */}
           {loadingUsers ? (
             <div className={styles.usersLoading}>
               <div className={styles.spinner} />
@@ -657,7 +667,6 @@ async function handleConfirmModal() {
             </div>
           ) : (
             <div className={styles.usersTable}>
-              {/* Header */}
               <div className={styles.usersTableHeader}>
                 <span>User</span>
                 <span>Role</span>
@@ -674,7 +683,6 @@ async function handleConfirmModal() {
                 return (
                   <div key={u.id} className={`${styles.userRow} ${!u.is_active ? styles.userRowInactive : ""}`}>
 
-                    {/* User info */}
                     <div className={styles.userInfo}>
                       <div className={styles.userAvatar}>{initials}</div>
                       <div>
@@ -686,7 +694,6 @@ async function handleConfirmModal() {
                       </div>
                     </div>
 
-                    {/* Role */}
                     <div className={styles.userRole}>
                       {isMe ? (
                         <RoleBadge role={u.role} />
@@ -703,7 +710,6 @@ async function handleConfirmModal() {
                       )}
                     </div>
 
-                    {/* Status */}
                     <div>
                       {u.is_active ? (
                         <span className={styles.activeChip}>Active</span>
@@ -712,7 +718,6 @@ async function handleConfirmModal() {
                       )}
                     </div>
 
-                    {/* Actions */}
                     <div className={styles.userActions}>
                       {!isMe && u.is_active && (
                         <button
@@ -749,6 +754,7 @@ async function handleConfirmModal() {
           )}
         </Section>
       )}
+      */}
 
     </div>
   );
