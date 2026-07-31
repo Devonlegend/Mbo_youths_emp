@@ -76,8 +76,9 @@ export default function Sidebar({ isOpen, onClose }) {
     } catch (err) {
       // Even if the call fails, we still clear local state and redirect
     } finally {
-      router.push("/login");
-    }
+  window.location.href = "/login";
+}
+
   }
 
 
