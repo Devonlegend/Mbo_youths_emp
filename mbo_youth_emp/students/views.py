@@ -91,7 +91,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         with_award   = Student.objects.exclude(active_award='').count()
 
         by_ward = {}
-        for student in Student.objects.values('ward').annotate(count=Count('id')):
+        for student in Student.objects.values('ward').annotate(count=Count('pk')):
             by_ward[student['ward']] = student['count']
 
         return Response({
