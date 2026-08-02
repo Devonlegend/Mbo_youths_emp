@@ -196,15 +196,19 @@ export default function ProfilePage() {
   }
 
   async function handleBankSave() {
+    // Paystack's resolve response only gives us bank_id, not a bank name —
+    // so we look up the display name from the banks list using bankCode.
+    const selectedBank = banks.find((b) => b.code === bankCode);
+
     try {
       await updateBankDetail({
-        bank_name:      bankVerified.bank_name      || "",
+        bank_name:      selectedBank?.name          || "",
         bank_code:      bankVerified.bank_code      || bankCode,
         account_number: bankVerified.account_number || accountDraft,
         account_name:   bankVerified.account_name   || "",
       });
       setBank({
-        bank_name:      bankVerified.bank_name      || "",
+        bank_name:      selectedBank?.name          || "",
         bank_code:      bankVerified.bank_code      || bankCode,
         account_number: bankVerified.account_number || accountDraft,
         account_name:   bankVerified.account_name   || "",
