@@ -18,6 +18,9 @@ const dmSans = DM_Sans({
 export const metadata = {
   title: "RMHCDT Youth Portal",
   description: "Royal Mbo Host Community Development Trust - Youth Beneficiary Portal",
+  other: {
+    "format-detection": "telephone=no, email=no, address=no",
+  },
 };
 
 export default function RootLayout({ children }) {

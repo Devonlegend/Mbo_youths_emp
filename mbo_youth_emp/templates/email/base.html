@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>{{ subject }}</title>
   <style>
     :root {
@@ -39,6 +41,41 @@
       --font-heading: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
       --font-body: 'Inter', Arial, Helvetica, sans-serif;
     }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-primary: #4ade80;
+        --color-primary-hover: #86efac;
+        --color-primary-light: #14291d;
+        --color-primary-border: #1f4a30;
+
+        --color-error: #f87171;
+        --color-error-bg: #2a1616;
+        --color-error-border: #4a2323;
+        --color-error-text: #fca5a5;
+
+        --color-warning: #fbbf24;
+        --color-warning-bg: #2a2210;
+        --color-warning-border: #4a3b1a;
+        --color-warning-text: #fcd34d;
+
+        --color-info: #60a5fa;
+        --color-info-bg: #16202e;
+        --color-info-border: #23374a;
+        --color-info-text: #93c5fd;
+
+        --color-bg: #0b0f0d;
+        --color-card: #121a15;
+        --color-subtle: #182019;
+        --color-border: #26302a;
+        --color-border-subtle: #1d2620;
+
+        --color-text: #f1f5f4;
+        --color-text-secondary: #cbd5cf;
+        --color-text-muted: #7c8a80;
+      }
+    }
+
     * { box-sizing: border-box; }
     body {
       margin: 0; padding: 0;
