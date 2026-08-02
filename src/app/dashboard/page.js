@@ -105,7 +105,7 @@ export default function DashboardPage() {
           lga:            profile.lga         || "",
           ward:           profile.ward        || "",
           is_verified:    profile.is_verified || false,
-          passport_photo: profile.passport || null,
+          passport_photo: auth.passport || null,
         });
 
         setStats({
