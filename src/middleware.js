@@ -1,25 +1,27 @@
 import { NextResponse } from "next/server";
 
 // ── PROTECTED ROUTES ────────────────────────────────────────────────────────
+// NOTE: /dashboard and /admin are intentionally NOT protected here.
+// Auth cookies are set by the Django backend (different origin/port), so this
+// middleware can't reliably see them. Auth is instead enforced client-side —
+// see DashboardLayout and admin layout, which call getMe() and redirect
+// unauthenticated users to /login.
 
-const PROTECTED = ["/dashboard", "/admin"];
+const PROTECTED = [];
 const PUBLIC    = ["/login", "/register", "/forgot-password", "/"];
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Check if this is a protected route
   const isProtected = PROTECTED.some((route) => pathname.startsWith(route));
 
   if (!isProtected) {
     return NextResponse.next();
   }
 
-  // Look for the access token cookie (set by backend as httpOnly)
   const accessToken = request.cookies.get("access_token");
 
   if (!accessToken) {
-    // No token — redirect to login, preserve the intended destination
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
@@ -28,10 +30,6 @@ export function middleware(request) {
   return NextResponse.next();
 }
 
-// ── MATCHER ─────────────────────────────────────────────────────────────────
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/admin/:path*",
-  ],
+  matcher: [],
 };

@@ -70,15 +70,13 @@ export default function Sidebar({ isOpen, onClose }) {
     return pathname.startsWith(href);
   }
 
-  async function handleLogout() {    
+  async function handleLogout() {
     try {
       await logout();
-    } catch (err) {
-      // Even if the call fails, we still clear local state and redirect
-    } finally {
-  window.location.href = "/login";
-}
-
+    } catch {}
+    finally {
+      router.push("/login");
+    }
   }
 
 
