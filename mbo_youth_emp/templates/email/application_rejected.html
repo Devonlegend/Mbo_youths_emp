@@ -1,4 +1,12 @@
 {% extends "email/base.html" %}
+
+{% block status_strip %}
+<div class="status-strip status-strip--red">
+  <div class="status-strip-icon">&#10005;</div>
+  <span class="status-strip-text">Application Not Selected</span>
+</div>
+{% endblock %}
+
 {% block content %}
   <h2>Application Update</h2>
   <p>
@@ -29,7 +37,7 @@
     New schemes are published regularly &mdash; we encourage you to apply again.
   </p>
 
-  <div style="text-align:center;">
+  <div class="cta-wrap">
     <a href="{{ portal_url }}/dashboard/programmes" class="cta-button">
       Browse Other Programmes
     </a>

@@ -1,4 +1,12 @@
 {% extends "email/base.html" %}
+
+{% block status_strip %}
+<div class="status-strip status-strip--blue">
+  <div class="status-strip-icon">i</div>
+  <span class="status-strip-text">Application Received</span>
+</div>
+{% endblock %}
+
 {% block content %}
   <h2>Application Received</h2>
   <p>
@@ -17,13 +25,13 @@
     <tr><td>Submitted</td><td>{{ submission_date }}</td></tr>
   </table>
 
-  <div class="info-box info-box--green">
+  <div class="info-box info-box--blue">
     Your application is now in the review queue. A verification officer will
     evaluate your eligibility and supporting documents. You will be notified
     at each stage of the process.
   </div>
 
-  <div style="text-align:center;">
+  <div class="cta-wrap">
     <a href="{{ portal_url }}/dashboard/applications" class="cta-button">
       Track Your Application
     </a>

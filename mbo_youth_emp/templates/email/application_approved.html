@@ -1,4 +1,12 @@
 {% extends "email/base.html" %}
+
+{% block status_strip %}
+<div class="status-strip status-strip--green">
+  <div class="status-strip-icon">&#10003;</div>
+  <span class="status-strip-text">Application Approved</span>
+</div>
+{% endblock %}
+
 {% block content %}
   <h2>Congratulations, {{ student_name }}!</h2>
   <p>
@@ -29,7 +37,7 @@
     and track disbursement by visiting your applications dashboard.
   </p>
 
-  <div style="text-align:center;">
+  <div class="cta-wrap">
     <a href="{{ portal_url }}/dashboard/applications" class="cta-button">
       View My Awards
     </a>

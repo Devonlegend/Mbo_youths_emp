@@ -1,4 +1,12 @@
 {% extends "email/base.html" %}
+
+{% block status_strip %}
+<div class="status-strip status-strip--green">
+  <div class="status-strip-icon">&#10003;</div>
+  <span class="status-strip-text">Account Created</span>
+</div>
+{% endblock %}
+
 {% block content %}
   <h2>Welcome, {{ student_name }}!</h2>
   <p>
@@ -15,13 +23,13 @@
     4. Track your application status anytime
   </div>
 
-  <div style="text-align:center;">
+  <div class="cta-wrap">
     <a href="{{ portal_url }}/dashboard/programmes" class="cta-button">
       Browse Programmes
     </a>
   </div>
 
-  <p style="font-size: 13px; color: #64748b; margin-top: 16px;">
+  <p class="fine-print">
     Account created on {{ registered_date }}.
   </p>
 {% endblock %}

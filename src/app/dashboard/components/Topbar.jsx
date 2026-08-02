@@ -237,7 +237,25 @@ export default function Topbar({ user, activeCycle, onMenuOpen }) {
             onClick={() => { setDropOpen((o) => !o); setBellOpen(false); }}
             aria-label="Profile menu"
           >
-            <div className={styles.avatar}>{initials || "RY"}</div>
+            <div className={styles.avatar}>
+              {user?.passport_photo ? (
+                <img
+                  src={user.passport_photo}
+                  alt=""
+                  className={styles.avatarImg}
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    e.target.nextSibling.style.display = "flex";
+                  }}
+                />
+              ) : null}
+              <span
+                className={styles.avatarInitials}
+                style={{ display: user?.passport_photo ? "none" : "flex" }}
+              >
+                {initials || "RY"}
+              </span>
+            </div>
             <div className={styles.avatarInfo}>
               <span className={styles.avatarName}>
                 {user?.first_name} {user?.last_name}

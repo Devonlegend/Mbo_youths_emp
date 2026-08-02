@@ -1,4 +1,12 @@
 {% extends "email/base.html" %}
+
+{% block status_strip %}
+<div class="status-strip status-strip--amber">
+  <div class="status-strip-icon">!</div>
+  <span class="status-strip-text">Action Required</span>
+</div>
+{% endblock %}
+
 {% block content %}
   <h2>Action Required &mdash; Award Conflict</h2>
   <p>
@@ -27,13 +35,13 @@
     application cannot move forward.
   </p>
 
-  <div style="text-align:center;">
+  <div class="cta-wrap">
     <a href="{{ portal_url }}/dashboard/applications" class="cta-button">
       Submit a Waiver
     </a>
   </div>
 
-  <p style="font-size: 12px; color: #94a3b8; margin-top: 16px;">
+  <p class="fine-print">
     If you believe this flag is an error, the waiver process is the fastest
     way to have an administrator review your situation directly.
   </p>
