@@ -374,12 +374,6 @@ export default function ProfilePage() {
                 <X size={13} strokeWidth={2} /> Cancel
               </button>
             )}
-            {/* Save button only appears once account is verified AND the name matches */}
-            {bankEditing && bankVerified && bankVerified.name_match?.passed && (
-              <button type="button" className={styles.btnEdit} onClick={handleBankSave}>
-                <Save size={13} strokeWidth={2} /> Save to Profile
-              </button>
-            )}
             {!bankEditing && (
               <button type="button" className={styles.btnEdit} onClick={handleBankEdit}>
                 <Pencil size={13} strokeWidth={2} /> {bank.bank_name ? "Edit" : "Add"}
@@ -520,6 +514,15 @@ export default function ProfilePage() {
                 <span style={{ fontSize: 11, color: "#94a3b8", marginTop: 4, display: "block" }}>
                   Verify your account — the name must match your BVN-linked account.
                 </span>
+              )}
+
+              {/* Save to Profile — appears below everything else, only once verified & name matches */}
+              {bankVerified && bankVerified.name_match?.passed && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+                  <button type="button" className={styles.btnEdit} onClick={handleBankSave}>
+                    <Save size={13} strokeWidth={2} /> Save to Profile
+                  </button>
+                </div>
               )}
             </>
           ) : bank.bank_name ? (
