@@ -23,29 +23,31 @@ export default function AdminLayout({ children }) {
         const u = res.data;
 
         // Only allow admin roles — redirect students back to their dashboard
+        // Keep loading=true here so the admin shell never flashes while
+        // the redirect is in flight.
         if (u.role === "student") {
           router.replace("/dashboard");
           return;
         }
 
         setUser(u);
-      } catch (err) {
-          const status = err?.response?.status;
-          if (status === 401 || status === 403) {
-            router.replace("/login");
-          } else {
-            console.error("Failed to load admin user:", err);
-          }
-        }
-        
-    finally {
         if (!cancelled) setLoading(false);
+      } catch (err) {
+        if (cancelled) return;
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          router.replace("/login");
+          // keep loading=true — we're navigating away
+        } else {
+          console.error("Failed to load admin user:", err);
+          setLoading(false);
+        }
       }
     }
     loadUser();
     return () => { cancelled = true; };
   }, []);
-
+  
   // Close sidebar when screen goes desktop width
   useEffect(() => {
     function onResize() {
