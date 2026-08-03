@@ -272,7 +272,7 @@ export default function AdminApplicationDetailPage() {
           className={styles.backBtn}
           onClick={() => router.push("/admin/applications")}
         >
-          <ArrowLeft size={14} strokeWidth={2} /> Back to Applications
+          <ArrowLeft size={16} strokeWidth={2} />
         </button>
       </div>
     );
@@ -304,7 +304,7 @@ export default function AdminApplicationDetailPage() {
 
       {/* BACK */}
       <button className={styles.backBtn} onClick={() => router.push("/admin/applications")}>
-        <ArrowLeft size={14} strokeWidth={2} /> Back to Applications
+        <ArrowLeft size={16} strokeWidth={2} />
       </button>
 
       {/* PAGE HEADER */}

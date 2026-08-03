@@ -1,4 +1,4 @@
-
+import ReactDOM from "react-dom";
 import { Sora, DM_Sans } from "next/font/google";
 import "./globals.css";
 import AdminThemeProvider from "./admin/components/AdminThemeProvider";
@@ -24,6 +24,12 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  ReactDOM.preconnect("https://res.cloudinary.com");
+  ReactDOM.preload(
+    "https://res.cloudinary.com/dwn6p3qmd/image/upload/f_auto,q_auto,w_80,h_80,c_fill,g_face,r_max/v1784673040/mboyouths_ssedqs.png",
+    { as: "image" }
+  );
+
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className={sora.variable + " " + dmSans.variable}>

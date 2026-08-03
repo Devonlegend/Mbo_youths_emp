@@ -26,6 +26,17 @@ export default function LoginPage() {
   const [apiError, setApiError] = useState("");
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
+  const [rememberMe, setRememberMe] = useState(false);
+
+
+  useEffect(() => {
+  const savedEmail = localStorage.getItem("rmhcdt_remembered_email");
+  if (savedEmail) {
+    setForm((prev) => ({ ...prev, email: savedEmail }));
+    setRememberMe(true);
+  }
+}, []);
+
 
   // ── IF ALREADY LOGGED IN → GO TO DASHBOARD ────────────────────────────────
  useEffect(() => {
@@ -106,10 +117,19 @@ export default function LoginPage() {
 
     try {
       await login({ email: form.email, password: form.password });
+
+      if (rememberMe) {
+        localStorage.setItem("rmhcdt_remembered_email", form.email);
+      } else {
+        localStorage.removeItem("rmhcdt_remembered_email");
+      }
+
       await otpSend({ email: form.email });
       setStep("otp");
       startCountdown();
-    } catch (err) {
+    } 
+    
+    catch (err) {
       setApiError(
         err?.response?.data?.error ||
         err?.response?.data?.detail ||
@@ -216,8 +236,8 @@ export default function LoginPage() {
         height="40"
       />
       <div className={styles.logoText}>
-        <span className={styles.logoName}>RMHCDT</span>
-        <span className={styles.logoSub}>Youth Portal</span>
+        <span className={styles.logoName}>RMHDCT</span>
+        <span className={styles.logoSub}>Youth Beneficiary Portal</span>
       </div>
     </Link>
   </div>
@@ -380,7 +400,17 @@ export default function LoginPage() {
               {errors.password && <span className={styles.error}>{errors.password}</span>}
             </div>
 
-            <div style={{ textAlign: "right", marginTop: "-4px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "-4px" }}>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className={styles.checkbox}
+                />
+                Remember me
+              </label>
+
               <Link href="/forgot-password" className={styles.forgotLink}>
                 Forgot password?
               </Link>

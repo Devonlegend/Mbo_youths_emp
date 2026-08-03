@@ -204,11 +204,11 @@ export default function AdminProvidersPage() {
               <div className={styles.activePulse} />
               <div>
                 <p className={styles.activeBannerTitle}>
-                  <strong>{providers.length}</strong> provider{providers.length !== 1 ? "s" : ""} available
+                  <strong>{providers.length}</strong> Provider{providers.length !== 1 ? "s" : ""} Available
                 </p>
-                <p className={styles.activeBannerSub}>
+                {/* <p className={styles.activeBannerSub}>
                   Schemes can be created using any of these providers.
-                </p>
+                </p> */}
               </div>
             </div>
           </div>

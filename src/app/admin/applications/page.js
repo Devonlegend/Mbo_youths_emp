@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ClipboardList, Search,
   ArrowRight, AlertCircle, CheckCircle2,
-  ShieldAlert,
+  ShieldAlert, Mail,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApplications } from "@/services";
@@ -136,17 +136,25 @@ export default function AdminApplicationsPage() {
     <div className={styles.page}>
 
       {/* PAGE HEADER */}
-      <div className={styles.header}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <ClipboardList size={20} color="var(--color-primary)" strokeWidth={1.8} />
-        </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
-            <h1 className={styles.title}>Applications</h1>
-            <p className={styles.sub}>Review and manage all programme applications.</p>
+        <div className={styles.header}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <ClipboardList size={20} color="var(--color-primary)" strokeWidth={1.8} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
+              <h1 className={styles.title}>Applications</h1>
+              <p className={styles.sub}>Review and manage all programme applications.</p>
+            </div>
           </div>
+
+          <button
+              className={styles.notifyBtn}
+              onClick={() => router.push("/admin/applications/approvals")}
+            >
+              <Mail size={14} strokeWidth={2} />
+              Send Approvals
+            </button>
         </div>
-      </div>
 
       {/* SUMMARY STRIP */}
       <div className={styles.summaryStrip}>

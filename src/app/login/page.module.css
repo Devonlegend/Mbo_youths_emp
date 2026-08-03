@@ -169,6 +169,24 @@
   opacity: 0.8;
 }
 
+.checkboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: #15803d;
+  cursor: pointer;
+}
+
 /* ─── FORM ──────────────────────────────────────────────────────────────── */
 .form {
   display: flex;

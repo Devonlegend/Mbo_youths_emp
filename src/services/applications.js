@@ -20,3 +20,9 @@ export const reviewApplication = (id, body) =>
 
 export const getMyApplications = () =>
   api.get("/applications/mine/");
+
+export const getSchemesOverview = () =>
+  api.get("/applications/schemes-overview/");
+
+export const publishSchemeApprovals = (schemeId) =>
+  api.post(`/applications/publish/${schemeId}/`);

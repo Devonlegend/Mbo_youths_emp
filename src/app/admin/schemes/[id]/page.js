@@ -197,7 +197,7 @@ if (checking) {
         <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
         <p style={{ color: "#ef4444", fontWeight: 600 }}>{error || "Scheme not found."}</p>
         <button className={styles.backBtn} onClick={() => router.push("/admin/schemes")}>
-          <ArrowLeft size={14} strokeWidth={2} /> Back to Schemes
+          <ArrowLeft size={16} strokeWidth={2} />
         </button>
       </div>
     );
@@ -215,7 +215,7 @@ if (checking) {
 
       {/* BACK */}
       <button className={styles.backBtn} onClick={() => router.push("/admin/schemes")}>
-        <ArrowLeft size={14} strokeWidth={2} /> Back to Schemes
+        <ArrowLeft size={16} strokeWidth={2} />
       </button>
 
       {/* PAGE HEADER */}

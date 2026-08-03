@@ -232,11 +232,11 @@ if (checking) {
               <div className={styles.activePulse} />
               <div>
                 <p className={styles.activeBannerTitle}>
-                  Active cycle — <strong>{activeCycle.name}</strong>
+                  Active cycle: <strong>{activeCycle.name}</strong>
                 </p>
-                <p className={styles.activeBannerSub}>
+                {/* <p className={styles.activeBannerSub}>
                   {formatYear(activeCycle.start_year)} – {formatYear(activeCycle.end_year)} · Students and programmes are scoped to this cycle.
-                </p>
+                </p> */}
               </div>
             </div>
             {/* <BookOpen size={18} color="#15803d" strokeWidth={1.5} style={{ flexShrink: 0 }} /> */}

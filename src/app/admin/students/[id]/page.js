@@ -160,7 +160,7 @@ export default function StudentDetailPage() {
         <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
         <p style={{ color: "#ef4444", fontWeight: 600 }}>{error || "Student not found."}</p>
         <button className={styles.backBtn} onClick={() => router.push("/admin/students")}>
-          <ArrowLeft size={14} strokeWidth={2} /> Back to Students
+          <ArrowLeft size={16} strokeWidth={2} />
         </button>
       </div>
     );
@@ -177,7 +177,7 @@ export default function StudentDetailPage() {
 
       {/* BACK */}
       <button className={styles.backBtn} onClick={() => router.push("/admin/students")}>
-        <ArrowLeft size={14} strokeWidth={2} /> Back to Students
+        <ArrowLeft size={16} strokeWidth={2} />
       </button>
 
       {/* PAGE HEADER */}

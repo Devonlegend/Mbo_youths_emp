@@ -44,12 +44,12 @@
 .logoBox {
   width: 38px;
   height: 38px;
-  background: #15803d;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(21,128,61,0.25);
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+  background: #e8ecf0; /* placeholder while loading */
+  box-shadow: 0 2px 12px rgba(21,128,61,0.25);
 }
 
 .logoLetter {
@@ -805,6 +805,108 @@
   object-fit: cover;
   border-radius: 10px;
 }
+
+/* ─── STEPPER ────────────────────────────────────────────────────────────── */
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-bottom: 4px;
+}
+
+.stepItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 56px;
+}
+
+.stepCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.stepActive {
+  background: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(21,128,61,0.12);
+}
+
+.stepDone {
+  background: #f0fdf4;
+  border-color: #15803d;
+  color: #15803d;
+}
+
+.stepLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.stepLabelActive { color: #15803d; }
+
+.stepLine {
+  flex: 1;
+  height: 1.5px;
+  background: #e2e8f0;
+  margin-top: 14px;
+  min-width: 16px;
+  max-width: 48px;
+}
+
+.stepLineDone { background: #15803d; }
+
+/* ─── RESTORE NOTICE ─────────────────────────────────────────────────────── */
+.restoreNotice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #1d4ed8;
+  font-weight: 500;
+}
+
+/* ─── STEP NAVIGATION ────────────────────────────────────────────────────── */
+.stepNav {
+  display: flex;
+  gap: 10px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 11px;
+  padding: 13px 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.backBtn:hover { background: #f1f5f9; }
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 @media (max-width: 520px) {
