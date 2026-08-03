@@ -36,15 +36,14 @@
 }
 
 .logoIcon {
-  width: 36px;
-  height: 36px;
-  background: #15803d;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(21,128,61,0.4);
+  display: block;
+  background: rgba(255,255,255,0.08);
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,0.12); 
 }
 
 .logoIcon span {

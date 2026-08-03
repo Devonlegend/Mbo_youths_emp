@@ -251,7 +251,7 @@
   font-size: 13px;
   font-weight: 600;
   color: #ffffff;
-  background: var(--color-primary);
+  background: #166534;
   border: none;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -375,4 +375,11 @@
   .summaryItem { padding: 10px 8px; }
   .grid { grid-template-columns: 1fr; padding: 14px; }
   .cardTop { padding: 14px; }
+  .title { font-size: 18px; }
+  .summaryValue { font-size: 20px; }
+  .summaryItem { padding: 10px 8px; }
+  .grid { grid-template-columns: 1fr; padding: 14px; }
+  .cardTop { padding: 14px; }
+
+  .summaryItem:nth-child(4) { display: none; }
 }

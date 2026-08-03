@@ -82,9 +82,16 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
 
         {/* ── LOGO ── */}
         <div className={styles.logo}>
-          <div className={styles.logoIcon}>
-            <span className={styles.logoLetter}>R</span>
-          </div>
+          <img
+              src="https://res.cloudinary.com/dwn6p3qmd/image/upload/f_auto,q_auto,w_80,h_80,c_fill,g_face/v1784673040/mboyouths_ssedqs.png"
+              alt="RMHCDT"
+              className={styles.logoIcon}
+              width="32"
+              height="32"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+            />
           <div className={styles.logoBrand}>
             <span className={styles.logoName}>RMHCDT</span>
             <span className={styles.logoSub}>Admin Portal</span>

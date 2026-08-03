@@ -33,10 +33,16 @@ function Shell({ children }) {
           <div className={styles.card}>
             <div className={styles.logoWrap}>
               <Link href="/" className={styles.logo}>
-                <div className={styles.logoBox}><span className={styles.logoLetter}>R</span></div>
+                <img
+                  src="https://res.cloudinary.com/dwn6p3qmd/image/upload/f_auto,q_auto,w_80,h_80,c_fill,g_face,r_max/v1784673040/mboyouths_ssedqs.png"
+                  alt="RMHCDT"
+                  className={styles.logoBox}
+                  width="40"
+                  height="40"
+                />
                 <div className={styles.logoText}>
                   <span className={styles.logoName}>RMHCDT</span>
-                  <span className={styles.logoSub}>Youth Portal</span>
+                  <span className={styles.logoSub}>Youth Beneficiary Portal</span>
                 </div>
               </Link>
             </div>

@@ -9,9 +9,9 @@ import { getSchemesOverview, publishSchemeApprovals } from "@/services";
 
 // ── CATEGORY CONFIG — matches Applications page ─────────────────────────────
 const categoryConfig = {
-  scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)" },
-  empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)" },
-  grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)" },
+  scholarship: { label: "Scholarship", color: "#15803d", bg: "rgba(74,222,128,0.12)" },
+  empowerment: { label: "Empowerment", color: "#b45309", bg: "rgba(251,191,36,0.12)" },
+  grant:       { label: "Grant",       color: "#7c3aed", bg: "rgba(167,139,250,0.12)" },
 };
 
 const FILTERS = [
@@ -111,13 +111,15 @@ export default function ApprovalsPage() {
 
   return (
     <div className={styles.page}>
+      
+        <button className={styles.backBtn} onClick={() => router.push("/admin/applications")}>
+            <ArrowLeft size={16} strokeWidth={2} />
+        </button>
 
       {/* HEADER */}
       <div className={styles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <button className={styles.backBtn} onClick={() => router.push("/admin/applications")}>
-            <ArrowLeft size={16} strokeWidth={2} />
-          </button>
+          
           <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Mail size={20} color="var(--color-primary)" strokeWidth={1.8} />
           </div>
@@ -146,9 +148,9 @@ export default function ApprovalsPage() {
       <div className={styles.summaryStrip}>
         {[
           { label: "Total Pending", value: totalPending,          key: "all"         },
-          { label: "Scholarship",   value: byType.scholarship,    key: "scholarship", color: "#4ade80" },
-          { label: "Empowerment",   value: byType.empowerment,    key: "empowerment", color: "#fbbf24" },
-          { label: "Grant",         value: byType.grant,          key: "grant",       color: "#a78bfa" },
+          { label: "Scholarship",   value: byType.scholarship,    key: "scholarship", color: "#15803d" },
+          { label: "Empowerment",   value: byType.empowerment,    key: "empowerment", color: "#b45309" },
+          { label: "Grant",         value: byType.grant,          key: "grant",       color: "#7c3aed" },
         ].map((s) => (
           <button
             key={s.label}
