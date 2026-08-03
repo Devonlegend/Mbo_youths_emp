@@ -1,4 +1,5 @@
 import { GraduationCap, Briefcase, Wrench, Banknote, ArrowRight } from "lucide-react";
+import Reveal from "./Reveal";
 import styles from "./Programmes.module.css";
 
 const programmes = [
@@ -54,7 +55,7 @@ export default function Programmes() {
       <div className={styles.container}>
 
         {/* HEADER */}
-        <div className={styles.header}>
+        <Reveal as="div" className={styles.header}>
           <div className={styles.label}>
             <span className={styles.labelDot} />
             What We Offer
@@ -67,10 +68,10 @@ export default function Programmes() {
             Each programme category serves a distinct development purpose.
             You may receive one per category per annual cycle.
           </p>
-        </div>
+        </Reveal>
 
         {/* CARDS */}
-        <div className={styles.grid}>
+        <Reveal as="div" className={styles.grid} delay={150}>
           {programmes.map((p, i) => {
             const Icon = p.icon;
             return (
@@ -130,7 +131,7 @@ export default function Programmes() {
               </div>
             );
           })}
-        </div>
+        </Reveal>
       </div>
     </section>
   );

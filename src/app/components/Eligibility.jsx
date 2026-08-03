@@ -1,4 +1,5 @@
 import { CheckCircle2, AlertCircle } from "lucide-react";
+import Reveal from "./Reveal";
 import styles from "./Eligibility.module.css";
 
 const requirements = [
@@ -57,7 +58,7 @@ export default function Eligibility() {
       <div className={styles.container}>
 
         {/* HEADER */}
-        <div className={styles.header}>
+         <Reveal as="div" className={styles.header}>
           <div className={styles.label}>
             <span className={styles.labelDot} />
             Who Can Apply
@@ -70,10 +71,10 @@ export default function Eligibility() {
             Make sure you meet all requirements before applying.
             Read the rules carefully to avoid disqualification.
           </p>
-        </div>
+        </Reveal>
 
         {/* TWO COLUMNS */}
-        <div className={styles.grid}>
+        <Reveal as="div" className={styles.grid}>
 
           {/* LEFT — REQUIREMENTS */}
           <div className={styles.col}>
@@ -132,7 +133,7 @@ export default function Eligibility() {
             </div>
           </div>
 
-        </div>
+        </Reveal>
 
       </div>
     </section>

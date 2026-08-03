@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GraduationCap, Briefcase, Wrench, Banknote, ArrowRight, ShieldCheck } from "lucide-react";
+import Reveal from "./Reveal"; 
 import styles from "./Hero.module.css";
 
 const programmes = [
@@ -56,7 +57,7 @@ export default function Hero() {
       <div className={styles.container}>
 
         {/* LEFT SIDE */}
-        <div className={styles.left}>
+        <Reveal as="div" className={styles.left}>
 
           {/* LABEL */}
           <div className={styles.label}>
@@ -100,10 +101,10 @@ export default function Hero() {
               </div>
             ))}
           </div>
-        </div>
+        </Reveal>
 
         {/* RIGHT SIDE */}
-        <div className={styles.right}>
+        <Reveal as="div" className={styles.right} delay={150}>
           <div className={styles.cardsGrid}>
             {programmes.map((p, i) => {
               const Icon = p.icon;
@@ -149,7 +150,7 @@ export default function Hero() {
               </span>
             </div>
           </div>
-        </div>
+        </Reveal>
 
       </div>
     </section>

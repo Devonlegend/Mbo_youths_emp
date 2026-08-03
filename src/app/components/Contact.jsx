@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { MapPin, Mail, Phone, Send, CheckCircle } from "lucide-react";
+import Reveal from "./Reveal";
 import styles from "./Contact.module.css";
 
 const contactInfo = [
@@ -48,7 +49,7 @@ export default function Contact() {
       <div className={styles.container}>
 
         {/* HEADER */}
-        <div className={styles.header}>
+         <Reveal as="div" className={styles.header}>
           <div className={styles.label}>
             <span className={styles.labelDot} />
             Get In Touch
@@ -61,7 +62,7 @@ export default function Contact() {
             Reach out to the Trust's designated officer for support
             with your application or any eligibility questions.
           </p>
-        </div>
+        </Reveal>
 
         {/* TWO COLUMNS */}
         <div className={styles.grid}>
@@ -97,7 +98,7 @@ export default function Contact() {
           </div>
 
           {/* RIGHT — FORM */}
-          <div className={styles.right}>
+          <Reveal as="div" className={styles.right}>
             {submitted ? (
               <div className={styles.successBox}>
                 <CheckCircle size={40} color="#15803d" strokeWidth={1.5} />
@@ -153,7 +154,7 @@ export default function Contact() {
                 </button>
               </form>
             )}
-          </div>
+          </Reveal>
 
         </div>
       </div>

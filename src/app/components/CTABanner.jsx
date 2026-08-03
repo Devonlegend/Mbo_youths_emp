@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, GraduationCap, Briefcase, Wrench, Banknote } from "lucide-react";
+import Reveal from "./Reveal";
 import styles from "./CTABanner.module.css";
 
 const icons = [GraduationCap, Briefcase, Wrench, Banknote];
@@ -48,7 +49,7 @@ export default function CTABanner() {
           </div>
         </div>
       </div>
-      
+      <Reveal />
     </section>
   );
 }

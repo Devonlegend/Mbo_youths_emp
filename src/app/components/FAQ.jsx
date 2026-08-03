@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import Reveal from "./Reveal";
 import styles from "./FAQ.module.css";
 
 const faqs = [
@@ -60,7 +61,7 @@ export default function FAQ() {
       <div className={styles.container}>
 
         {/* HEADER */}
-        <div className={styles.header}>
+        <Reveal as="div" className={styles.header}>
           <div className={styles.label}>
             <span className={styles.labelDot} />
             FAQ
@@ -72,10 +73,10 @@ export default function FAQ() {
           <p className={styles.subtext}>
             Everything you need to know before applying.
           </p>
-        </div>
+        </Reveal>
 
         {/* GRID */}
-        <div className={styles.grid}>
+        <Reveal as="div" className={styles.grid}>
           {faqs.map((faq, i) => (
             <div
               key={i}
@@ -114,7 +115,7 @@ export default function FAQ() {
               </div>
             </div>
           ))}
-        </div>
+        </Reveal>
 
       </div>
     </section>

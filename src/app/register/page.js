@@ -517,9 +517,9 @@ export default function RegisterPage() {
 
           <div className={styles.cardHeader}>
             <h1 className={styles.cardTitle}>Create Account</h1>
-            <p className={styles.cardSubtitle}>
+            {/* <p className={styles.cardSubtitle}>
               Join the portal to access scholarships, grants, training and funding.
-            </p>
+            </p> */}
           </div>
 
           <Stepper currentStep={currentStep} />

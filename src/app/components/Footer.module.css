@@ -37,11 +37,9 @@
 .logoBox {
   width: 32px;
   height: 32px;
-  background: #15803d;
-  border-radius: 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
 }
 
