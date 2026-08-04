@@ -243,7 +243,8 @@ export default function DynamicApplyPage() {
       if (cancelled) return;
       setScheme(schemeRes.data);
       setFields(Array.isArray(fieldsRes.data) ? fieldsRes.data : []);
-      setBanks(Array.isArray(banksRes.data?.banks) ? banksRes.data.banks : []);
+      const rawBanks = Array.isArray(banksRes.data?.banks) ? banksRes.data.banks : [];
+      setBanks(Array.from(new Map(rawBanks.map((b) => [b.code, b])).values()));
       } catch {
         if (!cancelled) setFetchError("Failed to load application form. Please go back and try again.");
       } finally {

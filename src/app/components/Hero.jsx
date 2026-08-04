@@ -62,7 +62,7 @@ export default function Hero() {
           {/* LABEL */}
           <div className={styles.label}>
             <span className={styles.labelDot} />
-            Royal Mbo Community Development Trust
+            Mbo Youth Empowerment
           </div>
 
           {/* HEADING */}

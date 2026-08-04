@@ -112,9 +112,10 @@ export default function ApprovalsPage() {
   return (
     <div className={styles.page}>
       
-        <button className={styles.backBtn} onClick={() => router.push("/admin/applications")}>
-            <ArrowLeft size={16} strokeWidth={2} />
-        </button>
+        <button className={styles.backBtn} onClick={() => router.back()}>
+      <ArrowLeft size={16} strokeWidth={2} />
+        Back
+      </button>
 
       {/* HEADER */}
       <div className={styles.header}>

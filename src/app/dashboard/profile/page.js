@@ -99,11 +99,12 @@ export default function ProfilePage() {
     }
 
     async function loadBanks() {
-      try {
-        const res = await getBanks();
-        setBanks(Array.isArray(res.data?.banks) ? res.data.banks : []);
-      } catch {}
-    }
+  try {
+    const res = await getBanks();
+    const rawBanks = Array.isArray(res.data?.banks) ? res.data.banks : [];
+    setBanks(Array.from(new Map(rawBanks.map((b) => [b.code, b])).values()));
+  } catch {}
+}
 
     loadProfile();
     loadBank();

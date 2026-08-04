@@ -26,3 +26,8 @@ export const getSchemesOverview = () =>
 
 export const publishSchemeApprovals = (schemeId) =>
   api.post(`/applications/publish/${schemeId}/`);
+
+export const getApplicationsByScheme = (schemeId, status) =>
+  api.get(`/applications/by-scheme/${schemeId}/`, {
+    params: status ? { status } : {},
+  });

@@ -38,7 +38,7 @@ const rules = [
   },
   {
     title: "One Per Category Per Cycle",
-    desc: "You cannot receive two scholarships in the same annual cycle — but you can receive a scholarship and a grant together.",
+    desc: "You cannot receive two scholarships in the same annual cycle but you can receive a scholarship and a grant together.",
     color: "#1d4ed8",
     bg: "#eff6ff",
     border: "#bfdbfe",

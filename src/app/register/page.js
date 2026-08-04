@@ -384,7 +384,7 @@ export default function RegisterPage() {
         decoding="async"
       />
       <div className={styles.logoText}>
-        <span className={styles.logoName}>RMHDCT</span>
+        <span className={styles.logoName}>Mbo Youth Empowerment</span>
         <span className={styles.logoSub}>Youth Beneficiary Portal</span>
       </div>
     </Link>

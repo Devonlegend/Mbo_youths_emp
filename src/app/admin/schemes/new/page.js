@@ -364,6 +364,7 @@ if (checking) {
       {/* BACK */}
       <button className={styles.backBtn} onClick={() => router.push("/admin/schemes")}>
       <ArrowLeft size={16} strokeWidth={2} />
+      Back
       </button>
 
       {/* PAGE HEADER */}
