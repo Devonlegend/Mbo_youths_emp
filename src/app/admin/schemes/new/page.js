@@ -244,6 +244,16 @@ const [form, setForm] = useState({
     application_close_date: "",
     stacking_policy:        "major_only",
     provider_id:            "",
+
+    // Eligibility criteria — 
+
+    min_cgpa:               "",
+    allowed_levels:         "",   
+    min_age:                "",
+    max_age:                "",
+    allowed_trades:         "",   
+    ward_restriction:       "",   
+    max_prior_awards:       "",
   });
 
   // const [fields,   setFields]   = useState(defaultFields.scholarship.map((f, i) => ({ ...f, order: i })));
@@ -470,6 +480,118 @@ if (checking) {
                 value={form.academic_year} onChange={(e) => set("academic_year", e.target.value)} />
             </div>
           </div>
+
+          {/* Eligibility Criteria */}
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Eligibility Criteria</h2>
+              <p className={styles.cardSub}>
+                Optional. Leave blank for no restriction on that criterion.
+              </p>
+
+              {form.award_type === "scholarship" && (
+                <>
+                  <div className={styles.twoCol}>
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Minimum CGPA</label>
+                      <input
+                        type="number" step="0.01" className={styles.input}
+                        placeholder="e.g. 2.20"
+                        value={form.min_cgpa}
+                        onChange={(e) => set("min_cgpa", e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Max Prior Awards</label>
+                      <input
+                        type="number" className={styles.input}
+                        placeholder="e.g. 1"
+                        value={form.max_prior_awards}
+                        onChange={(e) => set("max_prior_awards", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Allowed Levels</label>
+                    <input
+                      className={styles.input}
+                      placeholder="e.g. 200, 300, 400"
+                      value={form.allowed_levels}
+                      onChange={(e) => set("allowed_levels", e.target.value)}
+                    />
+                    <p className={styles.cycleHint}>Comma-separated. Also populates the level dropdown on the apply form.</p>
+                  </div>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Ward Restriction</label>
+                    <input
+                      className={styles.input}
+                      placeholder="e.g. effiat, ewang"
+                      value={form.ward_restriction}
+                      onChange={(e) => set("ward_restriction", e.target.value)}
+                    />
+                    <p className={styles.cycleHint}>Comma-separated. Leave blank to allow all wards.</p>
+                  </div>
+                </>
+              )}
+
+              {(form.award_type === "empowerment" || form.award_type === "grant") && (
+                <>
+                  <div className={styles.twoCol}>
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Minimum Age</label>
+                      <input
+                        type="number" className={styles.input}
+                        placeholder="e.g. 16"
+                        value={form.min_age}
+                        onChange={(e) => set("min_age", e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Maximum Age</label>
+                      <input
+                        type="number" className={styles.input}
+                        placeholder="e.g. 35"
+                        value={form.max_age}
+                        onChange={(e) => set("max_age", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {form.award_type === "empowerment" && (
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Allowed Trades</label>
+                      <input
+                        className={styles.input}
+                        placeholder="e.g. welding, tailoring, ICT"
+                        value={form.allowed_trades}
+                        onChange={(e) => set("allowed_trades", e.target.value)}
+                      />
+                      <p className={styles.cycleHint}>Comma-separated. Also populates the trade dropdown on the apply form.</p>
+                    </div>
+                  )}
+
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Ward Restriction</label>
+                    <input
+                      className={styles.input}
+                      placeholder="e.g. effiat, ewang"
+                      value={form.ward_restriction}
+                      onChange={(e) => set("ward_restriction", e.target.value)}
+                    />
+                    <p className={styles.cycleHint}>Comma-separated. Leave blank to allow all wards.</p>
+                  </div>
+
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Max Prior Awards</label>
+                    <input
+                      type="number" className={styles.input}
+                      placeholder="e.g. 1"
+                      value={form.max_prior_awards}
+                      onChange={(e) => set("max_prior_awards", e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
 
           {/* Form Builder — DISABLED, see comment block near top of file for why */}
           {/*
