@@ -64,7 +64,7 @@ const faqs = [
 ];
 
 const contactInfo = [
-  { icon: MapPin,  label: "Address",      value: "RMHCDT, Mbo LGA, Akwa Ibom State",       color: "#15803d", bg: "#f0fdf4", border: "#bbf7d0" },
+  { icon: MapPin,  label: "Address",      value: "Mbo Youth Empowerment, Mbo LGA, Akwa Ibom State",       color: "#15803d", bg: "#f0fdf4", border: "#bbf7d0" },
   { icon: Mail,    label: "Email",        value: "info@rmhcdt.org",                          color: "#1d4ed8", bg: "#eff6ff", border: "#bfdbfe" },
   { icon: Phone,   label: "Phone",        value: "+234 070 1234 5678",                       color: "#b45309", bg: "#fffbeb", border: "#fde68a" },
   { icon: Clock,   label: "Office Hours", value: "Mon – Fri, 8:00 AM – 5:00 PM WAT",        color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },

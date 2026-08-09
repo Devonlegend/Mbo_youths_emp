@@ -375,7 +375,7 @@ export default function RegisterPage() {
     <Link href="/" className={styles.logo}>
       <img
         src="https://res.cloudinary.com/dwn6p3qmd/image/upload/f_auto,q_auto,w_80,h_80,c_fill,g_face/v1784673040/mboyouths_ssedqs.png"
-        alt="RMHCDT"
+        alt="Mbo Youth Empowerment"
         className={styles.logoBox}
         width="40"
         height="40"

@@ -139,7 +139,7 @@ def notify_profile_verified(user) -> Notification:
         type='profile',
         title='Profile Verified',
         message=(
-            'Your identity and documents have been verified by the RMHCDT '
+            'Your identity and documents have been verified by the Mbo Youth Empowerment '
             'team. You can now browse and apply for available programmes.'
         ),
     )
