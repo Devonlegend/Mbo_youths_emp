@@ -85,7 +85,7 @@ export default function Navbar() {
           />
           <div className={styles.logoText}>
             <span className={styles.logoTitle}>Mbo Youth Empowerment</span>
-            <span className={styles.logoSubtitle}>Youth Beneficiary Porta</span>
+            <span className={styles.logoSubtitle}>Youth Beneficiary Portal</span>
           </div>
         </Link>
 
