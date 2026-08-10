@@ -41,7 +41,7 @@ function Shell({ children }) {
                   height="40"
                 />
                 <div className={styles.logoText}>
-                  <span className={styles.logoName}>RMHCDT</span>
+                  <span className={styles.logoName}>Mbo Youth Empowerment</span>
                   <span className={styles.logoSub}>Youth Beneficiary Portal</span>
                 </div>
               </Link>

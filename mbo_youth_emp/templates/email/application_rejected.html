@@ -1,10 +1,20 @@
 {% extends "email/base.html" %}
 
 {% block status_strip %}
-<div class="status-strip status-strip--red">
-  <div class="status-strip-icon">&#10005;</div>
-  <span class="status-strip-text">Application Not Selected</span>
-</div>
+<tr>
+  <td class="status-strip-cell status-strip--red" style="padding:16px 32px; border-bottom:1px solid #fecaca; background:#fef2f2;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="status-strip-icon" style="width:32px; height:32px; border-radius:9px; background:#ffffff; border:1px solid #fecaca; font-family: Arial, Helvetica, sans-serif; font-weight:800; font-size:15px; line-height:32px; text-align:center; color:#ef4444;">
+          &#10005;
+        </td>
+        <td style="padding-left:10px; vertical-align:middle;">
+          <span class="status-strip-text" style="font-size:12.5px; font-weight:700; letter-spacing:-0.01em; color:#b91c1c;">Application Not Selected</span>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
 {% endblock %}
 
 {% block content %}
@@ -17,7 +27,7 @@
 
   <span class="reference">Ref: #{{ reference }}</span>
 
-  <table class="detail-table">
+  <table class="detail-table" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; border-collapse:collapse; margin:4px 0 20px; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;">
     <tr><td>Scheme</td><td>{{ scheme_name }}</td></tr>
     <tr><td>Award Type</td><td>{{ award_type }}</td></tr>
     <tr><td>Provider</td><td>{{ provider_name }}</td></tr>

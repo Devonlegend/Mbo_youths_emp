@@ -1,16 +1,26 @@
 {% extends "email/base.html" %}
 
 {% block status_strip %}
-<div class="status-strip status-strip--green">
-  <div class="status-strip-icon">&#10003;</div>
-  <span class="status-strip-text">Account Created</span>
-</div>
+<tr>
+  <td class="status-strip-cell status-strip--green" style="padding:16px 32px; border-bottom:1px solid #bbf7d0; background:#f0fdf4;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="status-strip-icon" style="width:32px; height:32px; border-radius:9px; background:#ffffff; border:1px solid #bbf7d0; font-family: Arial, Helvetica, sans-serif; font-weight:800; font-size:15px; line-height:32px; text-align:center; color:#15803d;">
+          &#10003;
+        </td>
+        <td style="padding-left:10px; vertical-align:middle;">
+          <span class="status-strip-text" style="font-size:12.5px; font-weight:700; letter-spacing:-0.01em; color:#166534;">Account Created</span>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
 {% endblock %}
 
 {% block content %}
   <h2>Welcome, {{ student_name }}!</h2>
   <p>
-    Your account on the <strong>RMHCDT Youth Portal</strong> has been created.
+    Your account on the <strong>Mbo Youth Empowerment</strong> has been created.
     You can now browse funding opportunities and apply for scholarships, grants,
     and empowerment programmes from the Mbo Host Community Development Trust.
   </p>

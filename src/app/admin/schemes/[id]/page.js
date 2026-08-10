@@ -32,6 +32,19 @@ function formatCurrency(amount) {
   return `₦${Number(amount).toLocaleString()}`;
 }
 
+function eligibilityFieldsFromScheme(s) {
+  const c = s?.eligibility_criteria || {};
+  return {
+    min_cgpa:          c.min_cgpa ?? "",
+    allowed_levels:    Array.isArray(c.allowed_levels)    ? c.allowed_levels.join(", ")    : "",
+    min_age:           c.min_age ?? "",
+    max_age:           c.max_age ?? "",
+    allowed_trades:    Array.isArray(c.allowed_trades)    ? c.allowed_trades.join(", ")    : "",
+    ward_restriction:  Array.isArray(c.ward_restriction)  ? c.ward_restriction.join(", ")  : "",
+    max_prior_awards:  c.max_prior_awards ?? "",
+  };
+}
+
 // ── INFO ROW ──────────────────────────────────────────────────────────────────
 function InfoRow({ icon: Icon, label, value, color }) {
   return (
@@ -74,8 +87,7 @@ export default function SchemeDetailPage() {
         const res = await getScheme(params.id);
         if (cancelled) return;
         setScheme(res.data);
-        console.log("Full scheme object:", res.data);
-        setForm(res.data);
+        setForm({ ...res.data, ...eligibilityFieldsFromScheme(res.data) });
       } catch {
         if (!cancelled) setError("Failed to load scheme.");
       } finally {
@@ -88,7 +100,7 @@ export default function SchemeDetailPage() {
 
   // ── EDIT ──────────────────────────────────────────────────────────────────
   function startEdit() {
-    setForm({ ...scheme });
+    setForm({ ...scheme, ...eligibilityFieldsFromScheme(scheme) });
     setEditing(true);
     setSaveError("");
   }
@@ -111,8 +123,18 @@ export default function SchemeDetailPage() {
         application_open_date:  form.application_open_date,
         application_close_date: form.application_close_date,
         stacking_policy:        form.stacking_policy,
+
+        // Eligibility criteria — flat keys, backend assembles them same as create
+        min_cgpa:               form.min_cgpa,
+        allowed_levels:         form.allowed_levels,
+        min_age:                form.min_age,
+        max_age:                form.max_age,
+        allowed_trades:         form.allowed_trades,
+        ward_restriction:       form.ward_restriction,
+        max_prior_awards:       form.max_prior_awards,
       });
       setScheme(res.data);
+      setForm({ ...res.data, ...eligibilityFieldsFromScheme(res.data) });
       setEditing(false);
     } catch (err) {
       setSaveError(
@@ -142,20 +164,20 @@ export default function SchemeDetailPage() {
   }
 
   // ── REOPEN ────────────────────────────────────────────────────────────────
-async function handleReopen() {
-  setActionLoading(true);
-  setActionError("");
-  setActionSuccess("");
-  try {
-    await reopenScheme(params.id);
-    setScheme((s) => ({ ...s, is_active: true }));
-    setActionSuccess("Scheme reopened successfully.");
-  } catch (err) {
-    setActionError(err?.response?.data?.error || "Failed to reopen scheme.");
-  } finally {
-    setActionLoading(false);
+  async function handleReopen() {
+    setActionLoading(true);
+    setActionError("");
+    setActionSuccess("");
+    try {
+      await reopenScheme(params.id);
+      setScheme((s) => ({ ...s, is_active: true }));
+      setActionSuccess("Scheme reopened successfully.");
+    } catch (err) {
+      setActionError(err?.response?.data?.error || "Failed to reopen scheme.");
+    } finally {
+      setActionLoading(false);
+    }
   }
-}
 
   // ── CLOSE ─────────────────────────────────────────────────────────────────
   async function handleClose() {
@@ -174,7 +196,7 @@ async function handleReopen() {
   }
 
   // ── LOADING ───────────────────────────────────────────────────────────────
-if (checking) {
+  if (checking) {
     return (
       <div className={styles.centerState}>
         <div className={styles.spinner} />
@@ -216,6 +238,7 @@ if (checking) {
       {/* BACK */}
       <button className={styles.backBtn} onClick={() => router.push("/admin/schemes")}>
         <ArrowLeft size={16} strokeWidth={2} />
+        Back
       </button>
 
       {/* PAGE HEADER */}
@@ -240,7 +263,7 @@ if (checking) {
           )}
         </div>
       </div>
-      
+
 
       {/* ACTION BANNERS */}
       {actionSuccess && (
@@ -317,6 +340,7 @@ if (checking) {
                   <label className={styles.fieldLabel}>Description</label>
                   <textarea className={styles.textarea} rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
                 </div>
+
                 <div className={styles.twoCol}>
                   <div className={styles.field}>
                     <label className={styles.fieldLabel}>Academic Year</label>
@@ -351,6 +375,114 @@ if (checking) {
                     <input type="date" className={styles.input} value={form.application_close_date?.slice(0,10) || ""} onChange={(e) => setForm((f) => ({ ...f, application_close_date: e.target.value }))} />
                   </div>
                 </div>
+
+                {/* ── ELIGIBILITY CRITERIA ── */}
+                <div className={styles.field} style={{ marginTop: 4 }}>
+                  <label className={styles.fieldLabel}>Eligibility Criteria</label>
+                  <p className={styles.cardSub} style={{ margin: 0 }}>
+                    Optional. Leave blank for no restriction on that criterion.
+                  </p>
+                </div>
+
+                {catKey === "scholarship" && (
+                  <>
+                    <div className={styles.twoCol}>
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Minimum CGPA</label>
+                        <input
+                          type="number" step="0.01" className={styles.input}
+                          placeholder="e.g. 2.20"
+                          value={form.min_cgpa}
+                          onChange={(e) => setForm((f) => ({ ...f, min_cgpa: e.target.value }))}
+                        />
+                      </div>
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Max Prior Awards</label>
+                        <input
+                          type="number" className={styles.input}
+                          placeholder="e.g. 1"
+                          value={form.max_prior_awards}
+                          onChange={(e) => setForm((f) => ({ ...f, max_prior_awards: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Allowed Levels</label>
+                      <input
+                        className={styles.input}
+                        placeholder="e.g. 200, 300, 400"
+                        value={form.allowed_levels}
+                        onChange={(e) => setForm((f) => ({ ...f, allowed_levels: e.target.value }))}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Ward Restriction</label>
+                      <input
+                        className={styles.input}
+                        placeholder="e.g. effiat, ewang"
+                        value={form.ward_restriction}
+                        onChange={(e) => setForm((f) => ({ ...f, ward_restriction: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {(catKey === "empowerment" || catKey === "grant") && (
+                  <>
+                    <div className={styles.twoCol}>
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Minimum Age</label>
+                        <input
+                          type="number" className={styles.input}
+                          placeholder="e.g. 16"
+                          value={form.min_age}
+                          onChange={(e) => setForm((f) => ({ ...f, min_age: e.target.value }))}
+                        />
+                      </div>
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Maximum Age</label>
+                        <input
+                          type="number" className={styles.input}
+                          placeholder="e.g. 35"
+                          value={form.max_age}
+                          onChange={(e) => setForm((f) => ({ ...f, max_age: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    {catKey === "empowerment" && (
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Allowed Trades</label>
+                        <input
+                          className={styles.input}
+                          placeholder="e.g. welding, tailoring, ICT"
+                          value={form.allowed_trades}
+                          onChange={(e) => setForm((f) => ({ ...f, allowed_trades: e.target.value }))}
+                        />
+                      </div>
+                    )}
+
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Ward Restriction</label>
+                      <input
+                        className={styles.input}
+                        placeholder="e.g. effiat, ewang"
+                        value={form.ward_restriction}
+                        onChange={(e) => setForm((f) => ({ ...f, ward_restriction: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Max Prior Awards</label>
+                      <input
+                        type="number" className={styles.input}
+                        placeholder="e.g. 1"
+                        value={form.max_prior_awards}
+                        onChange={(e) => setForm((f) => ({ ...f, max_prior_awards: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className={styles.infoGrid}>
@@ -367,6 +499,30 @@ if (checking) {
                   scheme.stacking_policy === "major_only" ? "Major Only" :
                   "Open"
                 } />
+
+                {/* ── ELIGIBILITY CRITERIA (read-only) ── */}
+                {scheme.eligibility_criteria?.min_cgpa != null && (
+                  <InfoRow icon={Shield} label="Minimum CGPA" value={scheme.eligibility_criteria.min_cgpa} />
+                )}
+                {scheme.eligibility_criteria?.allowed_levels?.length > 0 && (
+                  <InfoRow icon={Shield} label="Allowed Levels" value={scheme.eligibility_criteria.allowed_levels.join(", ")} />
+                )}
+                {(scheme.eligibility_criteria?.min_age != null || scheme.eligibility_criteria?.max_age != null) && (
+                  <InfoRow
+                    icon={Shield}
+                    label="Age Range"
+                    value={`${scheme.eligibility_criteria?.min_age ?? "—"} – ${scheme.eligibility_criteria?.max_age ?? "—"}`}
+                  />
+                )}
+                {scheme.eligibility_criteria?.allowed_trades?.length > 0 && (
+                  <InfoRow icon={Shield} label="Allowed Trades" value={scheme.eligibility_criteria.allowed_trades.join(", ")} />
+                )}
+                {scheme.eligibility_criteria?.ward_restriction?.length > 0 && (
+                  <InfoRow icon={Shield} label="Ward Restriction" value={scheme.eligibility_criteria.ward_restriction.join(", ")} />
+                )}
+                {scheme.eligibility_criteria?.max_prior_awards != null && (
+                  <InfoRow icon={Shield} label="Max Prior Awards" value={scheme.eligibility_criteria.max_prior_awards} />
+                )}
               </div>
             )}
           </div>

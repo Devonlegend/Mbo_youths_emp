@@ -9,9 +9,15 @@ export default function Footer() {
         <div className={styles.bottom}>
           {/* LEFT: Logo */}
           <Link href="/" className={styles.logo}>
-            <div className={styles.logoBox}>
-              <span className={styles.logoLetter}>R</span>
-            </div>
+            <img
+              src="https://res.cloudinary.com/dwn6p3qmd/image/upload/f_auto,q_auto,w_80,h_80,c_fill,g_face/v1784673040/mboyouths_ssedqs.png"
+              alt="RMHCDT"
+              className={styles.logoBox}
+              width="32"
+              height="32"
+              loading="lazy"
+              decoding="async"
+            />
             <div className={styles.logoText}>
               <span className={styles.logoName}>RMHCDT</span>
               <span className={styles.logoSub}>Youth Portal</span>

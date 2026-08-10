@@ -1,363 +1,200 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
-  ClipboardList, Search,
-  ArrowRight, AlertCircle, CheckCircle2,
-  ShieldAlert, Mail,
+  ClipboardList, Search, AlertCircle, Users,
+  GraduationCap, Briefcase, Banknote, ArrowRight,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { getApplications } from "@/services";
-import Pagination from "../components/pagination/Pagination";
-
-const PAGE_SIZE = 50;
-
-// ── STATUS MAPPING ────────────────────────────────────────────────────────────
-const statusConfig = {
-  submitted:         { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  eligibility_check: { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  document_review:   { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  shortlisted:       { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  draft:             { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  double_dip_flag:   { label: "Flagged",  color: "#ef4444", bg: "rgba(239,68,68,0.1)"  },
-  approved:          { label: "Approved", color: "#4ade80", bg: "rgba(74,222,128,0.1)"  },
-  rejected:          { label: "Rejected", color: "#64748b", bg: "rgba(100,116,139,0.1)" },
-  withdrawn:         { label: "Rejected", color: "#64748b", bg: "rgba(100,116,139,0.1)" },
-};
+import { getSchemesOverview } from "@/services";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
-  scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)"  },
-  empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)"  },
-  grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)" },
+  scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
+  empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
+  grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
 };
 
-function formatDate(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-GB", {
-    day: "numeric", month: "short", year: "numeric",
-  });
-}
-
-// ── SKELETON ROW ──────────────────────────────────────────────────────────────
-function SkeletonRow() {
+// ── SKELETON CARD ─────────────────────────────────────────────────────────────
+function SkeletonCard() {
   return (
-    <div className={styles.tableRow}>
-      <div className={styles.skeletonCell} style={{ width: "20%" }} />
-      <div className={styles.skeletonCell} style={{ width: "28%" }} />
-      <div className={styles.skeletonCell} style={{ width: "12%" }} />
-      <div className={styles.skeletonCell} style={{ width: "10%" }} />
-      <div className={styles.skeletonCell} style={{ width: "8%"  }} />
+    <div className={styles.schemeCard}>
+      <div className={styles.skeletonBlock} style={{ width: "60%", height: 18, borderRadius: 6 }} />
+      <div className={styles.skeletonBlock} style={{ width: "40%", height: 14, borderRadius: 4, marginTop: 8 }} />
+      <div className={styles.skeletonBlock} style={{ width: "100%", height: 40, borderRadius: 6, marginTop: 12 }} />
+      <div className={styles.skeletonBlock} style={{ width: "40%", height: 34, borderRadius: 8, marginTop: 12 }} />
     </div>
   );
 }
 
-// ── TABS ──────────────────────────────────────────────────────────────────────
-const TABS = [
-  { key: "all",     label: "All"     },
-  { key: "pending", label: "Pending" },
-  { key: "flagged", label: "Flagged" },
-];
-
 // ── PAGE ──────────────────────────────────────────────────────────────────────
-export default function AdminApplicationsPage() {
-  const router       = useRouter();
-  const searchParams = useSearchParams();
+export default function AdminApplicationsOverviewPage() {
+  const router = useRouter();
 
-  const initialTab = searchParams.get("tab") || "all";
+  const [overview, setOverview] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+  const [search,   setSearch]   = useState("");
 
-  const [applications, setApplications] = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
-  const [activeTab,    setActiveTab]    = useState(initialTab);
-  const [search,       setSearch]       = useState("");
-
-  // ── PAGINATION STATE ───────────────────────────────────────────────────────
-  const [page,     setPage]     = useState(1);
-  const [pageInfo, setPageInfo] = useState({ count: 0, next: null, previous: null });
-
-  // ── FETCH ─────────────────────────────────────────────────────────────────
-  async function loadApplications(targetPage) {
+  async function loadOverview() {
     setLoading(true);
     setError(null);
     try {
-      const res  = await getApplications(targetPage);
-      setApplications(Array.isArray(res.data?.results) ? res.data.results : []);
-      setPageInfo({
-        count:    res.data?.count    ?? 0,
-        next:     res.data?.next     ?? null,
-        previous: res.data?.previous ?? null,
-      });
-      setPage(targetPage);
+      const res = await getSchemesOverview();
+      setOverview(Array.isArray(res.data) ? res.data : []);
     } catch {
-      setError("Failed to load applications. Please try again.");
+      setError("Failed to load schemes. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    loadApplications(1);
-  }, []);
+  useEffect(() => { loadOverview(); }, []);
 
-  // ── DERIVED COUNTS (current page only) ───────────────────────────────────
-  const counts = {
-    total:    pageInfo.count,
-    pending:  applications.filter((a) =>
-      ["submitted", "eligibility_check", "document_review",
-       "shortlisted", "draft"].includes(a.status)
-    ).length,
-    flagged:  applications.filter((a) => a.status === "double_dip_flag").length,
-    approved: applications.filter((a) => a.status === "approved").length,
-    rejected: applications.filter((a) =>
-      ["rejected", "withdrawn"].includes(a.status)
-    ).length,
-  };
+  // ── FILTER ────────────────────────────────────────────────────────────────
+  const filtered = overview.filter((row) =>
+    search.trim() === "" ? true :
+    (row.scheme?.name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (row.scheme?.award_type || "").toLowerCase().includes(search.toLowerCase())
+  );
 
-  // ── FILTER BY TAB + SEARCH (current page only) ────────────────────────────
-  const filtered = applications.filter((app) => {
-    const tabMatch =
-      activeTab === "all"     ? true :
-      activeTab === "pending" ? ["submitted", "eligibility_check", "document_review",
-                                 "shortlisted", "draft"].includes(app.status) :
-      activeTab === "flagged" ? app.status === "double_dip_flag" : true;
+  const totalSchemes  = overview.length;
+  const totalPending   = overview.reduce((sum, r) => sum + (r.pending_review || 0), 0);
+  const totalUnpublished = overview.reduce((sum, r) => sum + (r.unpublished || 0), 0);
 
-    const studentName = (app.student?.full_name || "").toLowerCase();
-    const schemeName  = (app.scheme?.name || "").toLowerCase();
-    const searchMatch = search.trim() === "" ? true :
-      studentName.includes(search.toLowerCase()) ||
-      schemeName.includes(search.toLowerCase());
-
-    return tabMatch && searchMatch;
-  });
-
-  // ── RENDER ────────────────────────────────────────────────────────────────
   return (
     <div className={styles.page}>
 
       {/* PAGE HEADER */}
-        <div className={styles.header}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <ClipboardList size={20} color="var(--color-primary)" strokeWidth={1.8} />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
-              <h1 className={styles.title}>Applications</h1>
-              <p className={styles.sub}>Review and manage all programme applications.</p>
-            </div>
+      <div className={styles.header}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <ClipboardList size={20} color="var(--color-primary)" strokeWidth={1.8} />
           </div>
-
-          <button
-              className={styles.notifyBtn}
-              onClick={() => router.push("/admin/applications/approvals")}
-            >
-              <Mail size={14} strokeWidth={2} />
-              Send Approvals
-            </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
+            <h1 className={styles.title}>Applications</h1>
+            <p className={styles.sub}>Select a scheme to review its applications.</p>
+          </div>
         </div>
+
+        <div className={styles.headerRight}>
+          <div className={styles.searchWrap}>
+            <Search size={14} className={styles.searchIcon} />
+            <input
+              className={styles.searchInput}
+              placeholder="Search schemes..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* SUMMARY STRIP */}
       <div className={styles.summaryStrip}>
         {[
-          { label: "Total",    value: counts.total,    key: "all"     },
-          { label: "Pending",  value: counts.pending,  key: "pending", color: "#f59e0b" },
-          { label: "Flagged",  value: counts.flagged,  key: "flagged", color: "#ef4444" },
-          { label: "Approved", value: counts.approved, key: null,      color: "#4ade80" },
-          { label: "Rejected", value: counts.rejected, key: null,      color: "#64748b" },
+          { label: "Schemes",           value: totalSchemes,     color: "var(--color-text)" },
+          { label: "Pending Review",    value: totalPending,     color: "#f59e0b" },
+          { label: "Awaiting Notify",   value: totalUnpublished, color: "#3b82f6" },
         ].map((s) => (
-          <button
-            key={s.label}
-            className={`${styles.summaryItem} ${activeTab === s.key ? styles.summaryItemActive : ""}`}
-            onClick={() => s.key && setActiveTab(s.key)}
-            style={{ cursor: s.key ? "pointer" : "default" }}
-          >
-            <span className={styles.summaryValue} style={{ color: s.color || "var(--color-text)" }}>
+          <div key={s.label} className={styles.summaryItem}>
+            <span className={styles.summaryValue} style={{ color: s.color }}>
               {loading ? "—" : s.value}
             </span>
             <span className={styles.summaryLabel}>{s.label}</span>
-          </button>
+          </div>
         ))}
       </div>
 
-      {/* MAIN CARD */}
-      <div className={styles.card}>
-
-        {/* TABS + TOOLBAR */}
-        <div className={styles.cardTop}>
-          <div className={styles.tabs}>
-            {TABS.map((tab) => (
-              <button
-                key={tab.key}
-                className={`${styles.tab} ${activeTab === tab.key ? styles.tabActive : ""}`}
-                onClick={() => setActiveTab(tab.key)}
-              >
-                {tab.label}
-                {tab.key === "flagged" && counts.flagged > 0 && (
-                  <span className={styles.tabBadge}>{counts.flagged}</span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.toolbar}>
-            <div className={styles.searchWrap}>
-              <Search size={14} className={styles.searchIcon} />
-              <input
-                className={styles.searchInput}
-                placeholder="Search by student or scheme..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-          </div>
+      {/* ERROR */}
+      {error && (
+        <div className={styles.errorState}>
+          <AlertCircle size={22} color="#f87171" strokeWidth={1.5} />
+          <p style={{ color: "#ef4444" }}>{error}</p>
+          <button className={styles.retryBtn} onClick={loadOverview}>Try again</button>
         </div>
+      )}
 
-        {/* TABLE */}
-        <div className={styles.tableWrap}>
+      {/* LOADING */}
+      {loading && (
+        <div className={styles.grid}>
+          {[1,2,3,4].map((i) => <SkeletonCard key={i} />)}
+        </div>
+      )}
 
-          {/* Header */}
-          <div className={`${styles.tableRow} ${styles.tableHeader}`}>
-            <span>Student</span>
-            <span>Scheme</span>
-            <span>Submitted</span>
-            <span>Status</span>
-            <span></span>
-          </div>
+      {/* EMPTY */}
+      {!loading && !error && filtered.length === 0 && (
+        <div className={styles.emptyState}>
+          <ClipboardList size={28} color="#cbd5e1" strokeWidth={1.5} />
+          <p className={styles.emptyTitle}>No schemes with applications</p>
+          <p className={styles.emptySub}>
+            {search ? "Try a different search." : "No one has applied to any scheme yet."}
+          </p>
+        </div>
+      )}
 
-          {/* Loading */}
-          {loading && [1,2,3,4,5].map((i) => <SkeletonRow key={i} />)}
-
-          {/* Error */}
-          {!loading && error && (
-            <div className={styles.emptyState}>
-              <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
-              <p style={{ color: "#ef4444", fontWeight: 600 }}>{error}</p>
-              <button
-                className={styles.retryBtn}
-                onClick={() => loadApplications(page)}
-              >
-                Try again
-              </button>
-            </div>
-          )}
-
-          {/* Empty — flagged queue clear */}
-          {!loading && !error && activeTab === "flagged" && filtered.length === 0 && (
-            <div className={styles.emptyState}>
-              <div className={styles.emptyIconWrap} style={{ background: "rgba(74,222,128,0.1)", border: "1.5px solid rgba(74,222,128,0.2)" }}>
-                <CheckCircle2 size={24} color="#4ade80" strokeWidth={1.8} />
-              </div>
-              <p className={styles.emptyTitle} style={{ color: "#4ade80" }}>Flagged queue is clear</p>
-              <p className={styles.emptySub}>No conflict or false declaration flags at this time.</p>
-            </div>
-          )}
-
-          {/* Empty — pending queue clear */}
-          {!loading && !error && activeTab === "pending" && filtered.length === 0 && (
-            <div className={styles.emptyState}>
-              <div className={styles.emptyIconWrap} style={{ background: "rgba(74,222,128,0.1)", border: "1.5px solid rgba(74,222,128,0.2)" }}>
-                <CheckCircle2 size={24} color="#4ade80" strokeWidth={1.8} />
-              </div>
-              <p className={styles.emptyTitle} style={{ color: "#4ade80" }}>All caught up</p>
-              <p className={styles.emptySub}>No pending applications waiting for review.</p>
-            </div>
-          )}
-
-          {/* Empty — no results */}
-          {!loading && !error && filtered.length === 0 &&
-           activeTab !== "flagged" && activeTab !== "pending" && (
-            <div className={styles.emptyState}>
-              <ClipboardList size={28} color="#cbd5e1" strokeWidth={1.5} />
-              <p className={styles.emptyTitle}>No applications found</p>
-              <p className={styles.emptySub}>
-                {search ? "Try a different search term." : "No applications this cycle yet."}
-              </p>
-            </div>
-          )}
-
-          {/* TABLE ROWS */}
-          {!loading && !error && filtered.map((app) => {
-            const status     = statusConfig[app.status] || statusConfig.submitted;
-            const catKey     = (app.scheme?.award_type || "").toLowerCase();
-            const category   = categoryConfig[catKey] || categoryConfig.scholarship;
-            const isConflict = app.status === "double_dip_flag";
-            const fullName   = app.student?.full_name || "Unknown";
-            const initials   = fullName
-              .split(" ")
-              .map((n) => n[0] || "")
-              .slice(0, 2)
-              .join("")
-              .toUpperCase();
+      {/* SCHEME CARDS GRID */}
+      {!loading && !error && filtered.length > 0 && (
+        <div className={styles.grid}>
+          {filtered.map((row) => {
+            const catKey    = (row.scheme?.award_type || "scholarship").toLowerCase();
+            const category  = categoryConfig[catKey] || categoryConfig.scholarship;
+            const Icon      = category.icon;
+            const hasPending = row.pending_review > 0;
 
             return (
-              <div
-                key={app.id}
-                className={`${styles.tableRow} ${styles.tableRowData} ${isConflict ? styles.tableRowFlagged : ""}`}
-              >
-                {/* Student */}
-                <div className={styles.tdStudent}>
-                  <div className={styles.studentAvatar}>{initials}</div>
-                  <div className={styles.studentInfo}>
-                    <span className={styles.studentName}>{fullName}</span>
-                    <span className={styles.studentMeta}>{app.student?.ward || "—"}</span>
+              <div key={row.scheme.id} className={styles.schemeCard}>
+                {/* Card top */}
+                <div className={styles.schemeCardTop}>
+                  <div className={styles.schemeIconWrap} style={{ background: category.bg }}>
+                    <Icon size={18} color={category.color} strokeWidth={1.8} />
                   </div>
-                </div>
-
-                {/* Scheme */}
-                <div className={styles.tdScheme}>
-                  <span className={styles.schemeName}>{app.scheme?.name || "—"}</span>
-                  <span
-                    className={styles.categoryChip}
-                    style={{ color: category.color, background: category.bg }}
-                  >
-                    {category.label}
-                  </span>
-                </div>
-
-                {/* Date */}
-                <span className={styles.tdDate}>{formatDate(app.submission_date)}</span>
-
-                {/* Status */}
-                <div className={styles.tdStatus}>
-                  <span
-                    className={styles.statusBadge}
-                    style={{ color: status.color, background: status.bg }}
-                  >
-                    {status.label}
-                  </span>
-                  {isConflict && (
-                    <span className={styles.conflictChip}>
-                      <ShieldAlert size={10} strokeWidth={2} />
-                      Conflict
+                  {hasPending && (
+                    <span className={styles.pendingPill}>
+                      {row.pending_review} pending
                     </span>
                   )}
                 </div>
 
-                {/* Action */}
-                <button
-                  className={styles.viewBtn}
-                  onClick={() => router.push(`/admin/applications/${app.id}`)}
+                {/* Scheme name */}
+                <h3 className={styles.schemeName}>{row.scheme.name}</h3>
+
+                {/* Category chip */}
+                <span
+                  className={styles.categoryChip}
+                  style={{ color: category.color, background: category.bg }}
                 >
-                  Review <ArrowRight size={11} strokeWidth={2} />
-                </button>
+                  {category.label}
+                </span>
+
+                {/* Meta info */}
+                <div className={styles.schemeMeta}>
+                  <div className={styles.metaItem}>
+                    <Users size={12} strokeWidth={2} />
+                    <span>{row.scheme.remaining_slots ?? "—"} / {row.scheme.total_slots ?? "—"} slots left</span>
+                  </div>
+                  {row.unpublished > 0 && (
+                    <div className={styles.metaItem}>
+                      <ClipboardList size={12} strokeWidth={2} />
+                      <span>{row.unpublished} awaiting notification</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* View button */}
+                <div className={styles.schemeActions}>
+                  <button
+                    className={styles.viewBtn}
+                    onClick={() => router.push(`/admin/applications/scheme/${row.scheme.id}`)}
+                  >
+                    View Applications <ArrowRight size={13} strokeWidth={2} />
+                  </button>
+                </div>
               </div>
             );
           })}
-
         </div>
-
-        {/* PAGINATION */}
-        <Pagination
-          page={page}
-          pageSize={PAGE_SIZE}
-          totalCount={pageInfo.count}
-          hasNext={!!pageInfo.next}
-          hasPrevious={!!pageInfo.previous}
-          loading={loading}
-          onPageChange={(newPage) => loadApplications(newPage)}
-        />
-
-      </div>
+      )}
 
     </div>
   );

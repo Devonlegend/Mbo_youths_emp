@@ -375,7 +375,7 @@ export default function RegisterPage() {
     <Link href="/" className={styles.logo}>
       <img
         src="https://res.cloudinary.com/dwn6p3qmd/image/upload/f_auto,q_auto,w_80,h_80,c_fill,g_face/v1784673040/mboyouths_ssedqs.png"
-        alt="RMHCDT"
+        alt="Mbo Youth Empowerment"
         className={styles.logoBox}
         width="40"
         height="40"
@@ -384,7 +384,7 @@ export default function RegisterPage() {
         decoding="async"
       />
       <div className={styles.logoText}>
-        <span className={styles.logoName}>RMHDCT</span>
+        <span className={styles.logoName}>Mbo Youth Empowerment</span>
         <span className={styles.logoSub}>Youth Beneficiary Portal</span>
       </div>
     </Link>
@@ -517,9 +517,9 @@ export default function RegisterPage() {
 
           <div className={styles.cardHeader}>
             <h1 className={styles.cardTitle}>Create Account</h1>
-            <p className={styles.cardSubtitle}>
+            {/* <p className={styles.cardSubtitle}>
               Join the portal to access scholarships, grants, training and funding.
-            </p>
+            </p> */}
           </div>
 
           <Stepper currentStep={currentStep} />

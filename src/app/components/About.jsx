@@ -1,4 +1,5 @@
 import { ShieldCheck, Scale, Lock, FileCheck } from "lucide-react";
+import Reveal from "./Reveal"; 
 import styles from "./About.module.css";
 
 const values = [
@@ -42,7 +43,7 @@ export default function About() {
       <div className={styles.container}>
 
         {/* TOP */}
-        <div className={styles.top}>
+        <Reveal as="div" className={styles.top}>
           <div className={styles.left}>
             <div className={styles.label}>
               <span className={styles.labelDot} />
@@ -69,13 +70,13 @@ export default function About() {
               deserve it.
             </p>
           </div>
-        </div>
+        </Reveal>
 
         {/* DIVIDER */}
         <div className={styles.divider} />
 
         {/* VALUE CARDS */}
-        <div className={styles.valuesGrid}>
+        <Reveal as="div" className={styles.valuesGrid} delay={150}>
           {values.map((v, i) => {
             const Icon = v.icon;
             return (
@@ -98,7 +99,7 @@ export default function About() {
               </div>
             );
           })}
-        </div>
+        </Reveal>
 
       </div>
     </section>

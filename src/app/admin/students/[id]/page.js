@@ -178,6 +178,7 @@ export default function StudentDetailPage() {
       {/* BACK */}
       <button className={styles.backBtn} onClick={() => router.push("/admin/students")}>
         <ArrowLeft size={16} strokeWidth={2} />
+        Back
       </button>
 
       {/* PAGE HEADER */}

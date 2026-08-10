@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { UserPlus, FileText, ShieldCheck, ClipboardCheck, CheckCircle } from "lucide-react";
+import Reveal from "./Reveal";
 import styles from "./HowItWorks.module.css";
 
 const steps = [
@@ -79,7 +80,7 @@ export default function HowItWorks() {
       <div className={styles.container}>
 
         {/* HEADER */}
-        <div className={styles.header}>
+        <Reveal as="div" className={styles.header}>
           <div className={styles.label}>
             <span className={styles.labelDot} />
             The Process
@@ -91,10 +92,10 @@ export default function HowItWorks() {
           <p className={styles.subtext}>
             Five clear steps. Fully transparent. Completely documented.
           </p>
-        </div>
+        </Reveal>
 
         {/* CONTENT */}
-        <div className={styles.content}>
+        <Reveal as="div" className={styles.content} delay={150}>
 
           {/* LEFT — STEPS */}
           <div className={styles.steps}>
@@ -219,7 +220,7 @@ export default function HowItWorks() {
             </div>
           </div>
 
-        </div>
+        </Reveal>
       </div>
     </section>
   );

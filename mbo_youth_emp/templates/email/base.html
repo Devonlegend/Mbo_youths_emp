@@ -3,166 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light dark">
-  <meta name="supported-color-schemes" content="light dark">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <title>{{ subject }}</title>
   <style>
-    :root {
-      --color-primary: #15803d;
-      --color-primary-hover: #166534;
-      --color-primary-light: #f0fdf4;
-      --color-primary-border: #bbf7d0;
-
-      --color-error: #ef4444;
-      --color-error-bg: #fef2f2;
-      --color-error-border: #fecaca;
-      --color-error-text: #b91c1c;
-
-      --color-warning: #f59e0b;
-      --color-warning-bg: #fffbeb;
-      --color-warning-border: #fde68a;
-      --color-warning-text: #92400e;
-
-      --color-info: #3b82f6;
-      --color-info-bg: #eff6ff;
-      --color-info-border: #bfdbfe;
-      --color-info-text: #1e40af;
-
-      --color-bg: #f8fafc;
-      --color-card: #ffffff;
-      --color-subtle: #f1f5f9;
-      --color-border: #e2e8f0;
-      --color-border-subtle: #f1f5f9;
-
-      --color-text: #0f172a;
-      --color-text-secondary: #374151;
-      --color-text-muted: #94a3b8;
-
-      --font-heading: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
-      --font-body: 'Inter', Arial, Helvetica, sans-serif;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --color-primary: #4ade80;
-        --color-primary-hover: #86efac;
-        --color-primary-light: #14291d;
-        --color-primary-border: #1f4a30;
-
-        --color-error: #f87171;
-        --color-error-bg: #2a1616;
-        --color-error-border: #4a2323;
-        --color-error-text: #fca5a5;
-
-        --color-warning: #fbbf24;
-        --color-warning-bg: #2a2210;
-        --color-warning-border: #4a3b1a;
-        --color-warning-text: #fcd34d;
-
-        --color-info: #60a5fa;
-        --color-info-bg: #16202e;
-        --color-info-border: #23374a;
-        --color-info-text: #93c5fd;
-
-        --color-bg: #0b0f0d;
-        --color-card: #121a15;
-        --color-subtle: #182019;
-        --color-border: #26302a;
-        --color-border-subtle: #1d2620;
-
-        --color-text: #f1f5f4;
-        --color-text-secondary: #cbd5cf;
-        --color-text-muted: #7c8a80;
-      }
-    }
-
-    * { box-sizing: border-box; }
+    
     body {
       margin: 0; padding: 0;
-      background-color: var(--color-bg);
-      font-family: var(--font-body);
+      background-color: #f8fafc;
+      font-family: 'Inter', Arial, Helvetica, sans-serif;
       font-size: 14px; line-height: 1.65;
-      color: var(--color-text-secondary);
+      color: #374151;
       -webkit-font-smoothing: antialiased;
     }
+    table { border-collapse: collapse; }
+    img { border: 0; outline: none; text-decoration: none; }
+
     .email-wrapper {
       max-width: 560px; margin: 32px auto;
-      background-color: var(--color-card);
-      border: 1px solid var(--color-border);
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
       border-radius: 20px;
       overflow: hidden;
     }
 
     /* ── HEADER ── */
-    .email-header {
+    .email-header-cell {
       padding: 28px 32px 24px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border-bottom: 1px solid var(--color-border-subtle);
+      border-bottom: 1px solid #f1f5f9;
     }
     .email-logo-img {
       width: 40px; height: 40px;
       border-radius: 50%;
-      object-fit: cover;
-      flex-shrink: 0;
       display: block;
     }
     .email-brand h1 {
       margin: 0;
-      font-family: var(--font-heading);
+      font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
       font-weight: 800; font-size: 14.5px;
-      color: var(--color-text); letter-spacing: -0.02em;
+      color: #0f172a; letter-spacing: -0.02em;
     }
     .email-brand p {
       margin: 2px 0 0;
-      font-size: 11.5px; color: var(--color-text-muted);
+      font-size: 11.5px; color: #94a3b8;
     }
 
     /* ── STATUS STRIP ── */
-    .status-strip {
-      display: flex; align-items: center; gap: 10px;
+    .status-strip-cell {
       padding: 16px 32px;
       border-bottom: 1px solid;
     }
     .status-strip-icon {
       width: 32px; height: 32px;
       border-radius: 9px;
-      background: var(--color-card);
+      background: #ffffff;
       border: 1px solid;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      font-family: var(--font-heading);
+      font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
       font-weight: 800; font-size: 15px;
-      line-height: 1;
+      line-height: 32px;
+      text-align: center;
     }
     .status-strip-text {
       font-size: 12.5px; font-weight: 700;
       letter-spacing: -0.01em;
     }
-    .status-strip--green { background: var(--color-primary-light); border-color: var(--color-primary-border); }
-    .status-strip--green .status-strip-icon { border-color: var(--color-primary-border); color: var(--color-primary); }
-    .status-strip--green .status-strip-text { color: var(--color-primary-hover); }
+    .status-strip--green { background: #f0fdf4; border-color: #bbf7d0; }
+    .status-strip--green .status-strip-icon { border-color: #bbf7d0; color: #15803d; }
+    .status-strip--green .status-strip-text { color: #166534; }
 
-    .status-strip--amber { background: var(--color-warning-bg); border-color: var(--color-warning-border); }
-    .status-strip--amber .status-strip-icon { border-color: var(--color-warning-border); color: var(--color-warning); }
-    .status-strip--amber .status-strip-text { color: var(--color-warning-text); }
+    .status-strip--amber { background: #fffbeb; border-color: #fde68a; }
+    .status-strip--amber .status-strip-icon { border-color: #fde68a; color: #f59e0b; }
+    .status-strip--amber .status-strip-text { color: #92400e; }
 
-    .status-strip--red { background: var(--color-error-bg); border-color: var(--color-error-border); }
-    .status-strip--red .status-strip-icon { border-color: var(--color-error-border); color: var(--color-error); }
-    .status-strip--red .status-strip-text { color: var(--color-error-text); }
+    .status-strip--red { background: #fef2f2; border-color: #fecaca; }
+    .status-strip--red .status-strip-icon { border-color: #fecaca; color: #ef4444; }
+    .status-strip--red .status-strip-text { color: #b91c1c; }
 
-    .status-strip--blue { background: var(--color-info-bg); border-color: var(--color-info-border); }
-    .status-strip--blue .status-strip-icon { border-color: var(--color-info-border); color: var(--color-info); }
-    .status-strip--blue .status-strip-text { color: var(--color-info-text); }
+    .status-strip--blue { background: #eff6ff; border-color: #bfdbfe; }
+    .status-strip--blue .status-strip-icon { border-color: #bfdbfe; color: #3b82f6; }
+    .status-strip--blue .status-strip-text { color: #1e40af; }
 
     /* ── BODY ── */
     .email-body { padding: 32px; }
     .email-body h2 {
       margin: 0 0 12px;
-      font-family: var(--font-heading);
+      font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
       font-weight: 800; font-size: 19px;
-      color: var(--color-text); letter-spacing: -0.02em;
+      color: #0f172a; letter-spacing: -0.02em;
     }
     .email-body p { margin: 0 0 14px; }
     .email-body p:last-child { margin-bottom: 0; }
@@ -171,9 +98,9 @@
     .reference {
       display: inline-block;
       margin: 2px 0 18px;
-      background: var(--color-subtle);
-      color: var(--color-text-secondary);
-      border: 1px solid var(--color-border);
+      background: #f1f5f9;
+      color: #374151;
+      border: 1px solid #e2e8f0;
       padding: 6px 12px; border-radius: 8px;
       font-size: 12px; font-weight: 600;
       font-family: 'SFMono-Regular', Consolas, monospace;
@@ -184,21 +111,21 @@
     .detail-table {
       width: 100%; border-collapse: collapse;
       margin: 4px 0 20px;
-      border: 1px solid var(--color-border);
+      border: 1px solid #e2e8f0;
       border-radius: 14px;
       overflow: hidden;
     }
-    .detail-table tr { border-bottom: 1px solid var(--color-border-subtle); }
+    .detail-table tr { border-bottom: 1px solid #f1f5f9; }
     .detail-table tr:last-child { border-bottom: none; }
     .detail-table td { padding: 12px 16px; vertical-align: top; }
     .detail-table td:first-child {
       width: 140px; font-weight: 600; font-size: 11px;
       text-transform: uppercase; letter-spacing: 0.06em;
-      color: var(--color-text-muted);
-      background: var(--color-subtle);
+      color: #94a3b8;
+      background: #f1f5f9;
     }
     .detail-table td:last-child {
-      font-size: 13px; font-weight: 600; color: var(--color-text);
+      font-size: 13px; font-weight: 600; color: #0f172a;
     }
 
     /* ── INFO BOXES ── */
@@ -208,19 +135,19 @@
       font-size: 13px; line-height: 1.6;
     }
     .info-box strong { font-weight: 700; }
-    .info-box--green { background: var(--color-primary-light); border-color: var(--color-primary-border); color: var(--color-primary-hover); }
-    .info-box--red   { background: var(--color-error-bg); border-color: var(--color-error-border); color: var(--color-error-text); }
-    .info-box--amber { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning-text); }
-    .info-box--blue  { background: var(--color-info-bg); border-color: var(--color-info-border); color: var(--color-info-text); }
+    .info-box--green { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    .info-box--red   { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+    .info-box--amber { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .info-box--blue  { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
 
     /* ── CTA BUTTON ── */
     .cta-wrap { text-align: center; margin: 24px 0 4px; }
     .cta-button {
       display: inline-block;
-      background: var(--color-primary);
+      background: #15803d;
       color: #ffffff !important; text-decoration: none;
       padding: 13px 30px; border-radius: 10px;
-      font-family: var(--font-heading);
+      font-family: 'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
       font-weight: 700; font-size: 13.5px;
       letter-spacing: -0.01em;
     }
@@ -231,63 +158,90 @@
       display: inline-block;
       font-family: 'SFMono-Regular', Consolas, monospace;
       font-size: 30px; font-weight: 800;
-      letter-spacing: 8px; color: var(--color-text);
-      background: var(--color-subtle);
-      border: 1px solid var(--color-border);
+      letter-spacing: 8px; color: #0f172a;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
       padding: 14px 26px; border-radius: 12px;
     }
     .otp-expiry {
-      text-align: center; color: var(--color-text-muted);
+      text-align: center; color: #94a3b8;
       font-size: 12.5px; margin-top: -10px;
     }
 
     /* ── FINE PRINT ── */
     .fine-print {
-      font-size: 12px; color: var(--color-text-muted);
+      font-size: 12px; color: #94a3b8;
       margin-top: 20px;
     }
-    .fine-print a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
+    .fine-print a { color: #15803d; text-decoration: none; font-weight: 600; }
 
     /* ── FOOTER ── */
     .email-footer {
       padding: 20px 32px;
-      background: var(--color-subtle);
-      border-top: 1px solid var(--color-border);
+      background: #f1f5f9;
+      border-top: 1px solid #e2e8f0;
       text-align: center;
     }
-    .email-footer p { margin: 0; font-size: 12px; color: var(--color-text-muted); }
-    .email-footer a { color: var(--color-primary); text-decoration: none; font-weight: 600; }
+    .email-footer p { margin: 0; font-size: 12px; color: #94a3b8; }
+    .email-footer a { color: #15803d; text-decoration: none; font-weight: 600; }
   </style>
 </head>
-<body>
-  <div class="email-wrapper">
-    <div class="email-header">
-      <img
-        src="https://res.cloudinary.com/dwn6p3qmd/image/upload/f_auto,q_auto,w_80,h_80,c_fill,g_face,r_max/v1784673040/mboyouths_ssedqs.png"
-        alt="RMHCDT Youth Portal"
-        class="email-logo-img"
-        width="40" height="40"
-      />
-      <div class="email-brand">
-        <h1>RMHCDT Youth Portal</h1>
-        <p>Royal Mbo Host Community Development Trust</p>
-      </div>
-    </div>
+<body style="margin:0; padding:0; background-color:#f8fafc; font-family: Arial, Helvetica, sans-serif; font-size:14px; line-height:1.65; color:#374151;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f8fafc;">
+    <tr>
+      <td align="center" style="padding: 0 16px;">
 
-    {% block status_strip %}{% endblock %}
+        <table role="presentation" class="email-wrapper" width="560" cellpadding="0" cellspacing="0" border="0"
+          style="max-width:560px; width:100%; margin:32px auto; background-color:#ffffff; border:1px solid #e2e8f0; border-radius:20px; overflow:hidden;">
 
-    <div class="email-body">
-      {% block content %}{% endblock %}
-    </div>
+          <!-- HEADER -->
+          <tr>
+            <td class="email-header-cell" style="padding:28px 32px 24px; border-bottom:1px solid #f1f5f9;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding-right:12px; vertical-align:middle;">
+                    <img
+                      src="https://res.cloudinary.com/dwn6p3qmd/image/upload/f_auto,q_auto,w_80,h_80,c_fill,g_face,r_max/v1784673040/mboyouths_ssedqs.png"
+                      alt="Mbo Youth Empowerment"
+                      class="email-logo-img"
+                      width="40" height="40"
+                      style="width:40px; height:40px; border-radius:50%; display:block;"
+                    />
+                  </td>
+                  <td class="email-brand" style="vertical-align:middle;">
+                    <h1 style="margin:0; font-family: Arial, Helvetica, sans-serif; font-weight:800; font-size:14.5px; color:#0f172a; letter-spacing:-0.02em;">Mbo Youth Empowerment</h1>
+                    <p style="margin:2px 0 0; font-size:11.5px; color:#94a3b8;">Mbo Youth Empowerment</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-    <div class="email-footer">
-      <p>
-        &copy; Royal Mbo Host Community Development Trust<br>
-        <a href="{{ portal_url }}">RMHCDT Youth Portal</a>
-        &ensp;&middot;&ensp;
-        <a href="mailto:{{ support_email }}">{{ support_email }}</a>
-      </p>
-    </div>
-  </div>
+          {% block status_strip %}{% endblock %}
+
+          <!-- BODY -->
+          <tr>
+            <td class="email-body" style="padding:32px;">
+              {% block content %}{% endblock %}
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td class="email-footer" style="padding:20px 32px; background:#f1f5f9; border-top:1px solid #e2e8f0; text-align:center;">
+              <p style="margin:0; font-size:12px; color:#94a3b8;">
+                &copy; Royal Mbo Host Community Development Trust<br>
+                <a href="{{ portal_url }}" style="color:#15803d; text-decoration:none; font-weight:600;">Mbo Youth Empowerment</a>
+                &ensp;&middot;&ensp;
+                <a href="mailto:{{ support_email }}" style="color:#15803d; text-decoration:none; font-weight:600;">{{ support_email }}</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
