@@ -1,0 +1,40 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Withdraw an approved application — choose a scheme</h1>
+<p>Pick a scheme that has approved applications. On the next page you'll choose the
+specific application whose award should be revoked; withdrawing it releases its
+slot back to the scheme and records the change in the status history.</p>
+{% if schemes %}
+  <table id="result_list" style="width:100%">
+    <thead>
+      <tr>
+        <th scope="col">Scheme</th>
+        <th scope="col">Award type</th>
+        <th scope="col">Academic year</th>
+        <th scope="col">Approved applications</th>
+        <th scope="col">Slots left</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in schemes %}
+      <tr>
+        <td>{{ entry.scheme.name }}</td>
+        <td>{{ entry.scheme.get_award_type_display }}</td>
+        <td>{{ entry.scheme.academic_year }}</td>
+        <td>{{ entry.approved_count }}</td>
+        <td>{{ entry.scheme.remaining_slots }} / {{ entry.scheme.total_slots }}</td>
+        <td>
+          <a class="button" href="{% url 'admin:applications_withdraw_form' entry.scheme.id %}">Choose</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p><strong>No schemes currently have approved applications to withdraw.</strong></p>
+{% endif %}
+<p style="margin-top:16px">
+  <a href="{% url 'admin:applications_applicationstatushistory_changelist' %}" class="closelink">Back</a>
+</p>
+{% endblock %}

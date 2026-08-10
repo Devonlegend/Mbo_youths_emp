@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.core.files.storage import default_storage
+from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
@@ -33,6 +34,8 @@ from .dynamic import (
     applications_by_status,
 )
 from .services.creation import create_application
+from .services.slots import consume_slot, SlotUnavailable
+from .services.withdrawal import withdraw_application
 from schemes.models import ScholarshipScheme
 from accounts.permissions import IsVerifier, IsAdmin
 
@@ -558,21 +561,27 @@ class ApplicationViewSet(viewsets.ViewSet):
         valid_overrides = {s.value for s in ApplicationStatus}
         if status_override and status_override in valid_overrides:
             from_status = application.status
-            application.status = status_override
-            if status_override == ApplicationStatus.APPROVED:
-                student.active_award = scheme.name
-                student.save(update_fields=['active_award'])
-                scheme.remaining_slots = max(0, scheme.remaining_slots - 1)
-                scheme.save(update_fields=['remaining_slots'])
-            application.save()
-            ApplicationStatusHistory.objects.create(
-                application_id = application.id,
-                scheme         = scheme,
-                from_status    = from_status,
-                to_status      = status_override,
-                changed_by     = request.user,
-                reason         = f'Admin set initial status to {status_override}',
-            )
+            try:
+                with transaction.atomic():
+                    if status_override == ApplicationStatus.APPROVED:
+                        # Admin approval also respects the slot cap (atomic take).
+                        if not consume_slot(scheme):
+                            raise SlotUnavailable(
+                                "No slots remaining for this scheme — cannot approve.")
+                        student.active_award = scheme.name
+                        student.save(update_fields=['active_award'])
+                    application.status = status_override
+                    application.save()
+                    ApplicationStatusHistory.objects.create(
+                        application_id = application.id,
+                        scheme         = scheme,
+                        from_status    = from_status,
+                        to_status      = status_override,
+                        changed_by     = request.user,
+                        reason         = f'Admin set initial status to {status_override}',
+                    )
+            except SlotUnavailable as exc:
+                return Response({"error": str(exc)}, status=400)
 
         return Response({
             "application_id":   str(application.id),
@@ -666,58 +675,68 @@ class ApplicationViewSet(viewsets.ViewSet):
             'rejected':    ApplicationStatus.REJECTED,
             'shortlisted': ApplicationStatus.SHORTLISTED,
         }
-        application.status         = status_map[decision]
-        application.reviewed_by    = request.user
-        application.reviewed_at    = timezone.now()
-        application.reviewer_notes = notes
+        try:
+            with transaction.atomic():
+                # Approval respects the slot cap: consume a slot atomically and
+                # refuse the decision when none is left. `SlotUnavailable`
+                # rolls back the whole decision (including the slot take) and is
+                # converted to a 400 below.
+                if decision == 'approved' and not consume_slot(scheme):
+                    raise SlotUnavailable("No slots remaining for this scheme — cannot approve.")
 
-        if decision == 'rejected':
-            application.rejection_reason = notes
+                application.status         = status_map[decision]
+                application.reviewed_by    = request.user
+                application.reviewed_at    = timezone.now()
+                application.reviewer_notes = notes
 
-        if decision == 'approved':
-            student.active_award = scheme.name
-            student.save(update_fields=['active_award'])
-            scheme.remaining_slots = max(0, scheme.remaining_slots - 1)
-            scheme.save(update_fields=['remaining_slots'])
+                if decision == 'rejected':
+                    application.rejection_reason = notes
 
-        application.save()
+                if decision == 'approved':
+                    student.active_award = scheme.name
+                    student.save(update_fields=['active_award'])
 
-        # When a verifier approves an application that failed eligibility or has
-        # an unresolved conflict, record the override explicitly so the audit
-        # trail shows it was a deliberate human decision, not an engine pass.
-        overrides = []
-        if decision == 'approved':
-            if application.eligibility_passed is False:
-                overrides.append('failed eligibility')
-            if application.has_conflict:
-                overrides.append('active-award conflict')
+                application.save()
 
-        reason = notes or f'Application {decision} by reviewer'
-        if overrides:
-            reason = f'{reason} [override: approved despite {", ".join(overrides)}]'
+                # When a verifier approves an application that failed eligibility
+                # or has an unresolved conflict, record the override explicitly
+                # so the audit trail shows it was a deliberate human decision,
+                # not an engine pass.
+                overrides = []
+                if decision == 'approved':
+                    if application.eligibility_passed is False:
+                        overrides.append('failed eligibility')
+                    if application.has_conflict:
+                        overrides.append('active-award conflict')
 
-        ApplicationStatusHistory.objects.create(
-            application_id = application.id,
-            scheme         = scheme,
-            from_status    = from_status,
-            to_status      = application.status,
-            changed_by     = request.user,
-            reason         = reason,
-        )
+                reason = notes or f'Application {decision} by reviewer'
+                if overrides:
+                    reason = f'{reason} [override: approved despite {", ".join(overrides)}]'
 
-        # ── Notifications ─────────────────────────────────────────────────────
-        # Approval emails are NOT sent here. They are staged as a pending
-        # notification and dispatched in bulk when a reviewer Publishes the
-        # scheme (see the `publish` action). Rejection emails are deprecated
-        # entirely and never sent.
-        if decision == 'approved':
-            PendingApplicationNotification.objects.create(
-                application_id   = application.id,
-                scheme           = scheme,
-                notification_type = 'approved',
-            )
+                ApplicationStatusHistory.objects.create(
+                    application_id = application.id,
+                    scheme         = scheme,
+                    from_status    = from_status,
+                    to_status      = application.status,
+                    changed_by     = request.user,
+                    reason         = reason,
+                )
 
-        # In-app notification for the student.
+                # ── Notifications ─────────────────────────────────────────────
+                # Approval emails are NOT sent here. They are staged as a
+                # pending notification and dispatched in bulk when a reviewer
+                # Publishes the scheme (see the `publish` action). Rejection
+                # emails are deprecated entirely and never sent.
+                if decision == 'approved':
+                    PendingApplicationNotification.objects.create(
+                        application_id    = application.id,
+                        scheme            = scheme,
+                        notification_type = 'approved',
+                    )
+        except SlotUnavailable as exc:
+            return Response({"error": str(exc)}, status=400)
+
+        # In-app notification for the student (after the transaction commits).
         try:
             notify_application_status_update(student.user, application, decision)
         except Exception:
@@ -728,6 +747,45 @@ class ApplicationViewSet(viewsets.ViewSet):
             "status":  application.status,
             "note":    ("Approval email will be sent when this scheme is published."
                         if decision == 'approved' else None),
+        })
+
+    # ── Withdraw an approval (release slot) ────────────────────────────────────
+    @extend_schema(
+        summary="Withdraw an approved application (releases its slot)",
+        description=(
+            "Revokes an approved application: moves it to `withdrawn`, releases "
+            "its slot back to the scheme (remaining_slots +1), and clears the "
+            "student's active-award label if it points at this scheme. "
+            "Verifier/admin only."
+        ),
+        request=None,
+        responses=OpenApiResponse(description='{ message, status, remaining_slots }'),
+    )
+    @action(detail=True, methods=['post'], url_path='withdraw', permission_classes=[IsVerifier])
+    def withdraw(self, request, pk=None):
+        found = find_application(pk)
+        if not found:
+            return Response({"error": "Application not found"}, status=404)
+        scheme, _model, application = found
+
+        if application.status != ApplicationStatus.APPROVED:
+            return Response(
+                {"error": f"Only an approved application can be withdrawn "
+                          f"(current: '{application.status}')."},
+                status=400,
+            )
+
+        application, remaining = withdraw_application(application, scheme, request.user)
+
+        try:
+            notify_application_status_update(application.student.user, application, 'withdrawn')
+        except Exception:
+            logger.exception("Failed to create withdraw notification")
+
+        return Response({
+            "message":         "Application withdrawn and its slot released.",
+            "status":          application.status,
+            "remaining_slots": remaining,
         })
 
     # ── Publish scheme approvals ──────────────────────────────────────────────

@@ -1,0 +1,47 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Withdraw application — {{ scheme.name }}</h1>
+<p><strong>Award type:</strong> {{ scheme.get_award_type_display }} &nbsp;|&nbsp;
+   <strong>Cycle:</strong> {{ scheme.academic_year }} &nbsp;|&nbsp;
+   <strong>Slots left:</strong> {{ scheme.remaining_slots }} / {{ scheme.total_slots }}</p>
+<p>Approved applications for this scheme are listed below. Withdrawing revokes the
+award, releases its slot back to the scheme, and logs the change in the status
+history. This cannot be undone.</p>
+{% if applications %}
+  <table id="result_list" style="width:100%">
+    <thead>
+      <tr>
+        <th scope="col">Reference</th>
+        <th scope="col">Student</th>
+        <th scope="col">Email</th>
+        <th scope="col">Status</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for app in applications %}
+      <tr>
+        <td>#{{ app.id|slice:":8"|upper }}</td>
+        <td>{{ app.student.full_name }}</td>
+        <td>{{ app.student.user.email }}</td>
+        <td>{{ app.get_status_display }}</td>
+        <td>
+          <form method="post" action=""
+                onsubmit="return confirm('Withdraw this awarded application and release its slot?');">
+            {% csrf_token %}
+            <input type="hidden" name="application_id" value="{{ app.id }}">
+            <button type="submit" class="button" style="padding:6px 12px">Withdraw &amp; release slot</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p><strong>No approved applications for this scheme.</strong></p>
+{% endif %}
+<p style="margin-top:16px">
+  <a href="{% url 'admin:applications_withdraw_pick' %}" class="closelink">Back</a>
+  <a href="{% url 'admin:applications_applicationstatushistory_changelist' %}" class="closelink">Status history</a>
+</p>
+{% endblock %}

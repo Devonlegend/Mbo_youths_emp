@@ -3,5 +3,8 @@
   {% if create_application_url %}
     <li><a href="{{ create_application_url }}" class="addlink">Create application</a></li>
   {% endif %}
+  {% if withdraw_application_url %}
+    <li><a href="{{ withdraw_application_url }}" class="button">Withdraw award</a></li>
+  {% endif %}
   {{ block.super }}
 {% endblock %}
