@@ -1,5 +1,7 @@
 # applications/serializers.py
 
+from datetime import datetime
+
 from rest_framework import serializers
 
 from .models import ApplicationStatus, ApplicationStatusHistory, REVIEWABLE_STATUSES
@@ -160,6 +162,91 @@ def serialize_application_list(row):
         'can_waive':          _can_waive(row),
         'created_at':         row.created_at,
     }
+
+
+# --- Approved applicants (disbursement list) ---------------------------------
+# Flat records used by the `approved-list` endpoint: the student's name and
+# contact details (from Student) merged with the bank snapshot captured on the
+# application row itself.
+
+APPROVED_LIST_CSV_FIELDNAMES = [
+    'S/N',
+    'Full Name',
+    'Phone Number',
+    'Email',
+    'Ward',
+    'Scheme ID',
+    'Scheme',
+    'Award Type',
+    'Bank Name',
+    'Bank Code',
+    'Account Number',
+    'Account Name',
+    'Approved At',
+    'Application ID',
+]
+
+
+def _csv_cell(value):
+    """Empty-aware string cell for CSV export."""
+    if value is None:
+        return ''
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value)
+
+
+def serialize_approved_application(row, approved_at=None):
+    """Flat disbursement record for one approved application.
+
+    Merges the application's own bank snapshot with the student's name and
+    contact details so a scheme's approved list can be pulled in one pass.
+    `approved_at` is the timestamp the row moved into `approved` (resolved
+    by the view from the status-history log, falling back to `reviewed_at`).
+    """
+    student = row.student
+    return {
+        'application_id': str(row.id),
+        'student_id':     str(student.pk),
+        'full_name':      student.full_name,
+        'phone_number':   student.phone_number,
+        'email':          student.email,
+        'ward':           student.ward,
+        'scheme': {
+            'id':            str(row.scheme.id),
+            'name':          row.scheme.name,
+            'award_type':    row.scheme.award_type,
+            'academic_year': row.scheme.academic_year,
+        },
+        'bank_name':      row.bank_name,
+        'bank_code':      row.bank_code,
+        'account_number': row.account_number,
+        'account_name':   row.account_name,
+        'approved_at':    approved_at,
+        'reviewed_at':    row.reviewed_at,
+    }
+
+
+def approved_application_csv_row(index, record):
+    """One CSV row (1-based index), aligned with APPROVED_LIST_CSV_FIELDNAMES."""
+    scheme = record.get('scheme') or {}
+    return [
+        _csv_cell(index),
+        _csv_cell(record.get('full_name')),
+        _csv_cell(record.get('phone_number')),
+        _csv_cell(record.get('email')),
+        _csv_cell(record.get('ward')),
+        _csv_cell(scheme.get('id')),
+        _csv_cell(scheme.get('name')),
+        _csv_cell(scheme.get('award_type')),
+        _csv_cell(record.get('bank_name')),
+        _csv_cell(record.get('bank_code')),
+        _csv_cell(record.get('account_number')),
+        _csv_cell(record.get('account_name')),
+        _csv_cell(record.get('approved_at')),
+        _csv_cell(record.get('application_id')),
+    ]
+
 
 
 # ── Status history ────────────────────────────────────────────────────────────
