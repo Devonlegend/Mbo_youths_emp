@@ -84,8 +84,8 @@ export default function Navbar() {
             decoding="async"
           />
           <div className={styles.logoText}>
-            <span className={styles.logoTitle}>RMHCDT</span>
-            <span className={styles.logoSubtitle}>Youth Portal</span>
+            <span className={styles.logoTitle}>Mbo Youth Empowerment</span>
+            <span className={styles.logoSubtitle}>Youth Beneficiary Porta</span>
           </div>
         </Link>
 
