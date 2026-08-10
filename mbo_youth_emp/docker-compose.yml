@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+    command: sh -c "python manage.py migrate --no-input && gunicorn config.wsgi:application --bind 0.0.0.0:8080 --workers 3 --timeout 60"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+  worker:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+    command: celery -A config worker -l info
+    depends_on:
+      - backend
+      - redis
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  caddy_data:

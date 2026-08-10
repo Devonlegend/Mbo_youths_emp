@@ -1,10 +1,116 @@
-# Changelog — v1 (`da25bd7`)
+# Changelog
 
-## 58 files changed · +2,090 / −3,465 lines
+## v1.1.4 (wip)
+
+**Backend-only: new API to pull every approved applicant for a single scheme — names, phone numbers, emails & bank details — as JSON or CSV.**
 
 ---
 
-##  NIN Hashing Moved Server-Side
+### 🗂️ Backend — `GET /applications/approved-list/?scheme={scheme_id}`
+
+Fetches the approved (disbursement) list for **one scheme** in flat rows. Verifier/admin only.
+
+- **New endpoint** in `applications/views.py` — `approved_list` action on `ApplicationViewSet`
+  - `?scheme=` **required** (400 if missing · 404 if unknown scheme · 400 if scheme has no table)
+  - Returns `{ scheme, count, applications[] }`
+  - Each row merges the student's `full_name`, `phone_number`, `email`, `ward` with the application's own bank snapshot (`bank_name`, `bank_code`, `account_number`, `account_name`)
+  - `approved_at` — latest `ApplicationStatusHistory` transition into `approved` (fallback `reviewed_at`)
+  - Reads the scheme's dynamic table (`get_application_model`) filtered to `status='approved'` — **no “only after publish” constraint**
+- **CSV export** — same URL + `&export=csv` streams a downloadable `approved-list-{scheme}-{date}.csv`
+  - Columns: `S/N, Full Name, Phone Number, Email, Ward, Scheme ID, Scheme, Award Type, Bank Name, Bank Code, Account Number, Account Name, Approved At, Application ID`
+  - Uses `export`, **not** `format` — DRF reserves the `format` query param (returns 404 when no renderer matches)
+- **New helpers** in `applications/serializers.py` — `serialize_approved_application()`, `approved_application_csv_row()`, `APPROVED_LIST_CSV_FIELDNAMES`, `_csv_cell()`
+
+### 🧪 Tests (`applications/tests.py` — `ApprovedListExportTests`)
+
+- Missing `scheme` → 400 · empty scheme → 200 empty list
+- Only `approved` rows returned, with correct contact + bank data
+- CSV content-type, `Content-Disposition: attachment`, header + row values
+- Non-verifier (student) → 403
+- Full `applications` suite: **Ran 10 tests — OK** (5 existing + 5 new, no regressions)
+
+---
+
+### 🖥️ What the should be done on frontend (NOT implemented yet in this release)
+
+To surface the list in the admin UI:
+
+1. **Add service fetchers** in `src/services/applications.js` (via the existing `/api/proxy` axios instance; auth = the same CookieJWT):
+   ```js
+   export const getApprovedList = (schemeId) =>
+     api.get("/applications/approved-list/", { params: { scheme: schemeId } });
+
+   export const downloadApprovedListCsv = (schemeId) =>
+     api.get("/applications/approved-list/", {
+       params: { scheme: schemeId, export: "csv" },
+       responseType: "blob",
+     });
+   ```
+
+2. **Download button** (scheme detail page or a scheme selector): call `downloadApprovedListCsv(schemeId)` and trigger the browser download from the returned blob (object URL + `<a download>`). It must be fetched as a blob — the backend streams `text/csv` with `Content-Disposition: attachment`; do **not** use `responseType: "json"`.
+
+3. **Beneficiaries register** (`src/app/admin/beneficiaries/page.js`): add a **scheme dropdown**, load rows with `getApprovedList(schemeId)`, and add **Phone** and **Email** columns next to the existing Name + Account-number columns.
+
+4. **Field mapping** for the UI: `full_name` · `phone_number` · `email` · `ward` · `bank_name` · `account_number` · `account_name` · `approved_at` · `scheme.name`.
+
+## v1.1.3 (`f14262d`)
+
+**Merge PR #2 (`Master` → `backend`).** 46 files changed · +2,315 / −1,286 lines
+
+---
+
+### 🗂️ Admin: Scheme-scoped Application Management
+
+**Applications are now manageable per-scheme, and the main list got a major simplification.**
+
+- **New page `src/app/admin/applications/scheme/[schemeId]`** (page.js + page.module.css) — a dedicated dashboard for all applications within one scheme
+- **`admin/applications` list rewritten** — `page.js` and `page.module.css` both cut down heavily (hundreds of changed lines each); leaner cards and simpler state handling
+- **`src/services/applications.js` updated** — new fetchers backing the scheme-scoped view
+- Touch-ups in `admin/applications/[id]`, `admin/applications/approvals`, `admin/schemes/[id]`, `admin/schemes/new`, `admin/students/[id]`
+
+---
+
+### 🗂️ Admin: Scheme Management Suite
+
+**Creating schemes now has a dedicated page, and scheme details gained a full management UI.**
+
+- **New "Create Scheme" page** (`src/app/admin/schemes/new` + page.module.css)
+- **Scheme detail page extended** (`src/app/admin/schemes/[id]/page.js`, +191 lines)
+- **`src/docs/Eligibility_Criteria.md` added** — documents the eligibility rules behind scheme setup
+
+---
+
+### ✉️ Email Templates Redesigned
+
+**Every transactional email rebuilt on a refreshed shared layout.**
+
+- **`templates/email/base.html` overhauled** (+118/−163) — shared structure used by all emails
+- Rebuilt on top of it: `application_approved`, `application_rejected`, `application_submitted`, `double_dip_flagged`, `student_verified`, `welcome`, `password_reset`
+- **`notifications/helpers.py`** — link fix
+
+---
+
+### 🎨 Landing Page Polish + Navbar Overhaul
+
+- **New `Reveal` component** (`Reveal.jsx` + `Reveal.module.css`) — reusable scroll-reveal animation wrapper
+- **Navbar rewritten** (`Navbar.jsx` 366 changed lines, `Navbar.module.css` 398 changed lines) with follow-up alignment/colour fixes
+- Minor polish across `About`, `CTABanner`, `Contact`, `Eligibility`, `FAQ`, `Footer`, `Hero`, `HowItWorks`, `Programmes`
+
+---
+
+### 🛠️ Other Fixes
+
+- `dashboard/help`, `dashboard/profile`, `dashboard/programmes/apply`, `forgot-password`, `login`, `register` pages and the global `layout.js` updated
+
+---
+
+## Previous release — v1 (`da25bd7`)
+
+### 58 files changed · +2,090 / −3,465 lines
+
+---
+
+### NIN Hashing Moved Server-Side
 
 **The raw 11-digit NIN is now hashed on the server, not the client.** Previously the frontend pre-hashed the NIN before sending it — now the client should send the raw NIN as `"nin"` and the backend hashes it with a secret pepper before storage.
 
@@ -27,7 +133,7 @@
 
 ---
 
-## Email System Overhaul
+### Email System Overhaul
 
 ### All email dispatch moved to Celery tasks
 
@@ -63,7 +169,7 @@
 
 ---
 
-##  Approval Notification Deferral ("Publish" Flow)
+### Approval Notification Deferral ("Publish" Flow)
 
 **Approval emails are no longer sent at the moment of review.** Instead they are staged and dispatched in bulk when a reviewer "publishes" a scheme's results.
 
@@ -88,7 +194,7 @@ Rejection emails are no longer sent. `send_application_rejected_email` is intent
 
 ---
 
-##  Staff-Create Application Endpoint
+### Staff-Create Application Endpoint
 
 **`POST /applications/staff-create/`** — Admin creates an application on behalf of a student.
 
@@ -100,7 +206,7 @@ Rejection emails are no longer sent. `send_application_rejected_email` is intent
 
 ---
 
-##  Notification System Refactored
+### Notification System Refactored
 
 ### New: `notifications/helpers.py` (160 lines)
 
@@ -123,7 +229,7 @@ Removed `verification_approved` and `verification_rejected` types — those now 
 
 ---
 
-## 📄 Application Submission Improvements
+### 📄 Application Submission Improvements
 
 ### Multipart file upload at submit
 
@@ -150,7 +256,7 @@ Students no longer need admin verification before submitting applications — th
 the bank details check is now a must , it must match your name before u can submit
 ---
 
-## Removals
+### Removals
 
 | Removed | Why |
 |---|---|
@@ -164,7 +270,7 @@ the bank details check is now a must , it must match your name before u can subm
 
 ---
 
-##  Django Admin Hardening
+### Django Admin Hardening
 
 **`accounts/admin.py`** rewritten from a bare `UserAdmin(admin.ModelAdmin): pass`:
 
@@ -175,7 +281,7 @@ the bank details check is now a must , it must match your name before u can subm
 
 ---
 
-## Production Readiness
+### Production Readiness
 
 ### Docker
 
@@ -202,7 +308,7 @@ the bank details check is now a must , it must match your name before u can subm
 
 ---
 
-## Student Model Changes
+### Student Model Changes
 
 - **New fields on Student:** `email`, `phone_number`, `gender` — previously only on User, now mirrored on Student for direct access
 - **`nin_hash`** — max_length 20 → 64 (matches User)
@@ -214,7 +320,7 @@ the bank details check is now a must , it must match your name before u can subm
 
 ---
 
-##  Other Changes
+### Other Changes
 
 - **Audit log:** simplified from paginated `ListAPIView` back to `APIView` returning the latest 100 entries (fixed slice)
 - **Audit log creation removed** from application review — no audit entry on approve/reject

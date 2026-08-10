@@ -1,5 +1,7 @@
+import csv
 import json
 import logging
+import re
 import uuid
 
 from rest_framework import viewsets, status
@@ -8,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.core.files.storage import default_storage
+from django.http import HttpResponse
 from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
@@ -25,6 +28,9 @@ from .serializers import (
     REQUIRED_DOCUMENTS,
     serialize_application,
     serialize_application_list,
+    serialize_approved_application,
+    approved_application_csv_row,
+    APPROVED_LIST_CSV_FIELDNAMES,
 )
 from .dynamic import (
     get_application_model,
@@ -277,6 +283,95 @@ class ApplicationViewSet(viewsets.ViewSet):
             "unpublished":    unpublished,
             "applications":   [serialize_application(a) for a in apps],
         })
+
+    # -- Approved applicants (disbursement export) ----------------------------
+    @extend_schema(
+        summary="Approved applicants list / CSV export for one scheme",
+        description=(
+            "Flat disbursement list of every APPROVED application in one scheme: "
+            "student name, phone, email, ward and the bank snapshot captured on "
+            "the application. `?scheme=` is required. Append `&export=csv` to "
+            "stream the same data as a downloadable CSV. Verifier/admin only."
+        ),
+        parameters=[
+            OpenApiParameter('scheme', str, required=True,
+                             description='ScholarshipScheme id to export.'),
+            OpenApiParameter('export', str,
+                             description='Set to `csv` to download a CSV file.'),
+        ],
+        responses=OpenApiResponse(description='{ scheme, count, applications } or CSV file.'),
+    )
+    @action(detail=False, methods=['get'],
+            url_path='approved-list',
+            permission_classes=[IsVerifier])
+    def approved_list(self, request):
+        # GET /applications/approved-list/?scheme={scheme_id}
+        #
+        # Every approved application in ONE scheme's table as flat records
+        # (name + phone + email + bank snapshot + approval timestamp).
+        # `?export=csv` downloads the same data as a CSV instead of JSON.
+        scheme_id = request.query_params.get('scheme')
+        if not scheme_id:
+            return Response(
+                {"error": "'scheme' query parameter is required."},
+                status=400,
+            )
+
+        scheme = ScholarshipScheme.objects.filter(id=scheme_id).first()
+        if not scheme:
+            return Response({"error": "Scheme not found"}, status=404)
+        if not scheme.table_name:
+            return Response({"error": "Scheme has no application table"}, status=400)
+
+        model = get_application_model(scheme)
+        rows = list(
+            model.objects.filter(status=ApplicationStatus.APPROVED)
+            .select_related('student', 'scheme')
+            .order_by('created_at')
+        )
+
+        # application_id -> latest time the row moved into 'approved'.
+        approved_at_map = {
+            h.application_id: h.changed_at
+            for h in ApplicationStatusHistory.objects
+            .filter(scheme=scheme, to_status=ApplicationStatus.APPROVED)
+            .order_by('-changed_at')
+        }
+
+        records = [
+            serialize_approved_application(
+                row, approved_at_map.get(row.id, row.reviewed_at))
+            for row in rows
+        ]
+
+        # -- CSV export (plain HttpResponse bypasses DRF renderer negotiation) --
+        # NB: `format=` is reserved by DRF content negotiation (it raises an
+        #     Http404 when no renderer matches) so the CSV switch uses `export`.
+        if request.query_params.get('export', '').lower() == 'csv':
+            response = HttpResponse(content_type='text/csv; charset=utf-8')
+            slug = re.sub(r'[^A-Za-z0-9]+', '-', scheme.name).strip('-')
+            filename = f"approved-list-{slug or 'scheme'}-{timezone.now():%Y%m%d}.csv"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+            writer = csv.writer(response)
+            writer.writerow(APPROVED_LIST_CSV_FIELDNAMES)
+            for index, record in enumerate(records, start=1):
+                writer.writerow(approved_application_csv_row(index, record))
+            return response
+
+        return Response({
+            "scheme": {
+                "id":              str(scheme.id),
+                "name":            scheme.name,
+                "award_type":      scheme.award_type,
+                "academic_year":   scheme.academic_year,
+                "total_slots":     scheme.total_slots,
+                "remaining_slots": scheme.remaining_slots,
+            },
+            "count":        len(records),
+            "applications": records,
+        })
+
 
     # ── Status history ────────────────────────────────────────────────────────
     @extend_schema(
