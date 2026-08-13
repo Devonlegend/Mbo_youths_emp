@@ -1,0 +1,375 @@
+/* ══════════════════════════════════════════════
+   ADMIN BENEFICIARIES — SINGLE SCHEME — RMHCDT Admin Portal
+══════════════════════════════════════════════ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.backBtn:hover { background: var(--color-subtle); }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.schemeIconWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: -2px 0 0;
+  display: flex;
+  align-items: center;
+}
+
+.categoryChip {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.countPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.exportBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.exportBtn:hover:not(:disabled) {
+  background: var(--color-primary-border);
+}
+
+.infoBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--color-primary);
+  line-height: 1.5;
+  width: fit-content;
+}
+
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  flex-wrap: wrap;
+}
+
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  height: 36px;
+  padding: 0 12px 0 34px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-subtle);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+}
+
+.searchInput:focus {
+  border-color: var(--color-primary-border);
+  background: var(--color-card);
+}
+
+.searchInput::placeholder { color: var(--color-text-placeholder); }
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr 1.4fr 0.9fr 1.3fr 0.9fr 90px;
+  gap: 12px;
+  padding: 0 20px;
+  align-items: center;
+  min-height: 48px;
+}
+
+.tableHeader {
+  border-bottom: 1px solid var(--color-border-subtle);
+  min-height: 40px;
+}
+
+.tableHeader span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tableRowData {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr 1.4fr 0.9fr 1.3fr 0.9fr 90px;
+  gap: 12px;
+  padding: 0 20px;
+  align-items: center;
+  min-height: 68px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  transition: background 0.12s;
+}
+
+.tableRowData:last-of-type { border-bottom: none; }
+.tableRowData:hover { background: var(--color-subtle); }
+
+.tdStudent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.studentAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--color-primary-light);
+  border: 1.5px solid var(--color-primary-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.studentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.studentName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.studentMeta {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tdLocation {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tdBank {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lgaText  { font-size: 12.5px; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wardText { font-size: 11.5px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.tdDate {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.viewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  justify-self: end;
+}
+
+.viewBtn:hover { background: var(--color-primary-border); }
+
+.spin { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.skeletonCell {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-subtle) 25%, var(--color-border) 50%, var(--color-subtle) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 20px;
+  text-align: center;
+}
+
+.emptyTitle { font-size: 14px; font-weight: 700; color: var(--color-text); margin: 0; }
+.emptySub   { font-size: 13px; color: var(--color-text-muted); margin: 0; }
+
+.retryBtn {
+  margin-top: 8px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: background 0.15s;
+}
+
+.retryBtn:hover { background: var(--color-subtle); }
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Hide Email at narrower desktop widths */
+@media (max-width: 1200px) {
+  .tableRow,
+  .tableRowData { grid-template-columns: 1.8fr 1fr 0.9fr 1.3fr 0.9fr 90px; }
+  .tdEmail { display: none; }
+  .tableHeader span:nth-child(3) { display: none; }
+}
+
+/* Drop Ward too */
+@media (max-width: 1024px) {
+  .tableRow,
+  .tableRowData { grid-template-columns: 1.8fr 1fr 1.3fr 0.9fr 90px; }
+  .tdLocation { display: none; }
+  .tableHeader span:nth-child(4) { display: none; }
+}
+
+@media (max-width: 768px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .searchWrap { width: 100%; }
+  .tableRow,
+  .tableRowData { grid-template-columns: 1.5fr 1fr 90px; padding: 0 14px; }
+  .tdDate { display: none; }
+  .tdBank { display: none; }
+  .tdPhone { display: none; }
+  .tableHeader span:nth-child(2) { display: none; }
+  .tableHeader span:nth-child(5) { display: none; }
+  .title { font-size: 18px; }
+}

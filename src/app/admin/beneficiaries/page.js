@@ -2,14 +2,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  BadgeCheck, Search, ArrowRight, AlertCircle,
-  GraduationCap, Briefcase, Banknote, Filter, Download,
+  BadgeCheck, Search, AlertCircle, Users,
+  GraduationCap, Briefcase, Banknote, ArrowRight,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { getApplications } from "@/services";
-import Pagination from "../components/pagination/Pagination";
-
-const PAGE_SIZE = 50;
+import { getSchemes, getApprovedList } from "@/services";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
 const categoryConfig = {
@@ -18,316 +15,194 @@ const categoryConfig = {
   grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
 };
 
-function formatDate(dateStr) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-GB", {
-    day: "numeric", month: "short", year: "numeric",
-  });
-}
-
-function getInitials(fullName) {
-  if (!fullName) return "—";
-  const parts = fullName.trim().split(/\s+/);
-  const first = parts[0]?.[0] || "";
-  const last  = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return (first + last).toUpperCase();
-}
-
-// ── SKELETON ROW ──────────────────────────────────────────────────────────────
-function SkeletonRow() {
+// ── SKELETON CARD ─────────────────────────────────────────────────────────────
+function SkeletonCard() {
   return (
-    <div className={styles.tableRow}>
-      <div className={styles.skeletonCell} style={{ width: "22%" }} />
-      <div className={styles.skeletonCell} style={{ width: "28%" }} />
-      <div className={styles.skeletonCell} style={{ width: "14%" }} />
-      <div className={styles.skeletonCell} style={{ width: "14%" }} />
-      <div className={styles.skeletonCell} style={{ width: "10%" }} />
+    <div className={styles.schemeCard}>
+      <div className={styles.skeletonBlock} style={{ width: "60%", height: 18, borderRadius: 6 }} />
+      <div className={styles.skeletonBlock} style={{ width: "40%", height: 14, borderRadius: 4, marginTop: 8 }} />
+      <div className={styles.skeletonBlock} style={{ width: "100%", height: 40, borderRadius: 6, marginTop: 12 }} />
+      <div className={styles.skeletonBlock} style={{ width: "40%", height: 34, borderRadius: 8, marginTop: 12 }} />
     </div>
   );
 }
 
-const FILTERS = ["All", "Scholarship", "Empowerment", "Grant"];
-
 // ── PAGE ──────────────────────────────────────────────────────────────────────
-export default function BeneficiaryRegisterPage() {
+export default function BeneficiaryRegisterOverviewPage() {
   const router = useRouter();
 
-  const [beneficiaries, setBeneficiaries] = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState(null);
-  const [search,        setSearch]        = useState("");
-  const [activeFilter,  setActiveFilter]  = useState("All");
-  const [filterOpen,    setFilterOpen]    = useState(false);
+  const [schemes, setSchemes] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+  const [search,   setSearch]   = useState("");
 
-  // ── PAGINATION STATE ───────────────────────────────────────────────────────
-  const [page,     setPage]     = useState(1);
-  const [pageInfo, setPageInfo] = useState({ count: 0, next: null, previous: null });
-
-  // ── FETCH ─────────────────────────────────────────────────────────────────
-  async function loadBeneficiaries(targetPage) {
+  async function loadSchemes() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getApplications(targetPage, { status: "approved" });
-      setBeneficiaries(Array.isArray(res.data?.results) ? res.data.results : []);
-      setPageInfo({
-        count:    res.data?.count    ?? 0,
-        next:     res.data?.next     ?? null,
-        previous: res.data?.previous ?? null,
-      });
-      setPage(targetPage);
+      const res = await getSchemes();
+      const list = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+
+      // Pull each scheme's approved-beneficiary count in parallel. We only
+      // need `count` from the response, not the full applications array.
+      const withCounts = await Promise.all(
+        list.map(async (s) => {
+          try {
+            const countRes = await getApprovedList(s.id);
+            return { ...s, beneficiary_count: countRes.data?.count ?? 0 };
+          } catch {
+            return { ...s, beneficiary_count: 0 };
+          }
+        })
+      );
+
+      setSchemes(withCounts);
     } catch {
-      setError("Failed to load beneficiary register.");
+      setError("Failed to load schemes. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { loadBeneficiaries(1); }, []);
+  useEffect(() => { loadSchemes(); }, []);
 
-  // ── FILTER + SEARCH (current page only) ───────────────────────────────────
-  const filtered = beneficiaries.filter((b) => {
-    const fullName   = (b.student?.full_name || "").toLowerCase();
-    const schemeName = (b.scheme?.name || "").toLowerCase();
+  // ── FILTER ────────────────────────────────────────────────────────────────
+  const filtered = schemes.filter((s) =>
+    search.trim() === "" ? true :
+    (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (s.award_type || "").toLowerCase().includes(search.toLowerCase())
+  );
 
-    const matchSearch = search.trim() === "" ? true :
-      fullName.includes(search.toLowerCase()) ||
-      schemeName.includes(search.toLowerCase()) ||
-      (b.student?.ward || "").toLowerCase().includes(search.toLowerCase());
+  // ── STATS ─────────────────────────────────────────────────────────────────
+  const schemesWithBeneficiaries = schemes.filter((s) => (s.beneficiary_count || 0) > 0).length;
+  const totalBeneficiaries = schemes.reduce((sum, s) => sum + (s.beneficiary_count || 0), 0);
+  const totalSlots = schemes.reduce((sum, s) => sum + (s.total_slots || 0), 0);
+  const filledSlots = schemes.reduce(
+    (sum, s) => sum + ((s.total_slots || 0) - (s.remaining_slots ?? s.total_slots ?? 0)),
+    0
+  );
 
-    const catKey   = (b.scheme?.award_type || "scholarship").toLowerCase();
-    const catLabel = categoryConfig[catKey]?.label || "Scholarship";
-    const matchFilter = activeFilter === "All" ? true : catLabel === activeFilter;
-
-    return matchSearch && matchFilter;
-  });
-
-  // ── EXPORT CSV (current page only) ────────────────────────────────────────
-  function handleExport() {
-    const headers = ["#", "Full Name", "Scheme", "Category", "Ward", "Bank Name", "Account Number", "Account Name", "Approved Date"];
-    const rows = filtered.map((b, index) => [
-      String(index + 1).padStart(3, "0"),
-      b.student?.full_name || "Unknown",
-      b.scheme?.name || "",
-      categoryConfig[(b.scheme?.award_type || "scholarship").toLowerCase()]?.label || "",
-      b.student?.ward || "",
-      b.details?.bank_name || "",
-      b.details?.account_number || "",
-      b.details?.account_name || "",
-      formatDate(b.submission_date),
-    ]);
-
-    const csv = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = `beneficiary-register-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  // ── RENDER ────────────────────────────────────────────────────────────────
   return (
     <div className={styles.page}>
 
       {/* PAGE HEADER */}
       <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <div className={styles.headerIcon}>
-            <BadgeCheck size={20} strokeWidth={1.8} />
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <BadgeCheck size={20} color="var(--color-primary)" strokeWidth={1.8} />
           </div>
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
             <h1 className={styles.title}>Beneficiary Register</h1>
-            <p className={styles.sub}>
-              Permanent record of all approved beneficiaries this cycle. Read-only.
-            </p>
+            <p className={styles.sub}>Select a scheme to view its confirmed beneficiaries.</p>
           </div>
         </div>
-        {!loading && !error && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div className={styles.countPill}>
-              <BadgeCheck size={13} strokeWidth={2} />
-              {pageInfo.count} confirmed beneficiar{pageInfo.count !== 1 ? "ies" : "y"}
-            </div>
-            <button
-              onClick={handleExport}
-              disabled={filtered.length === 0}
-              className={styles.exportBtn}
-              style={{ opacity: filtered.length === 0 ? 0.5 : 1, cursor: filtered.length === 0 ? "not-allowed" : "pointer" }}
-            >
-              <Download size={13} strokeWidth={2} /> Export CSV
-            </button>
-          </div>
-        )}
-      </div>
 
-      {/* INFO BANNER */}
-      <div className={styles.infoBanner}>
-        <BadgeCheck size={14} color="#15803d" strokeWidth={2} style={{ flexShrink: 0 }} />
-        <span>This register is read-only. Records are created automatically when an application is approved and are retained permanently.</span>
-      </div>
-
-      {/* MAIN CARD */}
-      <div className={styles.card}>
-
-        {/* TOOLBAR */}
-        <div className={styles.toolbar}>
+        <div className={styles.headerRight}>
           <div className={styles.searchWrap}>
             <Search size={14} className={styles.searchIcon} />
             <input
               className={styles.searchInput}
-              placeholder="Search by name, scheme or ward..."
+              placeholder="Search schemes..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-
-          <div style={{ position: "relative" }}>
-            <button
-              className={`${styles.filterBtn} ${activeFilter !== "All" ? styles.filterBtnActive : ""}`}
-              onClick={() => setFilterOpen((o) => !o)}
-            >
-              <Filter size={13} strokeWidth={2} />
-              {activeFilter === "All" ? "All Categories" : activeFilter}
-            </button>
-            {filterOpen && (
-              <div className={styles.filterDropdown}>
-                {FILTERS.map((f) => (
-                  <button
-                    key={f}
-                    className={`${styles.filterOption} ${activeFilter === f ? styles.filterOptionActive : ""}`}
-                    onClick={() => { setActiveFilter(f); setFilterOpen(false); }}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
-
-        {/* TABLE HEADER */}
-        <div className={`${styles.tableRow} ${styles.tableHeader}`}>
-          <span>Beneficiary</span>
-          <span>Scheme</span>
-          <span>Ward</span>
-          <span>Account Details</span>
-          <span>Approved</span>
-          <span></span>
-        </div>
-
-        {/* LOADING */}
-        {loading && [1,2,3,4,5].map((i) => <SkeletonRow key={i} />)}
-
-        {/* ERROR */}
-        {!loading && error && (
-          <div className={styles.emptyState}>
-            <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
-            <p style={{ color: "#ef4444", fontWeight: 600 }}>{error}</p>
-            <button className={styles.retryBtn} onClick={() => loadBeneficiaries(page)}>
-              Try again
-            </button>
-          </div>
-        )}
-
-        {/* EMPTY */}
-        {!loading && !error && filtered.length === 0 && (
-          <div className={styles.emptyState}>
-            <BadgeCheck size={28} color="#cbd5e1" strokeWidth={1.5} />
-            <p className={styles.emptyTitle}>
-              {search || activeFilter !== "All"
-                ? "No matching beneficiaries"
-                : "No approved beneficiaries yet"
-              }
-            </p>
-            <p className={styles.emptySub}>
-              {search || activeFilter !== "All"
-                ? "Try adjusting your search or filter."
-                : "Beneficiaries appear here once applications are approved."
-              }
-            </p>
-          </div>
-        )}
-
-        {/* TABLE ROWS */}
-        {!loading && !error && filtered.map((b, index) => {
-          const catKey   = (b.scheme?.award_type || "scholarship").toLowerCase();
-          const category = categoryConfig[catKey] || categoryConfig.scholarship;
-          const Icon     = category.icon;
-
-          return (
-            <div key={b.id} className={styles.tableRowData}>
-
-              {/* Beneficiary */}
-              <div className={styles.tdStudent}>
-                <div className={styles.studentAvatar}>{getInitials(b.student?.full_name)}</div>
-                <div className={styles.studentInfo}>
-                  <span className={styles.studentName}>{b.student?.full_name || "Unknown"}</span>
-                  <span className={styles.studentMeta}>#{String(index + 1).padStart(3, "0")}</span>
-                </div>
-              </div>
-
-              {/* Scheme */}
-              <div className={styles.tdScheme}>
-                <div className={styles.schemeIconWrap} style={{ background: category.bg }}>
-                  <Icon size={12} color={category.color} strokeWidth={2} />
-                </div>
-                <div className={styles.schemeInfo}>
-                  <span className={styles.schemeName}>{b.scheme?.name || "—"}</span>
-                  <span className={styles.categoryChip} style={{ color: category.color, background: category.bg }}>
-                    {category.label}
-                  </span>
-                </div>
-              </div>
-
-              {/* Ward */}
-              <div className={styles.tdLocation}>
-                <span className={styles.wardText}>{b.student?.ward || "—"}</span>
-              </div>
-
-              {/* Account Details */}
-              <div className={styles.tdBank}>
-                {b.details?.account_number ? (
-                  <>
-                    <span className={styles.lgaText}>{b.details.bank_name || "—"}</span>
-                    <span className={styles.wardText}>{b.details.account_number}</span>
-                  </>
-                ) : (
-                  <span className={styles.wardText}>No bank on file</span>
-                )}
-              </div>
-
-              {/* Approved date */}
-              <span className={styles.tdDate}>{formatDate(b.submission_date)}</span>
-
-              {/* View */}
-              <button
-                className={styles.viewBtn}
-                onClick={() => router.push(`/admin/applications/${b.id}`)}
-              >
-                View <ArrowRight size={11} strokeWidth={2} />
-              </button>
-
-            </div>
-          );
-        })}
-
-        {/* PAGINATION */}
-        <Pagination
-          page={page}
-          pageSize={PAGE_SIZE}
-          totalCount={pageInfo.count}
-          hasNext={!!pageInfo.next}
-          hasPrevious={!!pageInfo.previous}
-          loading={loading}
-          onPageChange={(newPage) => loadBeneficiaries(newPage)}
-        />
-
       </div>
+
+      {/* SUMMARY STRIP */}
+      <div className={styles.summaryStrip}>
+        {[
+          { label: "Schemes",            value: schemesWithBeneficiaries,               color: "var(--color-text)" },
+          { label: "Beneficiaries",      value: totalBeneficiaries,                     color: "#15803d" },
+          { label: "Slots Filled",       value: `${filledSlots} / ${totalSlots}`,       color: "#3b82f6" },
+        ].map((s) => (
+          <div key={s.label} className={styles.summaryItem}>
+            <span className={styles.summaryValue} style={{ color: s.color }}>
+              {loading ? "—" : s.value}
+            </span>
+            <span className={styles.summaryLabel}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ERROR */}
+      {error && (
+        <div className={styles.errorState}>
+          <AlertCircle size={22} color="#f87171" strokeWidth={1.5} />
+          <p style={{ color: "#ef4444" }}>{error}</p>
+          <button className={styles.retryBtn} onClick={loadSchemes}>Try again</button>
+        </div>
+      )}
+
+      {/* LOADING */}
+      {loading && (
+        <div className={styles.grid}>
+          {[1,2,3,4].map((i) => <SkeletonCard key={i} />)}
+        </div>
+      )}
+
+      {/* EMPTY */}
+      {!loading && !error && filtered.length === 0 && (
+        <div className={styles.emptyState}>
+          <BadgeCheck size={28} color="#cbd5e1" strokeWidth={1.5} />
+          <p className={styles.emptyTitle}>No schemes found</p>
+          <p className={styles.emptySub}>
+            {search ? "Try a different search." : "Create a scheme to start tracking beneficiaries."}
+          </p>
+        </div>
+      )}
+
+      {/* SCHEME CARDS GRID */}
+      {!loading && !error && filtered.length > 0 && (
+        <div className={styles.grid}>
+          {filtered.map((s) => {
+            const catKey   = (s.award_type || "scholarship").toLowerCase();
+            const category = categoryConfig[catKey] || categoryConfig.scholarship;
+            const Icon     = category.icon;
+
+            return (
+              <div key={s.id} className={styles.schemeCard}>
+                <div className={styles.schemeCardTop}>
+                  <div className={styles.schemeIconWrap} style={{ background: category.bg }}>
+                    <Icon size={18} color={category.color} strokeWidth={1.8} />
+                  </div>
+                  {s.beneficiary_count > 0 && (
+                    <span className={styles.beneficiaryPill}>
+                      {s.beneficiary_count} confirmed
+                    </span>
+                  )}
+                </div>
+
+                <h3 className={styles.schemeName}>{s.name}</h3>
+
+                <span
+                  className={styles.categoryChip}
+                  style={{ color: category.color, background: category.bg }}
+                >
+                  {category.label}
+                </span>
+
+                <div className={styles.schemeMeta}>
+                  <div className={styles.metaItem}>
+                    <Users size={12} strokeWidth={2} />
+                    <span>{s.remaining_slots ?? "—"} / {s.total_slots ?? "—"} slots left</span>
+                  </div>
+                </div>
+
+                <div className={styles.schemeActions}>
+                  <button
+                    className={styles.viewBtn}
+                    onClick={() => router.push(`/admin/beneficiaries/${s.id}`)}
+                  >
+                    View Beneficiaries <ArrowRight size={13} strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
     </div>
   );

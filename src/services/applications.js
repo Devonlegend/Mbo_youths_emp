@@ -31,3 +31,12 @@ export const getApplicationsByScheme = (schemeId, status) =>
   api.get(`/applications/by-scheme/${schemeId}/`, {
     params: status ? { status } : {},
   });
+
+export const getApprovedList = (schemeId) =>
+  api.get("/applications/approved-list/", { params: { scheme: schemeId } });
+
+export const downloadApprovedListCsv = (schemeId) =>
+  api.get("/applications/approved-list/", {
+    params: { scheme: schemeId, export: "csv" },
+    responseType: "blob",
+  });
