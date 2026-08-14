@@ -1,0 +1,24 @@
+# Git / secrets — never baked into the image
+.git
+.env
+.env.*
+!.env.example
+
+# Local virtualenv & DB dumps
+.venv
+venv
+env
+__pycache__
+*.py[cod]
+*.log
+db.sqlite3
+db.sqlite3.*
+staticfiles
+media
+
+# Stray local uploads
+/passport_*.jpg
+/passport_*.png
+/akirs*.png
+/22_SC_CO_*.pdf
+/_verify_typed.py

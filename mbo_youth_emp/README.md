@@ -132,7 +132,7 @@ sudo docker compose exec backend python manage.py createsuperuser
 Verify:
 
 ```bash
-curl https://back.mboempowerment.com/api/schema/
+curl https://api.mboempowerment.com/api/schema/
 ```
 
 ### 6. Deploy updates

@@ -1,0 +1,150 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Mbo Youth Empowerment — full production stack (frontend + backend + db +
+# redis + celery worker + Caddy). One command on a VPS:
+#     docker compose up -d --build
+# All runtime config lives in the root `.env` (see `.env.example`).
+# This file is also the single resource you import into Coolify.
+# ─────────────────────────────────────────────────────────────────────────
+name: mbo-portal
+
+services:
+  # ── Next.js frontend ──────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Inlined at build time (media file URLs)
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://back.mboempowerment.com}
+    restart: unless-stopped
+    environment:
+      # Read at runtime by the /api/proxy route. Same-network call avoids a
+      # public round-trip. For a Render-hosted frontend, point this at
+      # https://back.mboempowerment.com instead.
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8080}
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+
+  # ── PostgreSQL ────────────────────────────────────────────────────────
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Redis (Celery broker) ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+
+  # ── Django / gunicorn ─────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./mbo_youth_emp
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      # Everything else comes from the root .env
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG:-False}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      NIN_HASH_PEPPER: ${NIN_HASH_PEPPER:-${SECRET_KEY}}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
+      PORTAL_URL: ${PORTAL_URL:-https://mboempowerment.com}
+      JWT_COOKIE_SECURE: ${JWT_COOKIE_SECURE:-True}
+      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-None}
+      SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-True}
+      CELERY_TASK_ALWAYS_EAGER: ${CELERY_TASK_ALWAYS_EAGER:-False}
+      OTP_TTL_SECONDS: ${OTP_TTL_SECONDS:-600}
+      OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-5}
+      OTP_RESEND_COOLDOWN_SECONDS: ${OTP_RESEND_COOLDOWN_SECONDS:-60}
+      PAYSTACK_MOCK_MODE: ${PAYSTACK_MOCK_MODE:-False}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      BREVO_MOCK_MODE: ${BREVO_MOCK_MODE:-False}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-no-reply@mboempowerment.com}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-Mbo Youth Empowerment}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-dwn6p3qmd}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-support@mboempowerment.com}
+    command: sh -c "python manage.py migrate --no-input && gunicorn config.wsgi:application --bind 0.0.0.0:8080 --workers 3 --timeout 60"
+    expose:
+      - "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # ── Celery worker ─────────────────────────────────────────────────────
+  worker:
+    build:
+      context: ./mbo_youth_emp
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG:-False}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PAYSTACK_MOCK_MODE: ${PAYSTACK_MOCK_MODE:-False}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      BREVO_MOCK_MODE: ${BREVO_MOCK_MODE:-False}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-dwn6p3qmd}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+    command: celery -A config worker -l info
+    depends_on:
+      - redis
+      - db
+
+  # ── Caddy reverse proxy (TLS / Let's Encrypt) ─────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-mboempowerment.com}
+      API_DOMAIN: ${API_DOMAIN:-back.mboempowerment.com}
+    volumes:
+      - caddy_data:/data
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
