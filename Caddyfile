@@ -3,8 +3,8 @@
 # containers and issues Let's Encrypt certificates automatically.
 # ─────────────────────────────────────────────────────────────────────
 
-# Next.js frontend
-{$DOMAIN:mboempowerment.com} {
+# Next.js frontend (bare + www)
+{$DOMAIN:mboempowerment.com}, www.{$DOMAIN:mboempowerment.com} {
 	encode gzip zstd
 
 	# Next.js frontend. Cookie-based auth stays same-origin (browser only
