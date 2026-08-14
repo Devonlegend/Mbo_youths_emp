@@ -8,8 +8,10 @@ node_modules
 out
 npm-debug.log*
 
-# Other apps in this repo — not part of the frontend image
-mbo_youth_emp
+# Other apps / dev leftovers in this repo.
+# NOTE: mbo_youth_emp is intentionally NOT excluded — Coolify imports the whole
+# repo for the compose deploy (backend/worker build contexts need it). The
+# frontend image stays lean because its Dockerfile copies only src/public/configs.
 testone
 trash
 

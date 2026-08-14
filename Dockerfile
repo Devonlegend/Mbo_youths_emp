@@ -12,7 +12,9 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY package.json package-lock.json next.config.mjs jsconfig.json postcss.config.mjs ./
+COPY src ./src
+COPY public ./public
 RUN npm run build
 
 FROM node:22-alpine AS runner
