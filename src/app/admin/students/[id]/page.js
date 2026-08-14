@@ -36,7 +36,7 @@ const categoryIcons = {
 function getFileUrl(path) {
   if (!path) return null;
   if (path.startsWith("http")) return path;
-  return `/api/proxy${path}`;
+  return `${process.env.NEXT_PUBLIC_API_URL}${path}`;
 }
 
 function formatDate(dateStr) {

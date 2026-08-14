@@ -30,7 +30,7 @@ async function forward(request, params) {
     body: isBodyless ? undefined : await request.text(),
   });
 
-  const data = await res.arrayBuffer();
+  const data = await res.text();
 
   const response = new Response(data, {
     status: res.status,
