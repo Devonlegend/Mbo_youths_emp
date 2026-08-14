@@ -13,9 +13,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        # Inlined at build time (media file URLs)
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://back.mboempowerment.com}
     restart: unless-stopped
     environment:
       # Read at runtime by the /api/proxy route. Same-network call avoids a

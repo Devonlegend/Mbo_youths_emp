@@ -71,7 +71,6 @@ Point DNS: `back.mboempowerment.com` → VPS IP. Caddy grabs the cert automatica
   start command `npm start`. Render sets `NODE_ENV=production`.
 - **Environment variables:**
   - `BACKEND_URL=https://back.mboempowerment.com`
-  - `NEXT_PUBLIC_API_URL=https://back.mboempowerment.com`
 - Backend env adds the Render origin so CORS/cookies work:
   - `CORS_ALLOWED_ORIGINS=https://www.mboempowerment.com,https://mboempowerment.com,https://<yourapp>.onrender.com`
   - `CSRF_TRUSTED_ORIGINS` — same list
@@ -165,7 +164,6 @@ as the root `.env` file:
 DOMAIN=mboempowerment.com
 API_DOMAIN=back.mboempowerment.com
 BACKEND_URL=http://backend:8080
-NEXT_PUBLIC_API_URL=https://back.mboempowerment.com
 DB_NAME=mbo_portal_v2
 DB_USER=postgres
 DB_PASSWORD=<strong>
