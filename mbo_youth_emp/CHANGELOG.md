@@ -19,6 +19,7 @@ Fetches the approved (disbursement) list for **one scheme** in flat rows. Verifi
 - **CSV export** — same URL + `&export=csv` streams a downloadable `approved-list-{scheme}-{date}.csv`
   - Columns: `S/N, Full Name, Phone Number, Email, Ward, Scheme ID, Scheme, Award Type, Bank Name, Bank Code, Account Number, Account Name, Approved At, Application ID`
   - Uses `export`, **not** `format` — DRF reserves the `format` query param (returns 404 when no renderer matches)
+- **Django admin** — new `export_approved_list` action on `ScholarshipSchemeAdmin`: select one or more schemes and run “Export approved applicants for selected scheme(s) as CSV” (streams the same disbursement CSV via the shared helpers, no view code duplicated)
 - **New helpers** in `applications/serializers.py` — `serialize_approved_application()`, `approved_application_csv_row()`, `APPROVED_LIST_CSV_FIELDNAMES`, `_csv_cell()`
 
 ### 🧪 Tests (`applications/tests.py` — `ApprovedListExportTests`)
@@ -27,7 +28,8 @@ Fetches the approved (disbursement) list for **one scheme** in flat rows. Verifi
 - Only `approved` rows returned, with correct contact + bank data
 - CSV content-type, `Content-Disposition: attachment`, header + row values
 - Non-verifier (student) → 403
-- Full `applications` suite: **Ran 10 tests — OK** (5 existing + 5 new, no regressions)
+- Django admin action `export_approved_list` streams the CSV (`schemes/admin.py`)
+- Full `applications` suite: **Ran 11 tests — OK** (5 existing + 6 new, no regressions)
 
 ---
 

@@ -127,11 +127,7 @@ Migrations run automatically on startup. Create an admin user:
 sudo docker compose exec backend python manage.py createsuperuser
 ```
 
-### 5. DNS
 
-Point an `A` record for `api.mboempowerment.com` at your VPS IP (DNS-only / grey cloud
-if using Cloudflare on this record). Caddy issues and renews the TLS certificate
-automatically on the first request.
 
 Verify:
 

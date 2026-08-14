@@ -260,7 +260,28 @@ class ApprovedListExportTests(APITestCase):
         self.assertIn('08030000002', body)
         self.assertIn('1010101010', body)
 
+    def test_admin_action_streams_csv(self):
+        self._make_approved()
+        from schemes.admin import export_approved_list
+        from schemes.models import ScholarshipScheme
+
+        class _Stub:
+            def message_user(self, request, message, level=None):
+                self.last_message = message
+
+        stub = _Stub()
+        qs = ScholarshipScheme.objects.filter(id=self.scheme.id)
+        resp = export_approved_list(stub, None, qs)
+        self.assertIsNotNone(resp)
+        self.assertEqual(resp['Content-Type'], 'text/csv; charset=utf-8')
+        body = resp.content.decode('utf-8')
+        self.assertIn('Full Name,Phone Number,Email', body)
+        self.assertIn('Ada Okon', body)
+        self.assertIn('08030000002', body)
+        self.assertIn('1010101010', body)
+
     def test_students_are_not_allowed(self):
+
         plain_user = User.objects.create_user(
             email='plain@export.test', firstname='P', lastname='S',
             phone_number='08030000003', role='student',

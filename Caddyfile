@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────────────────────────────────
+# Caddy reverse proxy — routes the public site and API to their
+# containers and issues Let's Encrypt certificates automatically.
+# ─────────────────────────────────────────────────────────────────────
+
+# Next.js frontend
+{$DOMAIN:mboempowerment.com} {
+	encode gzip zstd
+
+	# Next.js frontend. Cookie-based auth stays same-origin (browser only
+	# ever talks to this domain; Django set-cookie passes through cleanly).
+	reverse_proxy frontend:3000
+}
+
+# Django API
+{$API_DOMAIN:back.mboempowerment.com} {
+	encode gzip zstd
+	reverse_proxy backend:8080
+}

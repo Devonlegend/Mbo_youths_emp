@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# Build / deps — rebuilt inside the image
+node_modules
+.next
+out
+npm-debug.log*
+
+# Other apps in this repo — not part of the frontend image
+mbo_youth_emp
+testone
+trash
+
+# Local / editor junk
+certificates
+.claude
+.impeccable
+*.md
+.env
+.env*.local
+deploy
