@@ -27,10 +27,11 @@ async function forward(request, params) {
       Cookie: request.headers.get("cookie") || "",
       "Content-Type": request.headers.get("content-type") || "application/json",
     },
-    body: isBodyless ? undefined : await request.text(),
+    body: isBodyless ? undefined : await request.arrayBuffer(),
+    duplex: "half",
   });
 
-  const data = await res.text();
+  const data = await res.arrayBuffer();
 
   const response = new Response(data, {
     status: res.status,
