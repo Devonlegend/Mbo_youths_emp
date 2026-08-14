@@ -12,7 +12,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN python manage.py collectstatic --no-input
+# Build-time env: there is no .env in the image, and settings.py refuses to
+# load when DEBUG=False and SECRET_KEY is empty. A throwaway key lets
+# collectstatic run; runtime secrets are injected by compose/Coolify.
+RUN SECRET_KEY=docker-build python manage.py collectstatic --no-input
 
 EXPOSE 8080
 
