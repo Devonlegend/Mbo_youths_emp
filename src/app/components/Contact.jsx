@@ -8,7 +8,7 @@ const contactInfo = [
   {
     icon: MapPin,
     label: "Address",
-    value: "RMHCDT, Mbo LGA, Akwa Ibom State",
+    value: "Mbo LGA, Akwa Ibom State",
     color: "#15803d",
     bg: "#f0fdf4",
     border: "#bbf7d0",
@@ -16,7 +16,7 @@ const contactInfo = [
   {
     icon: Mail,
     label: "Email",
-    value: "info@rmhcdt.org",
+    value: "support@mboempowerment.com",
     color: "#1d4ed8",
     bg: "#eff6ff",
     border: "#bfdbfe",

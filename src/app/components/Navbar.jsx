@@ -83,10 +83,10 @@ export default function Navbar() {
             fetchPriority="high"
             decoding="async"
           />
-          <div className={styles.logoText}>
-            <span className={styles.logoTitle}>Mbo Youth </span>
-            <span className={styles.logoSubtitle}>Youth Portal</span>
-          </div>
+          {/* <div className={styles.logoText}>
+            <span className={styles.logoTitle}>Mbo Youth Empowerment</span>
+            <span className={styles.logoSubtitle}>Youth Beneficiary Portal</span>
+          </div> */}
         </Link>
 
         {/* DESKTOP NAV LINKS */}

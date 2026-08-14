@@ -18,10 +18,10 @@ export default function Footer() {
               loading="lazy"
               decoding="async"
             />
-            <div className={styles.logoText}>
+            {/* <div className={styles.logoText}>
               <span className={styles.logoName}>RMHCDT</span>
               <span className={styles.logoSub}>Youth Portal</span>
-            </div>
+            </div> */}
           </Link>
 
           {/* RIGHT: Legal links + Copyright stacked */}
