@@ -98,6 +98,7 @@ export default function Sidebar({ isOpen, onClose }) {
               fetchPriority="high"
               decoding="async"
             />
+            {/* fixies. now */}
           {/* <div className={styles.logoBrand}>
             <span className={styles.logoName}>RMHCDT</span>
             <span className={styles.logoSub}>Youth Portal</span>
