@@ -98,10 +98,10 @@ export default function Sidebar({ isOpen, onClose }) {
               fetchPriority="high"
               decoding="async"
             />
-          <div className={styles.logoBrand}>
+          {/* <div className={styles.logoBrand}>
             <span className={styles.logoName}>RMHCDT</span>
             <span className={styles.logoSub}>Youth Portal</span>
-          </div>
+          </div> */}
           <button className={styles.closeBtn} onClick={onClose} aria-label="Close">
             <X size={14} strokeWidth={2} />
           </button>
