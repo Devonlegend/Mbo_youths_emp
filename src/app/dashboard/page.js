@@ -188,37 +188,37 @@ export default function DashboardPage() {
         <div className={styles.statCard}>
           <div className={styles.statTop}>
             <div className={`${styles.statIcon} ${styles.si_blue}`}><FileText size={15} strokeWidth={1.8} /></div>
-            <span className={`${styles.statPill} ${styles.sp_neut}`}>All time</span>
+            {/* <span className={`${styles.statPill} ${styles.sp_neut}`}>All time</span> */}
           </div>
           <div className={styles.statBottom}>
             <div className={styles.statValue}>{stats?.total ?? 0}</div>
             <div className={styles.statLabel}>Total applications</div>
           </div>
-          <span className={`${styles.statMobilePill} ${styles.sp_neut}`}>All time</span>
+          {/* <span className={`${styles.statMobilePill} ${styles.sp_neut}`}>All time</span> */}
         </div>
 
         <div className={styles.statCard}>
           <div className={styles.statTop}>
             <div className={`${styles.statIcon} ${styles.si_green}`}><CheckCircle2 size={15} strokeWidth={1.8} /></div>
-            <span className={`${styles.statPill} ${styles.sp_up}`}>Confirmed</span>
+            {/* <span className={`${styles.statPill} ${styles.sp_up`}>Confirmed</span> */}
           </div>
           <div className={styles.statBottom}>
             <div className={styles.statValue}>{stats?.approved ?? 0}</div>
             <div className={styles.statLabel}>Approved</div>
           </div>
-          <span className={`${styles.statMobilePill} ${styles.sp_up}`}>Confirmed</span>
+          {/* <span className={`${styles.statMobilePill} ${styles.sp_up}`}>Confirmed</span> */}
         </div>
 
         <div className={styles.statCard}>
           <div className={styles.statTop}>
             <div className={`${styles.statIcon} ${styles.si_amber}`}><Clock size={15} strokeWidth={1.8} /></div>
-            <span className={`${styles.statPill} ${styles.sp_warn}`}>In progress</span>
+            {/* <span className={`${styles.statPill} ${styles.sp_warn}`}>In progress</span> */}
           </div>
           <div className={styles.statBottom}>
             <div className={styles.statValue}>{stats?.underReview ?? 0}</div>
             <div className={styles.statLabel}>Under review</div>
           </div>
-          <span className={`${styles.statMobilePill} ${styles.sp_warn}`}>In progress</span>
+          {/* <span className={`${styles.statMobilePill} ${styles.sp_warn}`}>In progress</span> */}
         </div>
       </div>
 
