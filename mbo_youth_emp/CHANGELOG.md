@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.1.6 (wip)
+
+**Audit log completed — every administrative action is now recorded, and `GET /audit/` returns a paginated response.**
+
+---
+
+### 🗂️ Backend
+
+- **`audit/services.py` (new)** — failure-safe `record_admin_action()` helper that appends an immutable `AuditLog` row. The write is wrapped in try/except so a logging failure never breaks (or rolls back) the admin action that triggered it. A `None` / unauthenticated actor is stored as `null` and surfaced as "System" by the serializer.
+- **`audit/views.py`** — added `AuditLogPagination` (100 rows per page) and converted `AuditLogView` from a fixed 100-row slice back to a proper DRF paginated envelope (`{ count, next, previous, results }`, newest first). This fixes the contract mismatch where the frontend Audit Log page read `results/count/next/previous` from a bare-array response the old endpoint never provided — the page always rendered "No audit entries yet".
+- **Admin actions now write audit entries.** Entity types match the UI filter chips: `Application`, `Student`, `Scheme`, `Cycle`, `SchemeProvider`.
+  - **`applications/views.py`** — `review` (approved / rejected / shortlisted), `withdraw`, `staff_create`, `publish` (approval emails, with count sent)
+  - **`schemes/views.py`** — scheme create/update/delete + `publish` / `close` / `reopen`; cycle create/update/delete + `activate`; provider create/update/delete
+  - **`students/views.py`** — `verify` (verification approved / rejected)
+- **`audit/admin.py`** — `AuditLog` registered in Django admin as a read-only browsable trail: `list_display`, entity-type + date filters, search across action / entity id / admin name & email, newest first. Add and delete permissions are disabled and every field is read-only so entries can never be tampered with from the admin.
+- **Tests (`audit/tests.py`)** — `RecordAdminActionTests` (row created, `entity_id` stringified, `None`/unauthenticated actor → System, never raises) and `AuditLogApiTests` (paginated envelope shape, `page_size = 100`, page 2 slice, admin + superadmin allowed, student + anonymous denied, serialized fields). **Ran 13 tests — OK**; full `students` suite still green.
+
+---
+
+
+
+
+**Note:** audit search/filter stays client-side over the current page (100 rows); paging through older entries uses the existing pagination bar.
+
+---
+
 ## v1.1.5 (wip)
 
 **Ward-filtered approved-list CSV + Student passport from the User table.**

@@ -10,6 +10,7 @@ import logging
 from .models import Student
 from .serializers import StudentSerializer, StudentCreateSerializer
 from accounts.permissions import IsAdmin, IsStudent, IsVerifier
+from audit.services import record_admin_action
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +203,13 @@ class StudentViewSet(viewsets.ModelViewSet):
             except Exception:
                 logger.exception(
                     "Failed to create verified notification for student %s", student.pk)
+
+        record_admin_action(
+            request.user,
+            f"Student verification {decision}",
+            "Student",
+            str(student.pk),
+        )
 
         return Response({
             "is_verified": student.is_verified,

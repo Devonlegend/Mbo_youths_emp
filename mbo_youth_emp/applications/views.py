@@ -44,6 +44,7 @@ from .services.slots import consume_slot, SlotUnavailable
 from .services.withdrawal import withdraw_application
 from schemes.models import ScholarshipScheme
 from accounts.permissions import IsVerifier, IsAdmin
+from audit.services import record_admin_action
 
 # ── Notification tasks ────────────────────────────────────────────────────────
 # send_application_rejected_email is intentionally NOT imported: rejection emails
@@ -659,6 +660,13 @@ class ApplicationViewSet(viewsets.ViewSet):
             history_reason     = f'Created by admin {request.user.get_full_name() or request.user.email}',
         )
 
+        record_admin_action(
+            request.user,
+            f"Created application on behalf of student '{student.full_name}'",
+            "Application",
+            str(application.id),
+        )
+
         # ── Optional status override ───────────────────────────────────────
         status_override = parsed.get('status_override')
         valid_overrides = {s.value for s in ApplicationStatus}
@@ -825,6 +833,13 @@ class ApplicationViewSet(viewsets.ViewSet):
                     reason         = reason,
                 )
 
+                record_admin_action(
+                    request.user,
+                    f"Application {decision}",
+                    "Application",
+                    str(application.id),
+                )
+
                 # ── Notifications ─────────────────────────────────────────────
                 # Approval emails are NOT sent here. They are staged as a
                 # pending notification and dispatched in bulk when a reviewer
@@ -879,6 +894,13 @@ class ApplicationViewSet(viewsets.ViewSet):
             )
 
         application, remaining = withdraw_application(application, scheme, request.user)
+
+        record_admin_action(
+            request.user,
+            "Withdrew approved application (slot released)",
+            "Application",
+            str(application.id),
+        )
 
         try:
             notify_application_status_update(application.student.user, application, 'withdrawn')
@@ -940,6 +962,13 @@ class ApplicationViewSet(viewsets.ViewSet):
                 sent += 1
             notification.sent_at = timezone.now()
             notification.save(update_fields=['sent_at'])
+
+        record_admin_action(
+            request.user,
+            f"Published approval emails for scheme '{scheme.name}' ({sent} sent)",
+            "Scheme",
+            str(scheme.id),
+        )
 
         return Response({
             "sent":   sent,
