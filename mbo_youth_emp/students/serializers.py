@@ -8,6 +8,11 @@ from .models import Student
 class StudentSerializer(serializers.ModelSerializer):
     
     has_active_award = serializers.SerializerMethodField()
+    # The passport lives on the linked User (accounts.User.passport), set at
+    # registration. The legacy Student.passport column is never populated, so we
+    # surface the User's photo under the same `passport` key for the admin
+    # verification screens.
+    passport = serializers.SerializerMethodField()
 
     class Meta:
         model  = Student
@@ -19,6 +24,12 @@ class StudentSerializer(serializers.ModelSerializer):
 
     def get_has_active_award(self, obj) -> bool:
         return obj.has_active_award()
+
+    def get_passport(self, obj):
+        user = getattr(obj, 'user', None)
+        if user is not None and user.passport:
+            return user.passport.url
+        return None
 
 
 class StudentCreateSerializer(serializers.ModelSerializer):

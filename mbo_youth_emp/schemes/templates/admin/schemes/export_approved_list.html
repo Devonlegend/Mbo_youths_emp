@@ -1,0 +1,37 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Export approved applicants</h1>
+<p>Stream the approved applicants for the selected scheme(s) below as CSV.
+Choose a ward to export only that ward's approved applicants, or leave it on
+<strong>All wards</strong> for the full list.</p>
+
+<h2>Selected schemes</h2>
+<ul>
+  {% for s in schemes %}
+    <li>{{ s.name }} — {{ s.get_award_type_display }} ({{ s.academic_year }})</li>
+  {% endfor %}
+</ul>
+
+<form method="post" action="">
+  {% csrf_token %}
+  <p>
+    <label for="ward">Ward:</label>
+    <select name="ward" id="ward">
+      <option value="">All wards</option>
+      {% for w in wards %}
+        <option value="{{ w }}">{{ w }}</option>
+      {% endfor %}
+    </select>
+  </p>
+  <input type="submit" value="Export CSV" class="default">
+</form>
+
+{% if not wards %}
+  <p><strong>None of the selected schemes have approved applicants with a ward set yet.</strong>
+  You can still export the full list.</p>
+{% endif %}
+
+<p style="margin-top:16px">
+  <a href="{% url 'admin:schemes_scholarshipscheme_changelist' %}" class="closelink">Back to schemes</a>
+</p>
+{% endblock %}

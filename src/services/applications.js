@@ -35,8 +35,12 @@ export const getApplicationsByScheme = (schemeId, status) =>
 export const getApprovedList = (schemeId) =>
   api.get("/applications/approved-list/", { params: { scheme: schemeId } });
 
-export const downloadApprovedListCsv = (schemeId) =>
+export const downloadApprovedListCsv = (schemeId, ward) =>
   api.get("/applications/approved-list/", {
-    params: { scheme: schemeId, export: "csv" },
+    params: {
+      scheme: schemeId,
+      ward: ward || undefined,
+      export: "csv",
+    },
     responseType: "blob",
   });

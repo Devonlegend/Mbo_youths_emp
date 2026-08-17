@@ -260,8 +260,95 @@ class ApprovedListExportTests(APITestCase):
         self.assertIn('08030000002', body)
         self.assertIn('1010101010', body)
 
-    def test_admin_action_streams_csv(self):
+    def _make_approved_in_ward(self, ward, email, phone, firstname, lastname,
+                               bank_account='3030303030'):
+        user = User.objects.create_user(
+            email=email, firstname=firstname, lastname=lastname,
+            phone_number=phone, role='student',
+            nin_hash='nin-hash-export-' + firstname.lower(), password='x',
+            passport='')
+        student = Student.objects.create(
+            user=user, email=email, firstname=firstname, lastname=lastname,
+            phone_number=phone, ward=ward, bank_name='UBA', bank_code='033',
+            bank_account_number=bank_account, bank_account_name=lastname)
+        app = self.model.objects.create(
+            student=student, scheme=self.scheme,
+            status=ApplicationStatus.APPROVED,
+            submission_date=timezone.now(),
+            self_declaration_received_support=False,
+            self_declaration_details=[],
+            attestation_agreed=True,
+            attestation_at=timezone.now(),
+            documents={},
+            eligibility_passed=True,
+            eligibility_details={},
+            waiver_submitted=False,
+            bank_name='UBA', bank_code='033',
+            account_number=bank_account, account_name=lastname,
+            name_match_passed=True,
+            institution_name='University of Uyo', course_of_study='Computer Science',
+            current_level='300', cgpa=Decimal('3.50'),
+            admission_year=2023, matric_number='U2023/00' + firstname[0],
+        )
+        ApplicationStatusHistory.objects.create(
+            application_id=app.id, scheme=self.scheme,
+            from_status=ApplicationStatus.SUBMITTED,
+            to_status=ApplicationStatus.APPROVED,
+            changed_by=self.verifier, reason='meets criteria',
+        )
+        return app
+
+    def test_ward_filter_returns_only_that_ward(self):
+        self._make_approved()  # ward='efiat'
+        self._make_approved_in_ward(
+            'okobo', 'student2@export.test', '08030000004',
+            'Bassey', 'Edet')
+        self.client.force_authenticate(user=self.verifier)
+        resp = self.client.get(
+            '/applications/approved-list/?scheme={}&ward=okobo'.format(self.scheme.id))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['count'], 1)
+        rec = resp.data['applications'][0]
+        self.assertEqual(rec['full_name'], 'Bassey Edet')
+        self.assertEqual(rec['ward'], 'okobo')
+
+    def test_ward_filter_is_case_insensitive(self):
+        self._make_approved()  # ward='efiat'
+        self._make_approved_in_ward(
+            'OKOBO', 'student3@export.test', '08030000005',
+            'Imoh', 'Akpan')
+        self.client.force_authenticate(user=self.verifier)
+        resp = self.client.get(
+            '/applications/approved-list/?scheme={}&ward=okobo'.format(self.scheme.id))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['count'], 1)
+        self.assertEqual(resp.data['applications'][0]['ward'], 'OKOBO')
+
+    def test_csv_download_filtered_by_ward(self):
+        self._make_approved()  # ward='efiat'
+        self._make_approved_in_ward(
+            'okobo', 'student4@export.test', '08030000006',
+            'Nse', 'Ekanem')
+        self.client.force_authenticate(user=self.verifier)
+        resp = self.client.get(
+            '/applications/approved-list/?scheme={}&ward=okobo&export=csv'.format(self.scheme.id))
+        self.assertEqual(resp.status_code, 200)
+        body = resp.content.decode('utf-8')
+        self.assertIn('Nse Ekanem', body)
+        self.assertIn('08030000006', body)
+        self.assertNotIn('Ada Okon', body)
+        self.assertNotIn('08030000002', body)
+
+    def _make_admin(self):
+        admin_user = User.objects.create_superuser(
+            email='admin@export.test', firstname='Ad', lastname='Min',
+            nin_hash='01010101010', phone_number='08040000000', password='x')
+        self.client.force_login(admin_user)
+        return admin_user
+
+    def test_admin_action_redirects_to_ward_picker(self):
         self._make_approved()
+        self._make_admin()
         from schemes.admin import export_approved_list
         from schemes.models import ScholarshipScheme
 
@@ -271,14 +358,54 @@ class ApprovedListExportTests(APITestCase):
 
         stub = _Stub()
         qs = ScholarshipScheme.objects.filter(id=self.scheme.id)
-        resp = export_approved_list(stub, None, qs)
-        self.assertIsNotNone(resp)
+        resp = export_approved_list(stub, self.client.get('/admin/').wsgi_request, qs)
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('export-approved-list/?ids={}'.format(self.scheme.id), resp['Location'])
+
+    def test_admin_ward_picker_page_lists_wards(self):
+        self._make_approved()  # ward='efiat'
+        self._make_approved_in_ward(
+            'okobo', 'student5@export.test', '08030000007',
+            'Uduak', 'Offiong')
+        self._make_admin()
+        resp = self.client.get(
+            '/admin/schemes/scholarshipscheme/export-approved-list/?ids={}'.format(self.scheme.id))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(self.scheme.name, resp.content.decode('utf-8'))
+        self.assertContains(resp, 'efiat')
+        self.assertContains(resp, 'okobo')
+
+    def test_admin_ward_export_streams_only_that_ward(self):
+        self._make_approved()  # ward='efiat'
+        self._make_approved_in_ward(
+            'okobo', 'student6@export.test', '08030000008',
+            'Aniekan', 'Udo')
+        self._make_admin()
+        resp = self.client.post(
+            '/admin/schemes/scholarshipscheme/export-approved-list/?ids={}'.format(self.scheme.id),
+            {'ward': 'okobo'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'text/csv; charset=utf-8')
+        self.assertIn('attachment', resp['Content-Disposition'])
+        self.assertIn('okobo', resp['Content-Disposition'])
+        body = resp.content.decode('utf-8')
+        self.assertIn('Aniekan Udo', body)
+        self.assertNotIn('Ada Okon', body)
+
+    def test_admin_ward_export_all_wards(self):
+        self._make_approved()  # ward='efiat'
+        self._make_approved_in_ward(
+            'okobo', 'student7@export.test', '08030000009',
+            'Mfon', 'Jacob')
+        self._make_admin()
+        resp = self.client.post(
+            '/admin/schemes/scholarshipscheme/export-approved-list/?ids={}'.format(self.scheme.id),
+            {'ward': ''})
+        self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp['Content-Type'], 'text/csv; charset=utf-8')
         body = resp.content.decode('utf-8')
-        self.assertIn('Full Name,Phone Number,Email', body)
         self.assertIn('Ada Okon', body)
-        self.assertIn('08030000002', body)
-        self.assertIn('1010101010', body)
+        self.assertIn('Mfon Jacob', body)
 
     def test_students_are_not_allowed(self):
 

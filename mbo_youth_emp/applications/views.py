@@ -291,11 +291,14 @@ class ApplicationViewSet(viewsets.ViewSet):
             "Flat disbursement list of every APPROVED application in one scheme: "
             "student name, phone, email, ward and the bank snapshot captured on "
             "the application. `?scheme=` is required. Append `&export=csv` to "
-            "stream the same data as a downloadable CSV. Verifier/admin only."
+            "stream the same data as a downloadable CSV. Add `&ward=` to limit "
+            "the list to approved applicants from a single ward. Verifier/admin only."
         ),
         parameters=[
             OpenApiParameter('scheme', str, required=True,
                              description='ScholarshipScheme id to export.'),
+            OpenApiParameter('ward', str,
+                             description='Optional ward to filter approved applicants by.'),
             OpenApiParameter('export', str,
                              description='Set to `csv` to download a CSV file.'),
         ],
@@ -310,6 +313,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         # Every approved application in ONE scheme's table as flat records
         # (name + phone + email + bank snapshot + approval timestamp).
         # `?export=csv` downloads the same data as a CSV instead of JSON.
+        # `?ward=` narrows to approved applicants from a single ward.
         scheme_id = request.query_params.get('scheme')
         if not scheme_id:
             return Response(
@@ -323,10 +327,14 @@ class ApplicationViewSet(viewsets.ViewSet):
         if not scheme.table_name:
             return Response({"error": "Scheme has no application table"}, status=400)
 
+        ward = request.query_params.get('ward', '').strip()
+
         model = get_application_model(scheme)
+        qs = model.objects.filter(status=ApplicationStatus.APPROVED)
+        if ward:
+            qs = qs.filter(student__ward__iexact=ward)
         rows = list(
-            model.objects.filter(status=ApplicationStatus.APPROVED)
-            .select_related('student', 'scheme')
+            qs.select_related('student', 'scheme')
             .order_by('created_at')
         )
 

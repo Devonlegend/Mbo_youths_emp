@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class StudentViewSet(viewsets.ModelViewSet):
-    queryset           = Student.objects.all().order_by('firstname')
+    # select_related('user') so serializer reads of obj.user.passport don't
+    # trigger an extra query per row on the list endpoint.
+    queryset           = Student.objects.select_related('user').order_by('firstname')
     serializer_class   = StudentSerializer
     permission_classes = [IsAuthenticated]
 
