@@ -657,7 +657,7 @@ class ApplicationViewSet(viewsets.ViewSet):
             attestation_agreed = data['attestation_agreed'],
             documents          = documents,
             changed_by         = request.user,
-            history_reason     = f'Created by admin {request.user.get_full_name() or request.user.email}',
+            history_reason     = f'Created by admin {request.user.full_name or request.user.email}',
         )
 
         record_admin_action(
