@@ -265,6 +265,22 @@ export default function StudentDetailPage() {
                   </div>
                 </div>
 
+                <div className={styles.infoRow}>
+                  <div className={styles.infoIcon}>
+                    <FileText size={14} strokeWidth={1.8} />
+                  </div>
+                  <div className={styles.infoContent}>
+                    <span className={styles.infoLabel}>NIN Slip</span>
+                    {student.nin_slip ? (
+                      <a href={getFileUrl(student.nin_slip)} target="_blank" rel="noopener noreferrer" className={styles.docLink}>
+                        View NIN Slip
+                      </a>
+                    ) : (
+                      <span className={styles.infoValue}>—</span>
+                    )}
+                  </div>
+                </div>
+
               </div>
             </div>
 
