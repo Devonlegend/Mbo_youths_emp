@@ -62,6 +62,11 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
     return pathname.startsWith(href);
   }
 
+  function capitalize(str) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
   const initials =
     (user?.firstname?.[0]?.toUpperCase() || "") +
     (user?.lastname?.[0]?.toUpperCase()  || "");
@@ -149,7 +154,7 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
             </div>
             <div className={styles.adminInfo}>
               <span className={styles.adminName}>
-                {user?.firstname} {user?.lastname}
+              {capitalize(user?.firstname)} {capitalize(user?.lastname)}
               </span>
               <span className={styles.adminRole}>{roleLabel}</span>
             </div>

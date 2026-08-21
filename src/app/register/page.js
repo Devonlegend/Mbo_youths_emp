@@ -110,7 +110,9 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [certificate, setCertificate] = useState(null);
   const [passport, setPassport] = useState(null);
+  const [ninSlip, setNinSlip] = useState(null);
   const [certError, setCertError] = useState("");
+  const [ninSlipError, setNinSlipError] = useState("");
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "",
     nin: "", dob: "", gender: "", lga: "", ward: "",
@@ -173,6 +175,28 @@ export default function RegisterPage() {
   }
 
   function removeCertificate() { setCertificate(null); setCertError(""); }
+
+  function handleNinSlipChange(e) {
+    const file = e.target.files[0];
+    setNinSlipError("");
+    if (!file) return;
+    const allowed = ["application/pdf", "image/jpeg", "image/png"];
+    if (!allowed.includes(file.type)) {
+      setNinSlipError("Only PDF, JPG or PNG files are allowed.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setNinSlipError("File size must not exceed 5MB.");
+      e.target.value = "";
+      return;
+    }
+    setNinSlip(file);
+    setErrors((prev) => ({ ...prev, ninSlip: "" }));
+  }
+
+  function removeNinSlip() { setNinSlip(null); setNinSlipError(""); }
+
   function formatFileSize(bytes) { return (bytes / 1024).toFixed(1) + " KB"; }
 
   function dismissKeyboard(e) {
@@ -225,6 +249,7 @@ export default function RegisterPage() {
     }
     if (s === 3) {
       if (!passport) e.passport = "Passport photo is required.";
+      if (!ninSlip) e.ninSlip = "NIN Slip is required.";
     }
     if (s === 4) {
       if (!form.password) e.password = "Required";
@@ -271,6 +296,7 @@ export default function RegisterPage() {
       formData.append("password", form.password);
       if (passport) formData.append("passport", passport);
       if (certificate) formData.append("certificate", certificate);
+      if (ninSlip) formData.append("nin_slip", ninSlip);
 
       await register(formData);
 
@@ -768,6 +794,36 @@ export default function RegisterPage() {
                   )}
                   {certError && <span className={styles.error}>{certError}</span>}
                   {errors.certificate && !certError && <span className={styles.error}>{errors.certificate}</span>}
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label}>NIN Slip</label>
+                  {!ninSlip ? (
+                    <label className={styles.uploadArea + (errors.ninSlip ? " " + styles.inputError : "")}>
+                      <input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png"
+                        onChange={handleNinSlipChange}
+                        style={{ display: "none" }}
+                      />
+                      <UploadCloud size={22} color="#94a3b8" />
+                      <span className={styles.uploadTitle}>Click to upload</span>
+                      <span className={styles.uploadHint}>PDF, JPG or PNG · Max 5MB</span>
+                    </label>
+                  ) : (
+                    <div className={styles.filePreview}>
+                      <FileText size={20} color="#15803d" />
+                      <div className={styles.fileInfo}>
+                        <span className={styles.fileName}>{ninSlip.name}</span>
+                        <span className={styles.fileSize}>{formatFileSize(ninSlip.size)}</span>
+                      </div>
+                      <button type="button" onClick={removeNinSlip} className={styles.fileRemove}>
+                        <Trash2 size={15} color="#ef4444" />
+                      </button>
+                    </div>
+                  )}
+                  {ninSlipError && <span className={styles.error}>{ninSlipError}</span>}
+                  {errors.ninSlip && !ninSlipError && <span className={styles.error}>{errors.ninSlip}</span>}
                 </div>
               </>
             )}

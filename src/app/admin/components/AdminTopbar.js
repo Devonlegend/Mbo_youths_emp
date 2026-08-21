@@ -41,6 +41,11 @@ export default function AdminTopbar({ user, onMenuOpen }) {
     setTheme(next);
   }
 
+  function capitalize(str) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
   useEffect(() => {
     function handleClick(e) {
       if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false);
@@ -127,7 +132,7 @@ export default function AdminTopbar({ user, onMenuOpen }) {
           >
             <div className={styles.avatar}>{initials || "AD"}</div>
             <div className={styles.avatarInfo}>
-              <span className={styles.avatarName}>{user?.firstname} {user?.lastname}</span>
+              <span className={styles.avatarName}>{capitalize(user?.firstname)} {capitalize(user?.lastname)}</span>
               <span className={styles.avatarRole}>{roleLabel}</span>
             </div>
             <ChevronDown
@@ -142,7 +147,7 @@ export default function AdminTopbar({ user, onMenuOpen }) {
               <div className={styles.dropHeader}>
                 <div className={styles.dropAvatar}>{initials || "AD"}</div>
                 <div>
-                  <div className={styles.dropName}>{user?.firstname} {user?.lastname}</div>
+                  <div className={styles.dropName}>{capitalize(user?.firstname)} {capitalize(user?.lastname)}</div>
                   <div className={styles.dropEmail}>{user?.email || ""}</div>
                 </div>
               </div>

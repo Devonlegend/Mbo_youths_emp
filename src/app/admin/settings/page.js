@@ -53,6 +53,11 @@ function Section({ title, sub, children }) {
   );
 }
 
+function capitalize(str) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
 // ── ROLE BADGE ────────────────────────────────────────────────────────────────
 function RoleBadge({ role }) {
   const config = {
@@ -374,7 +379,7 @@ export default function AdminSettingsPage() {
           </div>
 
           <div className={styles.profileInfo}>
-            <p className={styles.profileName}>{user?.firstname} {user?.lastname}</p>
+            <p className={styles.profileName}>{capitalize(user?.firstname)} {capitalize(user?.lastname)}</p>
             <p className={styles.profileEmail}>{user?.email}</p>
             <p className={styles.profileLastLogin}>
               Last login: {user?.last_login
@@ -397,7 +402,7 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 className={`${styles.formInput} ${styles.formInputDisabled}`}
-                value={user?.firstname || ""}
+                value={capitalize(user?.firstname)}
                 disabled
               />
             </div>
@@ -406,10 +411,10 @@ export default function AdminSettingsPage() {
                 <User size={12} strokeWidth={2} /> Last Name
               </label>
               <input
-                className={`${styles.formInput} ${styles.formInputDisabled}`}
-                value={user?.lastname || ""}
-                disabled
-              />
+                  className={`${styles.formInput} ${styles.formInputDisabled}`}
+                  value={capitalize(user?.lastname)}
+                  disabled
+                />
             </div>
           </div>
 
