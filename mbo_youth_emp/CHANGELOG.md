@@ -1,5 +1,91 @@
 # Changelog
 
+## v1.1.6 (wip)
+
+**Audit log completed — every administrative action is now recorded, and `GET /audit/` returns a paginated response.**
+
+---
+
+### 🗂️ Backend
+
+- **`audit/services.py` (new)** — failure-safe `record_admin_action()` helper that appends an immutable `AuditLog` row. The write is wrapped in try/except so a logging failure never breaks (or rolls back) the admin action that triggered it. A `None` / unauthenticated actor is stored as `null` and surfaced as "System" by the serializer.
+- **`audit/views.py`** — added `AuditLogPagination` (100 rows per page) and converted `AuditLogView` from a fixed 100-row slice back to a proper DRF paginated envelope (`{ count, next, previous, results }`, newest first). This fixes the contract mismatch where the frontend Audit Log page read `results/count/next/previous` from a bare-array response the old endpoint never provided — the page always rendered "No audit entries yet".
+- **Admin actions now write audit entries.** Entity types match the UI filter chips: `Application`, `Student`, `Scheme`, `Cycle`, `SchemeProvider`.
+  - **`applications/views.py`** — `review` (approved / rejected / shortlisted), `withdraw`, `staff_create`, `publish` (approval emails, with count sent)
+  - **`schemes/views.py`** — scheme create/update/delete + `publish` / `close` / `reopen`; cycle create/update/delete + `activate`; provider create/update/delete
+  - **`students/views.py`** — `verify` (verification approved / rejected)
+- **`audit/admin.py`** — `AuditLog` registered in Django admin as a read-only browsable trail: `list_display`, entity-type + date filters, search across action / entity id / admin name & email, newest first. Add and delete permissions are disabled and every field is read-only so entries can never be tampered with from the admin.
+- **Tests (`audit/tests.py`)** — `RecordAdminActionTests` (row created, `entity_id` stringified, `None`/unauthenticated actor → System, never raises) and `AuditLogApiTests` (paginated envelope shape, `page_size = 100`, page 2 slice, admin + superadmin allowed, student + anonymous denied, serialized fields). **Ran 13 tests — OK**; full `students` suite still green.
+
+---
+
+
+
+
+**Note:** audit search/filter stays client-side over the current page (100 rows); paging through older entries uses the existing pagination bar.
+
+---
+
+## v1.1.5 (wip)
+
+**Ward-filtered approved-list CSV + Student passport from the User table.**
+
+---
+
+### 🗂️ Backend — `GET /applications/approved-list/` now filters by ward
+
+- **`applications/views.py`** — added an optional `?ward=` query param. When present, approved applicants are filtered by `student.ward` (case-insensitive, `iexact`) for **both** the JSON response and the `&export=csv` download.
+- **Swagger** — new `ward` parameter documented on the action.
+- **`schemes/admin.py`** — the "Export approved applicants" action now routes through an intermediate ward-picker page instead of streaming immediately:
+  - `_stream_approved_csv(response, schemes, ward=None)` — extracted streaming helper; honours an optional ward filter
+  - `ScholarshipSchemeAdmin.export_approved_list_view` — GET lists the selected schemes and a ward dropdown (only wards that actually have approved applicants); POST streams the CSV
+  - Download filename becomes `approved-applicants-{ward}.csv` when a ward is chosen
+- **New template** — `schemes/templates/admin/schemes/export_approved_list.html`
+
+### 🧪 Tests (`applications/tests.py` — `ApprovedListExportTests`)
+
+- Ward filter returns only that ward's approved applicants (JSON)
+- Ward filter is case-insensitive
+- CSV export filtered by ward excludes other wards
+- Admin action redirects to the ward picker
+- Admin ward-picker page lists the real wards
+- Admin ward-filtered CSV export; all-wards export unchanged
+- Full `ApprovedListExportTests` suite: **Ran 12 tests — OK**
+
+---
+
+### 🗂️ Backend — Student passport now read from the User table
+
+- **`students/serializers.py`** — `StudentSerializer.passport` now serializes the linked `accounts.User.passport` photo (`obj.user.passport.url`). The legacy `Student.passport` column is never populated, so it was always empty.
+- **`students/views.py`** — `StudentViewSet.queryset` now uses `select_related('user')` so the serializer read doesn't trigger an N+1 query per row.
+- **Tests** (`students/tests.py` — `StudentDetailPassportTests`): detail returns the user's passport URL; null when the user has no photo; the list endpoint returns it too.
+
+---
+
+### 🖥️ Service (Frontend API client)
+
+- **`src/services/applications.js`** — `downloadApprovedListCsv(schemeId, ward?)` now forwards an optional `ward` to the API. Omitted/empty ⇒ unchanged behaviour (all wards).
+
+---
+
+### 🔧 Ops
+
+- **`docker-compose.yml`** — expose Postgres on `127.0.0.1:5432:5432` (localhost only) for local tooling
+- **`DEPLOYMENT.md`** — corrected backend base URL references
+
+---
+
+### 🖥️ What the frontend should do (NOT implemented yet in this release)
+
+Backend + service support for ward filtering is in, but the admin UI does **not** surface it yet. To let admins download one ward's approved list from the portal:
+
+1. **`src/app/admin/beneficiaries/[id]/page.js`**
+   - Add a `ward` state (default `""` = all wards) and a ward `<select>` in the toolbar next to the search box. Populate options client-side from the loaded `beneficiaries` (unique non-empty `b.ward`, sorted, plus an "All wards" option) — no extra API call needed since `getApprovedList` already returns every approved record for the scheme.
+   - Include the ward in the table filter: `(!ward || b.ward === ward)`.
+   - Pass the selected ward to the export handler: `downloadApprovedListCsv(schemeId, ward)`.
+   - When a ward/search filter is active, show the filtered count in the header count pill.
+2. **`src/app/admin/beneficiaries/[id]/page.module.css`** — add a `.wardSelect` style matching the existing `.searchInput` look.
+
 ## v1.1.4 (wip)
 
 **Backend-only: new API to pull every approved applicant for a single scheme — names, phone numbers, emails & bank details — as JSON or CSV.**

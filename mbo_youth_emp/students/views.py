@@ -10,12 +10,15 @@ import logging
 from .models import Student
 from .serializers import StudentSerializer, StudentCreateSerializer
 from accounts.permissions import IsAdmin, IsStudent, IsVerifier
+from audit.services import record_admin_action
 
 logger = logging.getLogger(__name__)
 
 
 class StudentViewSet(viewsets.ModelViewSet):
-    queryset           = Student.objects.all().order_by('firstname')
+    # select_related('user') so serializer reads of obj.user.passport don't
+    # trigger an extra query per row on the list endpoint.
+    queryset           = Student.objects.select_related('user').order_by('firstname')
     serializer_class   = StudentSerializer
     permission_classes = [IsAuthenticated]
 
@@ -200,6 +203,13 @@ class StudentViewSet(viewsets.ModelViewSet):
             except Exception:
                 logger.exception(
                     "Failed to create verified notification for student %s", student.pk)
+
+        record_admin_action(
+            request.user,
+            f"Student verification {decision}",
+            "Student",
+            str(student.pk),
+        )
 
         return Response({
             "is_verified": student.is_verified,

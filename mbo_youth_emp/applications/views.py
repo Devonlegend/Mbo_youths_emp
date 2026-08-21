@@ -44,6 +44,7 @@ from .services.slots import consume_slot, SlotUnavailable
 from .services.withdrawal import withdraw_application
 from schemes.models import ScholarshipScheme
 from accounts.permissions import IsVerifier, IsAdmin
+from audit.services import record_admin_action
 
 # ── Notification tasks ────────────────────────────────────────────────────────
 # send_application_rejected_email is intentionally NOT imported: rejection emails
@@ -291,11 +292,14 @@ class ApplicationViewSet(viewsets.ViewSet):
             "Flat disbursement list of every APPROVED application in one scheme: "
             "student name, phone, email, ward and the bank snapshot captured on "
             "the application. `?scheme=` is required. Append `&export=csv` to "
-            "stream the same data as a downloadable CSV. Verifier/admin only."
+            "stream the same data as a downloadable CSV. Add `&ward=` to limit "
+            "the list to approved applicants from a single ward. Verifier/admin only."
         ),
         parameters=[
             OpenApiParameter('scheme', str, required=True,
                              description='ScholarshipScheme id to export.'),
+            OpenApiParameter('ward', str,
+                             description='Optional ward to filter approved applicants by.'),
             OpenApiParameter('export', str,
                              description='Set to `csv` to download a CSV file.'),
         ],
@@ -310,6 +314,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         # Every approved application in ONE scheme's table as flat records
         # (name + phone + email + bank snapshot + approval timestamp).
         # `?export=csv` downloads the same data as a CSV instead of JSON.
+        # `?ward=` narrows to approved applicants from a single ward.
         scheme_id = request.query_params.get('scheme')
         if not scheme_id:
             return Response(
@@ -323,10 +328,14 @@ class ApplicationViewSet(viewsets.ViewSet):
         if not scheme.table_name:
             return Response({"error": "Scheme has no application table"}, status=400)
 
+        ward = request.query_params.get('ward', '').strip()
+
         model = get_application_model(scheme)
+        qs = model.objects.filter(status=ApplicationStatus.APPROVED)
+        if ward:
+            qs = qs.filter(student__ward__iexact=ward)
         rows = list(
-            model.objects.filter(status=ApplicationStatus.APPROVED)
-            .select_related('student', 'scheme')
+            qs.select_related('student', 'scheme')
             .order_by('created_at')
         )
 
@@ -648,7 +657,14 @@ class ApplicationViewSet(viewsets.ViewSet):
             attestation_agreed = data['attestation_agreed'],
             documents          = documents,
             changed_by         = request.user,
-            history_reason     = f'Created by admin {request.user.get_full_name() or request.user.email}',
+            history_reason     = f'Created by admin {request.user.full_name or request.user.email}',
+        )
+
+        record_admin_action(
+            request.user,
+            f"Created application on behalf of student '{student.full_name}'",
+            "Application",
+            str(application.id),
         )
 
         # ── Optional status override ───────────────────────────────────────
@@ -817,6 +833,13 @@ class ApplicationViewSet(viewsets.ViewSet):
                     reason         = reason,
                 )
 
+                record_admin_action(
+                    request.user,
+                    f"Application {decision}",
+                    "Application",
+                    str(application.id),
+                )
+
                 # ── Notifications ─────────────────────────────────────────────
                 # Approval emails are NOT sent here. They are staged as a
                 # pending notification and dispatched in bulk when a reviewer
@@ -871,6 +894,13 @@ class ApplicationViewSet(viewsets.ViewSet):
             )
 
         application, remaining = withdraw_application(application, scheme, request.user)
+
+        record_admin_action(
+            request.user,
+            "Withdrew approved application (slot released)",
+            "Application",
+            str(application.id),
+        )
 
         try:
             notify_application_status_update(application.student.user, application, 'withdrawn')
@@ -932,6 +962,13 @@ class ApplicationViewSet(viewsets.ViewSet):
                 sent += 1
             notification.sent_at = timezone.now()
             notification.save(update_fields=['sent_at'])
+
+        record_admin_action(
+            request.user,
+            f"Published approval emails for scheme '{scheme.name}' ({sent} sent)",
+            "Scheme",
+            str(scheme.id),
+        )
 
         return Response({
             "sent":   sent,

@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import ScholarshipScheme, Cycle, SchemeProvider
 from .serializers import ScholarshipSchemeSerializer, CycleSerializer, SchemeProviderSerializer
 from accounts.permissions import IsAdmin
+from audit.services import record_admin_action
 
 
 class SchemeProviderViewSet(viewsets.ModelViewSet):
@@ -17,6 +18,34 @@ class SchemeProviderViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return [IsAuthenticated()]
         return [IsAdmin()]
+
+    def perform_create(self, serializer):
+        provider = serializer.save()
+        record_admin_action(
+            self.request.user,
+            f"Created provider '{provider.name}'",
+            "SchemeProvider",
+            str(provider.id),
+        )
+
+    def perform_update(self, serializer):
+        provider = serializer.save()
+        record_admin_action(
+            self.request.user,
+            f"Updated provider '{provider.name}'",
+            "SchemeProvider",
+            str(provider.id),
+        )
+
+    def perform_destroy(self, instance):
+        name = instance.name
+        record_admin_action(
+            self.request.user,
+            f"Deleted provider '{name}'",
+            "SchemeProvider",
+            str(instance.id),
+        )
+        instance.delete()
 
 
 class CycleViewSet(viewsets.ModelViewSet):
@@ -30,6 +59,34 @@ class CycleViewSet(viewsets.ModelViewSet):
             return [AllowAny()]
         return [IsAdmin()]
 
+    def perform_create(self, serializer):
+        cycle = serializer.save()
+        record_admin_action(
+            self.request.user,
+            f"Created cycle '{cycle.label}'",
+            "Cycle",
+            str(cycle.id),
+        )
+
+    def perform_update(self, serializer):
+        cycle = serializer.save()
+        record_admin_action(
+            self.request.user,
+            f"Updated cycle '{cycle.label}'",
+            "Cycle",
+            str(cycle.id),
+        )
+
+    def perform_destroy(self, instance):
+        label = instance.label
+        record_admin_action(
+            self.request.user,
+            f"Deleted cycle '{label}'",
+            "Cycle",
+            str(instance.id),
+        )
+        instance.delete()
+
     @action(detail=True, methods=['post'], url_path='activate')
     def activate(self, request, pk=None):
         """POST /schemes/cycles/{id}/activate/ — make this the active cycle."""
@@ -38,6 +95,12 @@ class CycleViewSet(viewsets.ModelViewSet):
         cycle = self.get_object()
         cycle.is_active = True
         cycle.save()
+        record_admin_action(
+            request.user,
+            f"Activated cycle '{cycle.label}'",
+            "Cycle",
+            str(cycle.id),
+        )
         return Response({'status': 'Cycle activated', 'cycle': CycleSerializer(cycle).data})
 
 
@@ -81,6 +144,34 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    def perform_create(self, serializer):
+        scheme = serializer.save()
+        record_admin_action(
+            self.request.user,
+            f"Created scheme '{scheme.name}'",
+            "Scheme",
+            str(scheme.id),
+        )
+
+    def perform_update(self, serializer):
+        scheme = serializer.save()
+        record_admin_action(
+            self.request.user,
+            f"Updated scheme '{scheme.name}'",
+            "Scheme",
+            str(scheme.id),
+        )
+
+    def perform_destroy(self, instance):
+        name = instance.name
+        record_admin_action(
+            self.request.user,
+            f"Deleted scheme '{name}'",
+            "Scheme",
+            str(instance.id),
+        )
+        instance.delete()
+
     @action(detail=True, methods=['post'])
     def publish(self, request, pk=None):
         """POST /schemes/{id}/publish/"""
@@ -88,6 +179,12 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
         scheme.is_published = True
         scheme.is_active    = True
         scheme.save()
+        record_admin_action(
+            request.user,
+            f"Published scheme '{scheme.name}'",
+            "Scheme",
+            str(scheme.id),
+        )
         return Response({
             'status': 'scheme published successfully',
             'is_published': scheme.is_published,
@@ -100,6 +197,12 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
         scheme = self.get_object()
         scheme.is_active = False
         scheme.save()
+        record_admin_action(
+            request.user,
+            f"Closed scheme '{scheme.name}'",
+            "Scheme",
+            str(scheme.id),
+        )
         return Response({
             'status': 'scheme closed successfully',
             'is_active': scheme.is_active
@@ -111,6 +214,12 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
         scheme = self.get_object()
         scheme.is_active = True
         scheme.save()
+        record_admin_action(
+            request.user,
+            f"Reopened scheme '{scheme.name}'",
+            "Scheme",
+            str(scheme.id),
+        )
         return Response({
             'status': 'scheme reopened successfully',
             'is_active': scheme.is_active

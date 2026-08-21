@@ -250,7 +250,7 @@ nc -zv <VPS_IP> 5432   # should hang / fail
 sudo docker compose exec backend python manage.py createsuperuser
 
 # sanity check
-curl https://back.mboempowerment.com/api/schema/
+curl https://.mboempowerment.com/api/schema/
 ```
 
 ## Common tasks
@@ -272,7 +272,7 @@ curl https://back.mboempowerment.com/api/schema/
 **Why `BACKEND_URL=http://backend:8080` when everyone else runs on one host?**
 The frontend's `/api/proxy` route is a Next.js server route. On the same Docker
 network it can reach the backend directly by container name — no public
-round-trip, no extra TLS. Only change it to `https://back.mboempowerment.com` for
+round-trip, no extra TLS. Only change it to `https://.mboempowerment.com` for
 the Render split (Option A).
 
 **Do I still need `mbo_youth_emp/.env` for deploys?**
