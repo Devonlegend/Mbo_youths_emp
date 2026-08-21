@@ -11,6 +11,7 @@ MAX_UPLOAD_BYTES = int(getattr(settings, 'MAX_UPLOAD_SIZE_MB', 5)) * 1024 * 1024
 ALLOWED_UPLOAD_TYPES = {
     'image/jpeg': '.jpg',
     'image/png': '.png',
+    
     'application/pdf': '.pdf',
 }
 

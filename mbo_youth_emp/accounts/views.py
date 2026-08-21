@@ -30,7 +30,7 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ cookie helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 def _cookie_flags():
     """Resolve secure/samesite from settings, with sane DEBUG defaults."""
@@ -102,7 +102,9 @@ def _delete_unverified_user(**filters):
             'gender': drf_serializers.CharField(required=False),
             'ward': drf_serializers.CharField(required=False),
             'lga': drf_serializers.CharField(required=False),
+            'nin_slip': drf_serializers.FileField(required=False),
             'passport': drf_serializers.FileField(),
+
             'certificate': drf_serializers.FileField(required=False),
         },
     ),
@@ -133,6 +135,7 @@ def register(request):
     ward         = request.data.get('ward', '')
     gender       = request.data.get('gender')
     lga          = request.data.get('lga', '')
+    nin_slip     = request.FILES.get('nin_slip')
     passport    = request.FILES.get('passport')
     certificate = request.FILES.get('certificate')
 
@@ -150,6 +153,7 @@ def register(request):
     try:
         validate_upload(passport, 'Passport photo', required=True)
         validate_upload(certificate, 'Certificate', required=False)
+        validate_upload(nin_slip, 'NIN slip', required=False)
     except FileValidationError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -163,9 +167,9 @@ def register(request):
                         status=status.HTTP_400_BAD_REQUEST)
     # Friendly pre-check for a nicer message; the unique constraint on nin_hash is the
     # real guard against the concurrent-registration race (handled below).
-    if User.objects.filter(nin_hash=nin_hash).exists():
+    """if User.objects.filter(nin_hash=nin_hash).exists():
         return Response({"error": "NIN already in use", "code": "nin_taken"},
-                        status=status.HTTP_400_BAD_REQUEST)
+                        status=status.HTTP_400_BAD_REQUEST)"""
 
     # Every self-registered user is initially a Student. Role is forced here
     # (ignoring any client-supplied role) so privileged roles can't be claimed
@@ -197,6 +201,7 @@ def register(request):
                 gender=gender,
                 date_of_birth=date_of_birth,
                 nin_hash=nin_hash,
+                nin_slip=nin_slip,
                 certificate=certificate
             )
     except IntegrityError:

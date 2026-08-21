@@ -17,7 +17,7 @@ class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Student
         fields = [
-            'user_id', 'email', 'firstname', 'lastname', 'phone_number', 'ward', 'lga',
+            'user_id', 'email', 'firstname', 'lastname', 'phone_number', 'ward','nin_slip', 'lga',
             'is_verified','gender', 'certificate','passport',
             'active_award', 'has_active_award',
         ]
@@ -42,6 +42,6 @@ class StudentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Student
         fields = [
-            'firstname', 'lastname', 'ward', 'lga', 'level', 'cgpa',
+            'firstname', 'lastname', 'ward', 'lga',
             'active_award',
         ]
