@@ -157,19 +157,20 @@ def register(request):
     except FileValidationError as exc:
         return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Allow re-registration over an unverified skeleton account so abandoned
-    # sign-ups don't permanently squat an email / NIN / phone number.
+    # Allow re-registration over an unverified skeleton account so an abandoned
+    # sign-up doesn't permanently squat an email. Only the SAME email may be
+    # reclaimed — a NIN belonging to another (even unverified) account is still
+    # a collision and is rejected below.
     _delete_unverified_user(email=email)
-    _delete_unverified_user(nin_hash=nin_hash)
 
     if User.objects.filter(email=email).exists():
         return Response({"error": "Email already registered"},
                         status=status.HTTP_400_BAD_REQUEST)
     # Friendly pre-check for a nicer message; the unique constraint on nin_hash is the
     # real guard against the concurrent-registration race (handled below).
-    """if User.objects.filter(nin_hash=nin_hash).exists():
+    if User.objects.filter(nin_hash=nin_hash).exists():
         return Response({"error": "NIN already in use", "code": "nin_taken"},
-                        status=status.HTTP_400_BAD_REQUEST)"""
+                        status=status.HTTP_400_BAD_REQUEST)
 
     # Every self-registered user is initially a Student. Role is forced here
     # (ignoring any client-supplied role) so privileged roles can't be claimed
@@ -178,36 +179,26 @@ def register(request):
     # user always has a matching student row keyed by the same UUID.
     try:
         with transaction.atomic():
-            user = User.objects.create_user(
-                email=email,
-                phone_number=phone_number,
-                role=Role.STUDENT,
-                password=password,
-                firstname=firstname,
-                lastname=lastname,
-                nin_hash=nin_hash,
-                date_of_birth=date_of_birth,
-                gender=gender,
-                passport=passport,
-            )
-            Student.objects.create(
-                user=user,
-                email=email,
-                firstname=firstname,
-                lastname=lastname,
-                phone_number=phone_number,
-                ward=ward or '',
-                lga=lga or '',
-                gender=gender,
-                date_of_birth=date_of_birth,
-                nin_hash=nin_hash,
-                nin_slip=nin_slip,
-                certificate=certificate
-            )
+            student = Student.objects.create_user(
+            email=email,
+            phone_number=phone_number,
+            role=Role.STUDENT,
+            password=password,
+            firstname=firstname,
+            lastname=lastname,
+            nin_hash=nin_hash,
+            date_of_birth=date_of_birth,
+            gender=gender,
+            passport=passport,
+            ward=ward or '',
+            lga=lga or '',
+            nin_slip=nin_slip,
+            certificate=certificate,
+        )
     except IntegrityError:
         # Lost the race to another concurrent registration with the same NIN
         # (or email/phone). Surface the NIN case with the same friendly code.
-        if User.objects.filter(nin_hash=nin_hash).exists():
+        if Student.objects.filter(nin_hash=nin_hash).exists():
             return Response({"error": "NIN already in use", "code": "nin_taken"},
                             status=status.HTTP_400_BAD_REQUEST)
         return Response({"error": "Account already exists"},
@@ -216,7 +207,7 @@ def register(request):
     # No JWT cookies here â€” the client must complete the OTP flow
     # (/auth/otp/send/ â†’ /auth/otp/verify/) before being logged in.
     return Response(
-        {"message": "Account created. Please verify your email.", "email": user.email},
+        {"message": "Account created. Please verify your email.", "email": student.email},
         status=status.HTTP_201_CREATED,
     )
 
@@ -505,7 +496,7 @@ def logout(request):
     return response
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ password reset â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 
 # Generic message returned by request/verify/confirm so an attacker can't probe
 # which emails are registered.

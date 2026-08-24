@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
@@ -51,18 +51,22 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     id           = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email        = models.EmailField(unique=True)
-    gender = models.CharField(max_length=10,default='male', choices=[('male', 'Male'), ('female', 'Female')])
-    phone_number = models.CharField(max_length=15, unique=True)
-    role         = models.CharField(max_length=20, choices=Role.choices)
-    is_active    = models.BooleanField(default=True)
-    is_staff     = models.BooleanField(default=False)
-    date_of_birth = models.DateField(null=True)
-    created_at   = models.DateTimeField(auto_now_add=True)
+    # Shared identity fields. Students extend User via multi-table inheritance
+    # (students.models.Student), so these live here once — not duplicated on both
+    # tables. Staff (admin / verifier / superadmin) accounts use them too.
     firstname    = models.CharField(max_length=50)
     lastname     = models.CharField(max_length=50)
+    gender       = models.CharField(max_length=10, default='male',
+                                   choices=[('male', 'Male'), ('female', 'Female')])
+    date_of_birth = models.DateField(null=True)
+    phone_number = models.CharField(max_length=15, unique=True)
+    role         = models.CharField(max_length=20, choices=Role.choices, default=Role.STUDENT)
+    is_active    = models.BooleanField(default=True)
+    is_staff     = models.BooleanField(default=False)
+    created_at   = models.DateTimeField(auto_now_add=True)
     nin_hash     = models.CharField(max_length=64, unique=True)
     email_verified = models.BooleanField(default=False)
-    passport = models.FileField(null= False)
+    passport     = models.FileField(null=False)
 
     objects = UserManager()
 

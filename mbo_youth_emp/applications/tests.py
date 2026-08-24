@@ -40,8 +40,7 @@ class SlotBookkeepingTests(TestCase):
             password='x',
             passport='',
         )
-        cls.student = Student.objects.create(
-            user=cls.user, email=cls.user.email, firstname='A', lastname='B')
+        cls.student = Student.attach_to_user(cls.user)
 
     def _make_scheme(self, slots=1):
         return ScholarshipScheme.objects.create(
@@ -101,8 +100,7 @@ class WithdrawApplicationTests(TestCase):
             email='withdraw@test.com', firstname='A', lastname='B',
             phone_number='08000000001', role='student',
             nin_hash='nin-hash-withdraw-001', password='x', passport='')
-        cls.student = Student.objects.create(
-            user=cls.user, email=cls.user.email, firstname='A', lastname='B')
+        cls.student = Student.attach_to_user(cls.user)
 
     def _make_approved_app(self, slots=1):
         scheme = ScholarshipScheme.objects.create(
@@ -161,9 +159,7 @@ class ApprovedListExportTests(APITestCase):
             email='student@export.test', firstname='Ada', lastname='Okon',
             phone_number='08030000002', role='student',
             nin_hash='nin-hash-export-stu', password='x', passport='')
-        cls.student = Student.objects.create(
-            user=student_user, email=student_user.email,
-            firstname='Ada', lastname='Okon', phone_number='08030000002',
+        cls.student = Student.attach_to_user(student_user,
             ward='efiat', bank_name='UBA', bank_code='033',
             bank_account_number='1010101010', bank_account_name='Ada Okon')
         cls.scheme = ScholarshipScheme.objects.create(
@@ -267,10 +263,10 @@ class ApprovedListExportTests(APITestCase):
             phone_number=phone, role='student',
             nin_hash='nin-hash-export-' + firstname.lower(), password='x',
             passport='')
-        student = Student.objects.create(
-            user=user, email=email, firstname=firstname, lastname=lastname,
-            phone_number=phone, ward=ward, bank_name='UBA', bank_code='033',
-            bank_account_number=bank_account, bank_account_name=lastname)
+        student = Student.attach_to_user(user, ward=ward, bank_name='UBA',
+                                         bank_code='033',
+                                         bank_account_number=bank_account,
+                                         bank_account_name=lastname)
         app = self.model.objects.create(
             student=student, scheme=self.scheme,
             status=ApplicationStatus.APPROVED,

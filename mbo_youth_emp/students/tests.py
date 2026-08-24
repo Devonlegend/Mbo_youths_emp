@@ -43,8 +43,9 @@ class StudentDetailPassportTests(APITestCase):
             nin_hash='nin-hash-passport-001', password='x',
             passport=self._passport(),
         )
-        return Student.objects.create(
-            user=user, email=user.email, firstname='Ada', lastname='Okon')
+        # Student now multi-table-inherits User: attach the child row to the
+        # already-created parent instead of re-creating the User row.
+        return Student.attach_to_user(user)
 
     def test_detail_returns_user_passport_url(self):
         student = self._student_with_passport()
@@ -59,8 +60,7 @@ class StudentDetailPassportTests(APITestCase):
             phone_number='08022223333', role='student',
             nin_hash='nin-hash-passport-002', password='x', passport='',
         )
-        student = Student.objects.create(
-            user=user, email=user.email, firstname='No', lastname='Ph')
+        student = Student.attach_to_user(user)
         resp = self.client.get(reverse('student-detail', kwargs={'pk': student.pk}))
         self.assertEqual(resp.status_code, 200, resp.data)
         self.assertIsNone(resp.data['passport'])

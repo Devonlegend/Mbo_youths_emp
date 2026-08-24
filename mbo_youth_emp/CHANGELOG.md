@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.1.7 (scale)
+
+**Student converted to multi-table inheritance of `User` — identity fields now live once on the parent, and registration creates both rows in a single call.**
+
+---
+
+###  Backend
+
+- **`accounts/models.py`** — `firstname`, `lastname`, `date_of_birth` moved up from `Student` to `User`; `gender` now lives on `User` (with its `male`/`female` choices); `role` gained a `default=Role.STUDENT`. These are shared identity fields used by staff accounts too.
+- **`students/models.py`** — `Student` is now `class Student(User)` (multi-table inheritance) instead of a standalone model with a FK `user`:
+  - Duplicated columns removed from the child table: `email`, `phone_number`, `nin_hash`, `passport` (inherited from `User` now)
+  - `user = OneToOneField(User, primary_key=True, related_name='student', parent_link=True)` — the parent-link column, so `student.pk == user.id` and `request.user.student` / `student.user` resolve to the same row
+- **`accounts/views.py` — `register` simplified**: previously `User.objects.create_user(...)` + `Student.objects.create(user=user, ...)` inside one `transaction.atomic()`; now a single `Student.objects.create_user(...)` that writes both rows (the manager is inherited). `ward` / `lga` / `nin_slip` / `certificate` flow through as `extra_fields`.
+- **Duplicate-NIN fix in `register`**: removed `_delete_unverified_user(nin_hash=...)` and restored the `nin_taken` pre-check. The NIN-reclaim branch previously deleted another (unverified) account sharing the same NIN, so a second registration with the same NIN succeeded (201). Now only the same-email skeleton can be reclaimed; a duplicate NIN returns `400 {"error": "NIN already in use", "code": "nin_taken"}`.
+- **New migrations**: `accounts/0005_alter_user_role` (role default) and `students/0011_remove_student_date_of_birth_remove_student_email_and_more` (drop the now-duplicated child columns; rewire the `user` column as the MTI parent link).
+
+### 🛠️ Fixes
+
+- **Boot blocker**: `Student(User)` re-declared `firstname` / `lastname` / `gender` / `date_of_birth`, which Django forbids for concrete parent fields — the app would not start (`FieldError`). Removed the shadowed fields.
+- **Parent link**: the `user` OneToOneField originally lacked `parent_link=True`, which would have made Django auto-add a second implicit `user_ptr` join column. Now explicit.
+- **New helper `Student.attach_to_user(user, **student_fields)`** — creates the child row for an already-persisted User via `save_base(raw=True)`. A plain `save()` force-inserts the parent row (Django force-inserts any new instance whose PK has a default), which would have raised a duplicate-PK error.
+
+### 🧪 Tests
+
+- **`students/tests.py`** — student fixtures now built with `Student.attach_to_user(...)`; passport-from-User behaviour unchanged (detail/list return `user.passport.url`, null when absent).
+- **`applications/tests.py`** — `SlotBookkeepingTests`, `WithdrawApplicationTests`, `ApprovedListExportTests`, and `_make_approved_in_ward` attach students to their existing users via the helper.
+- **`accounts/tests.py`** — `test_duplicate_nin_is_rejected` passes again (`register` returns `400 nin_taken`).
+- **Full suite: Ran 45 tests — OK.** `manage.py check` clean; `makemigrations --check` reports no drift.
+
+---
+
 ## v1.1.6 (wip)
 
 **Audit log completed — every administrative action is now recorded, and `GET /audit/` returns a paginated response.**

@@ -16,25 +16,24 @@ WARD_CHOICES = [
     ('udesi','Udesi'),
 ]
 
-class Student(models.Model):
-    # primary_key=True so the Student row reuses the User's UUID as its PK —
-    # student.pk == user.id, matching the contract the register view relies on.
-    user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='student')
-    email = models.EmailField(max_length=100)
-    firstname    = models.CharField(max_length=50, blank=True, default='')
-    lastname     = models.CharField(max_length=50, blank=True, default='')
-    phone_number = models.CharField(max_length=20, blank=True, default='')
-    gender = models.CharField(max_length=10, blank=True, default='Male')
+class Student(User):
+    # parent_link=True makes this THE parent-link column of the MTI relation:
+    # students.user_ptr_id == users.id, so student.pk == user.id and
+    # request.user.student / student.user both resolve to the same row.
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='student',
+        parent_link=True,
+    )
     is_verified = models.BooleanField(default=False)
     verification_rejection_reason = models.TextField(blank=True, default='')
     verification_reviewed_at = models.DateTimeField(null=True, blank=True)
     active_award = models.CharField(max_length=300, blank=True)
-    nin_hash = models.CharField(max_length=64, blank=True, default='')
     nin_slip = models.FileField(null=True,blank=True)
     lga = models.CharField(max_length=80, blank=True)
-    passport = models.FileField(null=True, blank=True)
     ward        = models.CharField(max_length=40, blank=True)
-    date_of_birth = models.DateField(null=True)
     certificate = models.FileField(null=True, blank=True)
     bank_name = models.CharField(max_length=100, blank=True, default='')
     bank_code = models.CharField(max_length=10, blank=True, default='')
@@ -50,4 +49,17 @@ class Student(models.Model):
 
     def has_active_award(self):
         return bool(self.active_award)
+
+    @classmethod
+    def attach_to_user(cls, user, **student_fields):
+        """Create the Student (child) row for an already-persisted User.
+
+        With multi-table inheritance the parent User row already exists, so a
+        plain save() would force a duplicate parent INSERT (Django force-inserts
+        any new instance whose PK has a default). save_base(raw=True) skips that
+        and only writes the child table, leaving the User row untouched.
+        """
+        student = cls(user=user, **student_fields)
+        student.save_base(raw=True)
+        return student
 
