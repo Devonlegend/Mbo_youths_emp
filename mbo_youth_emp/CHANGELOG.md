@@ -2,13 +2,27 @@
 
 ## v1.1.8 (email-provider)
 
-**Transactional email provider switched from Brevo to ZeptoMail (Zoho) — all Brevo SDK usage removed.**
+**Transactional email provider switched from Brevo to ZeptoMail (Zoho) — all Brevo SDK usage removed. Healthchecks added for every service (Coolify-ready).**
 
-- **`verification/services/email.py`** — `_brevo_send` (sib-api-v3-sdk) replaced with `_zepto_send` using the `zeptomail` SDK; `EmailService` public API and mock mode unchanged, so Celery tasks keep working as-is.
+### 📧 Email
+
+- **`verification/services/email.py`** — `_brevo_send` (sib-api-v3-sdk) replaced with `_zepto_send` using the `zeptomail` SDK; `EmailService` public API and mock mode unchanged, so Celery tasks keep working as-is. `_zepto_send` now strips any pasted `Zoho-enczapikey ` prefix from the configured key so the SDK header is always well-formed.
 - **`requirements.txt`** — dropped `sib-api-v3-sdk==7.6.0`, added `zeptomail==1.0.0`.
 - **`config/settings.py`** — `BREVO_MOCK_MODE` / `BREVO_API_KEY` / `BREVO_SENDER_EMAIL` / `BREVO_SENDER_NAME` renamed to `ZEPTO_*` (env var names changed accordingly).
 - **`accounts/services.py`** — deleted (unused legacy Brevo OTP/reset senders; views already use the Celery tasks).
 - **`docker-compose.yml`, `.env.example` (root + `mbo_youth_emp/`), `DEPLOYMENT.md`, `README.md`** — env/docs updated to the `ZEPTO_*` variables.
+
+### 🩺 Healthchecks
+
+- **New `health` app** — `GET /api/health/` runs `connection.ensure_connection()` and returns `200 {"status":"ok"}` or `503 {"status":"error"}` (try/except — never a 500). Registered in `INSTALLED_APPS`, routed at `config/urls.py`.
+- **New frontend route** — `src/app/api/health/route.js` returns `200 {"ok":true}` (no DB dependency).
+- **`docker-compose.yml`** — healthchecks on all services so Coolify reports them Healthy:
+  - `db` (existing `pg_isready`), `redis` (`redis-cli ping`)
+  - `backend` probes `/api/health/` on `127.0.0.1:8080` via `urllib` (10s/5s/5, start_period 30s)
+  - `frontend` probes `/api/health` on `127.0.0.1:3000` via `node fetch` (10s/5s/5, start_period 20s)
+  - `worker` pings via `celery -A config inspect ping` (15s/10s/3, start_period 60s)
+  - `caddy` checks its admin API at `127.0.0.1:2019/config/` (10s/5s/5, start_period 5s)
+- **`ALLOWED_HOSTS`** — compose default now includes `localhost,127.0.0.1` so in-container health probes aren't rejected with `DisallowedHost`.
 
 ---
 

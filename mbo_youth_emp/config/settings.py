@@ -75,7 +75,7 @@ INSTALLED_APPS = [
     'audit',
     'notifications',
     'django_celery_results',
-
+    'health',
 ]
 
 MIDDLEWARE = [

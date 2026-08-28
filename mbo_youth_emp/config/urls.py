@@ -31,6 +31,7 @@ urlpatterns = [
     path('verification/', include('verification.urls')),
     path('audit/', include('audit.urls')),
     path('notifications/', include('notifications.urls')),
+    path('api/health/', include('health.urls')),
 
     #API documentation (drf-spectacular) 
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
