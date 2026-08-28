@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.8 (email-provider)
+
+**Transactional email provider switched from Brevo to ZeptoMail (Zoho) — all Brevo SDK usage removed.**
+
+- **`verification/services/email.py`** — `_brevo_send` (sib-api-v3-sdk) replaced with `_zepto_send` using the `zeptomail` SDK; `EmailService` public API and mock mode unchanged, so Celery tasks keep working as-is.
+- **`requirements.txt`** — dropped `sib-api-v3-sdk==7.6.0`, added `zeptomail==1.0.0`.
+- **`config/settings.py`** — `BREVO_MOCK_MODE` / `BREVO_API_KEY` / `BREVO_SENDER_EMAIL` / `BREVO_SENDER_NAME` renamed to `ZEPTO_*` (env var names changed accordingly).
+- **`accounts/services.py`** — deleted (unused legacy Brevo OTP/reset senders; views already use the Celery tasks).
+- **`docker-compose.yml`, `.env.example` (root + `mbo_youth_emp/`), `DEPLOYMENT.md`, `README.md`** — env/docs updated to the `ZEPTO_*` variables.
+
+---
+
 ## v1.1.7 (scale)
 
 **Student converted to multi-table inheritance of `User` — identity fields now live once on the parent, and registration creates both rows in a single call.**

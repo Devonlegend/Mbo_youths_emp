@@ -257,7 +257,7 @@ def _generate_code() -> str:
 
 def _issue_otp(email):
     """Generate a fresh OTP for `email`, invalidate prior unused ones, and email
-    it via Brevo. Returns a tuple (response_payload, http_status). Caller is
+    it via ZeptoMail. Returns a tuple (response_payload, http_status). Caller is
     responsible only for wrapping in a Response."""
     email = (email or '').strip().lower()
     if not email:

@@ -248,11 +248,11 @@ OTP_RESEND_COOLDOWN_SECONDS = int(os.getenv('OTP_RESEND_COOLDOWN_SECONDS', '60')
 PAYSTACK_MOCK_MODE   = _env_bool('PAYSTACK_MOCK_MODE', str(DEBUG))
 PAYSTACK_SECRET_KEY  = os.getenv('PAYSTACK_SECRET_KEY', '')
 
-# ── Brevo (email) ─────────────────────────────────────────────────────────
-BREVO_MOCK_MODE  = _env_bool('BREVO_MOCK_MODE', str(DEBUG))
-BREVO_API_KEY    = os.getenv('BREVO_API_KEY', '')
-BREVO_SENDER_EMAIL = os.getenv('BREVO_SENDER_EMAIL', 'no-reply@mboempowerment.com')
-BREVO_SENDER_NAME  = os.getenv('BREVO_SENDER_NAME', 'Mbo Youth Empowerment')
+# ── ZeptoMail (email) 
+ZEPTO_MOCK_MODE  = _env_bool('ZEPTO_MOCK_MODE', str(DEBUG))
+ZEPTO_API_KEY    = os.getenv('ZEPTO_API_KEY', '')
+ZEPTO_SENDER_EMAIL = os.getenv('ZEPTO_SENDER_EMAIL', 'no-reply@mboempowerment.com')
+ZEPTO_SENDER_NAME  = os.getenv('ZEPTO_SENDER_NAME', 'Mbo Youth Empowerment')
 SUPPORT_EMAIL      = os.getenv('SUPPORT_EMAIL', 'support@mboempowerment.com')
 
 

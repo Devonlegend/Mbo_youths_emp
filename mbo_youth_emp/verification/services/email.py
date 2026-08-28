@@ -1,17 +1,17 @@
 """
 Email service for the Mbo LGA Youth Empowerment Portal.
 
-Uses Brevo (formerly Sendinblue) for delivery via their official Python SDK.
+Uses ZeptoMail (by Zoho) for delivery via the `zeptomail` Python SDK.
 All emails are rendered from HTML templates using Django's template engine,
 so styling and content live in templates/email/*.html — not in Python strings.
 
-Install:  pip install sib-api-v3-sdk
-Docs:     https://github.com/sendinblue/APIv3-python-library
+Install:  pip install zeptomail
+Docs:     https://pypi.org/project/zeptomail/
 """
 
 import logging
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
+
+from zeptomail import Config, Email, ZeptoMailAPIError
 
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
@@ -28,7 +28,7 @@ class EmailService:
     @classmethod
     def _send(cls, to_email: str, subject: str, template: str, context: dict) -> bool:
         """
-        Core send method. Renders template, sends via Brevo.
+        Core send method. Renders template, sends via ZeptoMail.
         Returns True on success. Raises exceptions on network/API failure for Celery retries.
         """
         # Add global context available in every template
@@ -46,11 +46,11 @@ class EmailService:
             logger.error(f"[Email] Template render failed for {template}: {e}")
             return False
 
-        if getattr(settings, 'BREVO_MOCK_MODE', True):
+        if getattr(settings, 'ZEPTO_MOCK_MODE', True):
             cls._mock_send(to_email, subject, plain_content)
             return True
 
-        return cls._brevo_send(to_email, subject, html_content, plain_content)
+        return cls._zepto_send(to_email, subject, html_content, plain_content)
 
     @staticmethod
     def _mock_send(to_email: str, subject: str, plain_content: str):
@@ -60,41 +60,35 @@ class EmailService:
             to_email, subject, plain_content[:300])
 
     @staticmethod
-    def _brevo_send(to_email: str, subject: str,
+    def _zepto_send(to_email: str, subject: str,
                     html_content: str, plain_content: str) -> bool:
         """
-        Sends via Brevo. Raises Exceptions if the API fails so Celery can retry.
+        Sends via ZeptoMail. Raises Exceptions if the API fails so Celery can retry.
         """
-        configuration = sib_api_v3_sdk.Configuration()
-        configuration.api_key['api-key'] = settings.BREVO_API_KEY
-
-        api_instance = sib_api_v3_sdk.TransactionalEmailsApi(
-            sib_api_v3_sdk.ApiClient(configuration)
-        )
-
-        send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
-            to=[{'email': to_email}],
-            sender={
-                'email': getattr(settings, 'BREVO_SENDER_EMAIL', 'no-reply@example.com'),
-                'name':  getattr(settings, 'BREVO_SENDER_NAME', 'Mbo Youth Empowerment'),
-            },
-            subject      = subject,
-            html_content = html_content,
-            text_content = plain_content,
-            tags=['mbo-lga', 'youth-empowerment'],
-        )
+        config = Config(api_key=settings.ZEPTO_API_KEY)
+        email  = Email(config)
 
         try:
-            api_instance.send_transac_email(send_smtp_email)
-            logger.info(f"[Email] Brevo sent '{subject}' to {to_email}")
+            email.send(
+                from_=getattr(settings, 'ZEPTO_SENDER_EMAIL', 'no-reply@example.com'),
+                from_name=getattr(settings, 'ZEPTO_SENDER_NAME', 'Mbo Youth Empowerment'),
+                to=[to_email],
+                subject=subject,
+                html_body=html_content,
+                text_body=plain_content,
+            )
+            logger.info(f"[Email] ZeptoMail sent '{subject}' to {to_email}")
             return True
 
-        except ApiException as e:
-            logger.error(f"[Email] Brevo API error for {to_email}: status={e.status} body={e.body}")
-            raise Exception(f"Brevo API Error: {e.status}") from e
+        except ZeptoMailAPIError as e:
+            logger.error(
+                f"[Email] ZeptoMail API error for {to_email}: "
+                f"status={e.status_code} body={e.response_body}"
+            )
+            raise Exception(f"ZeptoMail API Error: {e.status_code}") from e
 
         except Exception as e:
-            logger.error(f"[Email] Brevo send failed to {to_email}: {e}")
+            logger.error(f"[Email] ZeptoMail send failed to {to_email}: {e}")
             raise e
 
     # ── Public methods — one per email event ─────────────────────────────────
@@ -131,7 +125,9 @@ class EmailService:
         return cls._send(
             to_email=student.user.email,
             subject=f'Application Received — {scheme.name}',
-            template='application_submitted',
+            template='application_' \
+            '' \
+            'submitted',
             context={
                 'student_name':    student.full_name,
                 'scheme_name':     scheme.name,

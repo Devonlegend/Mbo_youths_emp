@@ -3,7 +3,7 @@
 Django REST backend for the Mbo LGA youth scholarship / grant / empowerment portal.
 Cookie-based JWT auth (httpOnly `access_token` / `refresh_token`) with an email-OTP step.
 
-- Django 6.0 + DRF, PostgreSQL, Redis + Celery, Cloudinary (media), Brevo (email), Paystack (payments)
+- Django 6.0 + DRF, PostgreSQL, Redis + Celery, Cloudinary (media), ZeptoMail (email), Paystack (payments)
 - Docs: `/api/docs/` (Swagger), `/api/redoc/`, schema at `/api/schema/`
 
 ---
@@ -27,7 +27,7 @@ cp .env.example .env
 ```
 
 Fill in the local values. Sensible defaults exist for dev, so `SECRET_KEY`, a local
-Postgres connection, and `BREVO_MOCK_MODE=True` / `PAYSTACK_MOCK_MODE=True` will get
+Postgres connection, and `ZEPTO_MOCK_MODE=True` / `PAYSTACK_MOCK_MODE=True` will get
 you running without external accounts.
 
 ### 3. Run
@@ -97,8 +97,8 @@ CELERY_BROKER_URL=redis://redis:6379/0
 CELERY_TASK_ALWAYS_EAGER="False"
 
 # Integrations — real credentials for production
-BREVO_API_KEY=...
-BREVO_MOCK_MODE="False"
+ZEPTO_API_KEY=...
+ZEPTO_MOCK_MODE="False"
 PAYSTACK_SECRET_KEY=sk_live_...
 PAYSTACK_MOCK_MODE="False"
 CLOUDINARY_API_KEY=...
@@ -168,5 +168,5 @@ The Postgres data and Caddy certs live in Docker volumes, so they survive rebuil
   can exchange cookies. CORS is locked down via `CORS_ALLOWED_ORIGINS`.
 - **Media**: uploaded to Cloudinary, nothing persisted on the server.
 - **Static**: served by whitenoise, collected at Docker build time.
-- **Payments / email**: Paystack and Brevo with mock modes for development.
+- **Payments / email**: Paystack and ZeptoMail with mock modes for development.
 - **NIN hashing**: SHA-256 with a server-only `NIN_HASH_PEPPER` (defaults to `SECRET_KEY`).
