@@ -65,7 +65,10 @@ class EmailService:
         """
         Sends via ZeptoMail. Raises Exceptions if the API fails so Celery can retry.
         """
-        config = Config(api_key=settings.ZEPTO_API_KEY)
+        api_key = settings.ZEPTO_API_KEY.strip()
+        if api_key.lower().startswith('zoho-enczapikey '):
+            api_key = api_key[len('Zoho-enczapikey '):]
+        config = Config(api_key=api_key)
         email  = Email(config)
 
         try:
