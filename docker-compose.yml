@@ -22,6 +22,9 @@ services:
       - "3000"
     depends_on:
       - backend
+    networks:
+      - default
+      - coolify
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
@@ -75,7 +78,7 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
       ENVIRONMENT: ${ENVIRONMENT:-production}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-back.mboempowerment.com,localhost,127.0.0.1}
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-back.mboempowerment.com},localhost,127.0.0.1"
       NIN_HASH_PEPPER: ${NIN_HASH_PEPPER:-${SECRET_KEY}}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
@@ -108,6 +111,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    networks:
+      - default
+      - coolify
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health/', timeout=5).status==200 else 1)"]
       interval: 10s
@@ -149,30 +155,19 @@ services:
       retries: 3
       start_period: 60s
 
-  # ── Caddy reverse proxy (TLS / Let's Encrypt) ─────────────────────────
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      DOMAIN: ${DOMAIN:-mboempowerment.com}
-      API_DOMAIN: ${API_DOMAIN:-back.mboempowerment.com}
-    volumes:
-      - caddy_data:/data
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-    depends_on:
-      - frontend
-      - backend
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
+  # ── Reverse proxy ─────────────────────────────────────────────────────
+  # Managed by Coolify's built-in proxy (Traefik by default). Do NOT run a
+  # proxy container here — it would fight Coolify's proxy for ports 80/443.
+  # Set each service's domain in the Coolify UI instead:
+  #   frontend -> https://mboempowerment.com  (port 3000)
+  #   backend  -> https://back.mboempowerment.com (port 8080)
 
 volumes:
   pgdata:
   redisdata:
-  caddy_data:
+
+networks:
+  # Coolify's proxy network. Must be external and pre-created by Coolify so
+  # its reverse proxy can route traffic to the frontend/backend containers.
+  coolify:
+    external: true
