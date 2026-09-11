@@ -1,5 +1,6 @@
-# Mbo Youth Empowerment — full production stack (frontend + backend + db +
-# redis + celery worker + Caddy). One command on a VPS:
+# Mbo Youth Empowerment — full production stack (frontend + backend +
+# redis + celery worker). PostgreSQL is a Coolify-managed database resource,
+# not a container in this file. Deploy the whole stack on a VPS with:
 #     docker compose up -d --build
 # All runtime config lives in the root `.env` (see `.env.example`).
 # This file is also the single resource you import into Coolify.
@@ -33,22 +34,10 @@ services:
       start_period: 20s
 
   # ── PostgreSQL ────────────────────────────────────────────────────────
-  db:
-    image: postgres:16
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "127.0.0.1:5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+  # Managed by Coolify as a standalone database resource. Set DB_HOST to the
+  # database's Internal URL hostname (Configuration > General), and make sure
+  # this compose resource can reach its destination network (Advanced >
+  # Connect To Predefined Network). Do NOT run a db container here.
 
   # ── Redis (Celery broker) ─────────────────────────────────────────────
   redis:
@@ -71,8 +60,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      DB_HOST: db
-      DB_PORT: "5432"
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
       CELERY_BROKER_URL: redis://redis:6379/0
       # Everything else comes from the root .env
       SECRET_KEY: ${SECRET_KEY}
@@ -107,8 +96,6 @@ services:
     expose:
       - "8080"
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_started
     networks:
@@ -128,8 +115,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      DB_HOST: db
-      DB_PORT: "5432"
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
       CELERY_BROKER_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
@@ -147,7 +134,6 @@ services:
     command: celery -A config worker -l info
     depends_on:
       - redis
-      - db
     healthcheck:
       test: ["CMD-SHELL", "celery -A config inspect ping --timeout 5 | grep -q 'OK'"]
       interval: 15s
@@ -163,7 +149,6 @@ services:
   #   backend  -> https://back.mboempowerment.com (port 8080)
 
 volumes:
-  pgdata:
   redisdata:
 
 networks:
