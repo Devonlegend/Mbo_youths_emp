@@ -43,11 +43,15 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    # Coolify generates SERVICE_PASSWORD_REDIS once and reuses it everywhere in
+    # this resource, so the server's requirepass and every client's auth match.
+    command: redis-server --appendonly yes --requirepass "${SERVICE_PASSWORD_REDIS}"
+    environment:
+      SERVICE_PASSWORD_REDIS: ${SERVICE_PASSWORD_REDIS}
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$SERVICE_PASSWORD_REDIS\" ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -62,7 +66,7 @@ services:
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT:-5432}
-      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://:${SERVICE_PASSWORD_REDIS}@redis:6379/0
       # Everything else comes from the root .env
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
@@ -117,7 +121,7 @@ services:
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT:-5432}
-      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://:${SERVICE_PASSWORD_REDIS}@redis:6379/0
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
       ENVIRONMENT: ${ENVIRONMENT:-production}
