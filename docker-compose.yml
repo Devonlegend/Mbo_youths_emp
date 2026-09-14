@@ -1,6 +1,6 @@
 # Mbo Youth Empowerment — full production stack (frontend + backend +
-# redis + celery worker). PostgreSQL is a Coolify-managed database resource,
-# not a container in this file. Deploy the whole stack on a VPS with:
+# celery worker). PostgreSQL and Redis are Coolify-managed database
+# resources, not containers in this file. Deploy the whole stack on a VPS with:
 #     docker compose up -d --build
 # All runtime config lives in the root `.env` (see `.env.example`).
 # This file is also the single resource you import into Coolify.
@@ -33,31 +33,20 @@ services:
       retries: 5
       start_period: 20s
 
-  # ── PostgreSQL ────────────────────────────────────────────────────────
+  #  PostgreSQL 
   # Managed by Coolify as a standalone database resource. Set DB_HOST to the
   # database's Internal URL hostname (Configuration > General), and make sure
   # this compose resource can reach its destination network (Advanced >
   # Connect To Predefined Network). Do NOT run a db container here.
 
-  # ── Redis (Celery broker) ─────────────────────────────────────────────
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    # Coolify generates SERVICE_PASSWORD_REDIS once and reuses it everywhere in
-    # this resource, so the server's requirepass and every client's auth match.
-    command: redis-server --appendonly yes --requirepass "${SERVICE_PASSWORD_REDIS}"
-    environment:
-      SERVICE_PASSWORD_REDIS: ${SERVICE_PASSWORD_REDIS}
-    volumes:
-      - redisdata:/data
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$$SERVICE_PASSWORD_REDIS\" ping | grep -q PONG"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 5s
+  #  Redis (Celery broker)
+  # Managed by Coolify as a standalone Redis database resource. Set
+  # CELERY_BROKER_URL in Coolify's Environment Variables to that database's
+  # Internal URL (e.g. redis://default:<password>@<uuid>:6379/0), and make sure
+  # this compose resource can reach its destination network (Advanced >
+  # Connect To Predefined Network). Do NOT run a redis container here.
 
-  # ── Django / gunicorn ─────────────────────────────────────────────────
+  # ── Django / gunicorn 
   backend:
     build:
       context: ./mbo_youth_emp
@@ -66,7 +55,8 @@ services:
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT:-5432}
-      CELERY_BROKER_URL: redis://:${SERVICE_PASSWORD_REDIS}@redis:6379/0
+      # Coolify-managed Redis database Internal URL.
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
       # Everything else comes from the root .env
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
@@ -99,9 +89,6 @@ services:
     command: sh -c "python manage.py migrate --no-input && gunicorn config.wsgi:application --bind 0.0.0.0:8080 --workers 3 --timeout 60"
     expose:
       - "8080"
-    depends_on:
-      redis:
-        condition: service_started
     networks:
       - default
       - coolify
@@ -121,7 +108,8 @@ services:
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT:-5432}
-      CELERY_BROKER_URL: redis://:${SERVICE_PASSWORD_REDIS}@redis:6379/0
+      # Coolify-managed Redis database Internal URL.
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
       SECRET_KEY: ${SECRET_KEY}
       DEBUG: ${DEBUG:-False}
       ENVIRONMENT: ${ENVIRONMENT:-production}
@@ -136,8 +124,9 @@ services:
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
     command: celery -A config worker -l info
-    depends_on:
-      - redis
+    networks:
+      - default
+      - coolify
     healthcheck:
       test: ["CMD-SHELL", "celery -A config inspect ping --timeout 5 | grep -q 'OK'"]
       interval: 15s
@@ -145,15 +134,12 @@ services:
       retries: 3
       start_period: 60s
 
-  # ── Reverse proxy ─────────────────────────────────────────────────────
+  #  Reverse proxy 
   # Managed by Coolify's built-in proxy (Traefik by default). Do NOT run a
   # proxy container here — it would fight Coolify's proxy for ports 80/443.
   # Set each service's domain in the Coolify UI instead:
   #   frontend -> https://mboempowerment.com  (port 3000)
   #   backend  -> https://back.mboempowerment.com (port 8080)
-
-volumes:
-  redisdata:
 
 networks:
   # Coolify's proxy network. Must be external and pre-created by Coolify so
