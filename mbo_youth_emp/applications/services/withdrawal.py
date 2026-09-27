@@ -39,6 +39,12 @@ def withdraw_application(application, scheme, changed_by):
             reason         = f'Approval withdrawn by {actor} — slot released',
         )
 
+        # Recurring scholarships: terminate the linked Award and cancel its
+        # non-disbursed installments (disbursed money is never touched).
+        # No-op for one-shot schemes.
+        from awards.services.creation import terminate_award_for_withdrawal
+        terminate_award_for_withdrawal(application=application, actor=changed_by)
+
     # Give the slot back and clear the student's active-award label if it
     # points at this scheme, after the transaction commits.
     remaining = release_slot(scheme, student)

@@ -681,6 +681,10 @@ class ApplicationViewSet(viewsets.ViewSet):
                                 "No slots remaining for this scheme — cannot approve.")
                         student.active_award = scheme.name
                         student.save(update_fields=['active_award'])
+                        if scheme.is_recurring and scheme.award_type == 'scholarship':
+                            from awards.services.creation import create_award
+                            create_award(student=student, scheme=scheme,
+                                         application=application, actor=request.user)
                     application.status = status_override
                     application.save()
                     ApplicationStatusHistory.objects.create(
@@ -851,6 +855,13 @@ class ApplicationViewSet(viewsets.ViewSet):
                         scheme            = scheme,
                         notification_type = 'approved',
                     )
+
+                    # Recurring scholarships: create the multi-year Award inside
+                    # the same transaction (idempotent — safe on retry).
+                    if scheme.is_recurring and scheme.award_type == 'scholarship':
+                        from awards.services.creation import create_award
+                        create_award(student=student, scheme=scheme,
+                                     application=application, actor=request.user)
         except SlotUnavailable as exc:
             return Response({"error": str(exc)}, status=400)
 
