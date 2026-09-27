@@ -268,6 +268,18 @@ CELERY_TASK_ALWAYS_EAGER = _env_bool('CELERY_TASK_ALWAYS_EAGER', str(DEBUG))
 PORTAL_URL = os.getenv('PORTAL_URL', 'http://localhost:3000')
 
 
+# ── Recurring (multi-year) scholarships ────────────────────────────────────
+# Days a student has to submit a renewal after the cycle opens before the
+# installment is auto-cancelled and the award suspended (expire_renewals).
+RENEWAL_GRACE_DAYS      = int(os.getenv('RENEWAL_GRACE_DAYS', '56'))
+# Days a suspended award's holder has to file an appeal before it is
+# auto-terminated (same periodic job as the grace timer).
+APPEAL_WINDOW_DAYS      = int(os.getenv('APPEAL_WINDOW_DAYS', '60'))
+# Verifier "reject (resubmit)" actions allowed per installment before it is
+# cancelled and the award suspended ("repeated invalid submissions").
+RENEWAL_RESUBMISSION_CAP = int(os.getenv('RENEWAL_RESUBMISSION_CAP', '2'))
+
+
 
 # HTTPS/cookie hardening. Active when DEBUG is off; relaxed locally so http
 # development keeps working. Individual flags can be overridden via env.

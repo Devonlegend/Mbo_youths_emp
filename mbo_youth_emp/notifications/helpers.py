@@ -158,3 +158,124 @@ def notify_password_changed(user) -> Notification:
             f'change, please contact support immediately at {support_email}.'
         ),
     )
+
+
+# ── Recurring (multi-year) awards ──────────────────────────────────────────
+
+def notify_new_renewal_in_queue(installment) -> None:
+    """Alert every verifier/admin that a student submitted a yearly renewal.
+
+    Mirrors notify_new_application_in_queue: one in-app row per staff user so
+    the renewal appears in their dashboard the next time they log in.
+    """
+    from accounts.models import User, Role
+    award = installment.award
+    scheme_name = award.scheme.name
+    for staff in User.objects.filter(
+        role__in=[Role.VERIFIER, Role.ADMIN, Role.SUPERADMIN],
+    ):
+        Notification.objects.create(
+            user=staff,
+            type='alert',
+            title='Renewal Awaiting Verification',
+            message=(
+                f'{award.student.full_name} submitted year '
+                f'{installment.year_index} of their "{scheme_name}" award. '
+                f'It is ready for verification.'
+            ),
+        )
+
+
+def notify_renewal_received(installment) -> Notification:
+    """Student confirmation that their renewal submission was received."""
+    award = installment.award
+    return Notification.objects.create(
+        user=award.student,
+        type='application',
+        title='Renewal Submitted',
+        message=(
+            f'Your year {installment.year_index} renewal for '
+            f'"{award.scheme.name}" has been received. A verification officer '
+            f'will review it shortly.'
+        ),
+    )
+
+
+def notify_renewal_approved(installment) -> Notification:
+    """Student notification that a renewal passed verification."""
+    award = installment.award
+    return Notification.objects.create(
+        user=award.student,
+        type='application',
+        title='Renewal Approved',
+        message=(
+            f'Your year {installment.year_index} renewal for '
+            f'"{award.scheme.name}" has been approved and queued for payment.'
+        ),
+    )
+
+
+def notify_renewal_rejected(installment, note: str = '') -> Notification:
+    """Student notification that a renewal was returned for resubmission."""
+    award = installment.award
+    message = (
+        f'Your year {installment.year_index} renewal for '
+        f'"{award.scheme.name}" needs attention and was sent back for '
+        f'resubmission.'
+    )
+    if note:
+        message += f' Verifier note: {note}'
+    return Notification.objects.create(
+        user=award.student,
+        type='application',
+        title='Renewal Needs Resubmission',
+        message=message,
+    )
+
+
+def notify_award_suspended(award, reason: str = '') -> Notification:
+    """Student notification that their award was suspended (breach / no
+    renewal). Includes the appeal path, which is the only way back."""
+    message = (
+        f'Your "{award.scheme.name}" award has been suspended.'
+    )
+    if reason:
+        message += f' Reason: {reason}.'
+    message += (
+        ' You can submit an appeal from your scholarship dashboard if you '
+        'believe this is an error.'
+    )
+    return Notification.objects.create(
+        user=award.student,
+        type='alert',
+        title='Award Suspended',
+        message=message,
+    )
+
+
+def notify_installment_disbursed(installment) -> Notification:
+    """Student notification that a payment year was disbursed."""
+    award = installment.award
+    return Notification.objects.create(
+        user=award.student,
+        type='application',
+        title='Payment Disbursed',
+        message=(
+            f'Your year {installment.year_index} payment of '
+            f'₦{installment.amount} for "{award.scheme.name}" has been '
+            f'disbursed.'
+        ),
+    )
+
+
+def notify_award_graduated(award) -> Notification:
+    """Congratulation notification when the final installment is disbursed."""
+    return Notification.objects.create(
+        user=award.student,
+        type='application',
+        title='Scholarship Completed',
+        message=(
+            f'Congratulations! You have completed all {award.total_years} '
+            f'payment years of your "{award.scheme.name}" award.'
+        ),
+    )
