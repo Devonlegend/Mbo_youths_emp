@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'students',
     'verification',
     'audit',
+    'awards',
     'notifications',
     'django_celery_results',
     'health',
