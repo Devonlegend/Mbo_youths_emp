@@ -3,6 +3,14 @@ import uuid
 from django.conf import settings
 from accounts.models import User
 
+
+class ProgrammeType(models.TextChoices):
+    UNDERGRADUATE     = 'undergraduate',       'Undergraduate'
+    HND               = 'hnd',                 'HND (top-up)'
+    POSTGRAD_TAUGHT   = 'postgraduate_taught', 'Postgraduate (taught)'
+    POSTGRAD_RESEARCH = 'postgraduate_research', 'Postgraduate (research)'
+
+
 WARD_CHOICES = [
     ('efiat','Efiat'),
     ('efiat II','Efiat II'),
@@ -39,6 +47,15 @@ class Student(User):
     bank_code = models.CharField(max_length=10, blank=True, default='')
     bank_account_number = models.CharField(max_length=10, blank=True, default='')
     bank_account_name = models.CharField(max_length=150, blank=True, default='')
+
+    # Academic profile — used by recurring (multi-year) awards to resolve how
+    # many years a scholarship pays for. All optional: existing students and
+    # non-scholarship flows are untouched, and tenure resolution degrades
+    # gracefully when these are blank (see awards/services/tenure.py).
+    faculty                  = models.CharField(max_length=120, blank=True)
+    programme_type           = models.CharField(max_length=30, choices=ProgrammeType.choices, blank=True)
+    programme_duration_years = models.PositiveSmallIntegerField(null=True, blank=True)
+    entry_level              = models.PositiveSmallIntegerField(null=True, blank=True)  # 100 or 200 (direct entry); null for HND/PG
 
     def __str__(self):
         return f"{self.firstname} {self.lastname} - {self.is_verified}"

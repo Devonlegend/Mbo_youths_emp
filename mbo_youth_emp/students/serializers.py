@@ -20,6 +20,7 @@ class StudentSerializer(serializers.ModelSerializer):
             'user_id', 'email', 'firstname', 'lastname', 'phone_number', 'ward','nin_slip', 'lga',
             'is_verified','gender', 'certificate','passport',
             'active_award', 'has_active_award',
+            'faculty', 'programme_type', 'programme_duration_years', 'entry_level',
         ]
 
     def get_has_active_award(self, obj) -> bool:
