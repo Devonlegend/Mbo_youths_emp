@@ -1,6 +1,24 @@
 from rest_framework import serializers
 from .models import SchemeProvider, ScholarshipScheme, Cycle
 
+VALID_PROGRAMME_TYPES = {
+    'undergraduate', 'hnd', 'postgraduate_taught', 'postgraduate_research',
+}
+
+
+def _parse_programme_types(raw):
+    """Accept a comma-separated string or a list; drop unknown values.
+    Returns None when the key wasn't sent (caller leaves the field alone)."""
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        items = [x.strip() for x in raw.split(',') if x.strip()]
+    elif isinstance(raw, list):
+        items = [str(x).strip() for x in raw if str(x).strip()]
+    else:
+        return None
+    return [x for x in items if x in VALID_PROGRAMME_TYPES]
+
 
 class CycleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,6 +57,7 @@ class ScholarshipSchemeSerializer(serializers.ModelSerializer):
             'id', 'provider', 'cycle', 'cycle_id', 'provider_id', 'name', 'award_type',
             'award_type_display', 'description', 'academic_year', 'award_amount',
             'total_slots', 'remaining_slots', 'stacking_policy', 'eligibility_criteria',
+            'is_recurring', 'min_renewal_cgpa', 'applicable_programme_types',
             'application_open_date', 'application_close_date', 'is_active', 'is_published',
             'created_at', 'updated_at'
         ]
@@ -155,6 +174,23 @@ class ScholarshipSchemeSerializer(serializers.ModelSerializer):
 
             validated_data['eligibility_criteria'] = eligibility_criteria
 
+            # Recurring-award config arrives as flat top-level keys (same
+            # convention as the eligibility keys above) but persists to model
+            # fields, not into eligibility_criteria.
+            if award_type == 'scholarship':
+                is_recurring = request.data.get('is_recurring')
+                if is_recurring is not None:
+                    validated_data['is_recurring'] = is_recurring in (True, 'true', 'True', '1', 1)
+                min_renewal = request.data.get('min_renewal_cgpa')
+                if min_renewal not in (None, ''):
+                    try:
+                        validated_data['min_renewal_cgpa'] = float(min_renewal)
+                    except (TypeError, ValueError):
+                        pass
+                programme_types = _parse_programme_types(request.data.get('applicable_programme_types'))
+                if programme_types is not None:
+                    validated_data['applicable_programme_types'] = programme_types
+
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
@@ -259,5 +295,24 @@ class ScholarshipSchemeSerializer(serializers.ModelSerializer):
 
             if eligibility_criteria:
                 validated_data['eligibility_criteria'] = eligibility_criteria
+
+        # Recurring-award config (flat keys, model fields). Only meaningful on
+        # scholarships; applies independently of whether eligibility keys were
+        # sent in the same request.
+        if request and award_type == 'scholarship':
+            if 'is_recurring' in request.data:
+                validated_data['is_recurring'] = request.data.get('is_recurring') in (True, 'true', 'True', '1', 1)
+            if 'min_renewal_cgpa' in request.data:
+                min_renewal = request.data.get('min_renewal_cgpa')
+                if min_renewal in (None, ''):
+                    validated_data['min_renewal_cgpa'] = None
+                else:
+                    try:
+                        validated_data['min_renewal_cgpa'] = float(min_renewal)
+                    except (TypeError, ValueError):
+                        pass
+            programme_types = _parse_programme_types(request.data.get('applicable_programme_types'))
+            if programme_types is not None:
+                validated_data['applicable_programme_types'] = programme_types
 
         return super().update(instance, validated_data)

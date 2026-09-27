@@ -96,6 +96,19 @@ class ScholarshipScheme(models.Model):
 
    .
     """
+    # ── Recurring (multi-year) award config ──────────────────────────────────
+    # Award-lifecycle config, deliberately OUTSIDE eligibility_criteria (those
+    # are application-time gates). Values here are snapshotted onto each Award
+    # at creation, so later edits never retroactively change existing awards.
+    is_recurring     = models.BooleanField(default=False)  # False = one-shot (today's behavior)
+    min_renewal_cgpa = models.DecimalField(
+                           max_digits=4, decimal_places=2, null=True, blank=True,
+                           help_text="Yearly renewal threshold; falls back to eligibility min_cgpa when blank.")
+    applicable_programme_types = models.JSONField(
+                           default=list, blank=True,
+                           help_text='Subset of undergraduate / hnd / postgraduate_taught / '
+                                     'postgraduate_research. Empty list = undergrad only.')
+
     application_open_date  = models.DateField()
     application_close_date = models.DateField()
     is_active    = models.BooleanField(default=True)
