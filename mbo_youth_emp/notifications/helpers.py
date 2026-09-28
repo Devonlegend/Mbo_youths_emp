@@ -335,3 +335,25 @@ def notify_appeal_decision(appeal) -> Notification:
         title=title,
         message=message,
     )
+
+
+# ── Rollover ───────────────────────────────────────────────────────────────
+
+def build_renewal_open_notification(award, cycle, year_index) -> Notification:
+    """Unsaved Notification for the rollover fan-out (bulk_create)."""
+    return Notification(
+        user=award.student,
+        type='application',
+        title='Renewal Open',
+        message=(
+            f'Your year {year_index} renewal for "{award.scheme.name}" is now '
+            f'open for {cycle.name}. Submit your latest CGPA and transcript to '
+            f'continue receiving payments.'
+        ),
+    )
+
+
+def notify_renewal_open(award, cycle, year_index) -> Notification:
+    notification = build_renewal_open_notification(award, cycle, year_index)
+    notification.save()
+    return notification
