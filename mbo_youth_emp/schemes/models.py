@@ -24,6 +24,9 @@ class Cycle(models.Model):
     start_year = models.IntegerField()
     end_year   = models.IntegerField()
     is_active  = models.BooleanField(default=False)
+    # Set when the cycle is activated; anchors the renewal grace window
+    # (awards/services/expiry.py). Null for cycles activated before this field.
+    activated_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
