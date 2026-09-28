@@ -36,9 +36,12 @@ from django.utils import timezone
 from accounts.validators import validate_upload, FileValidationError
 from audit.services import record_admin_action
 from notifications.helpers import (
+    notify_appeal_decision,
+    notify_appeal_received,
     notify_award_graduated,
     notify_award_suspended,
     notify_installment_disbursed,
+    notify_new_appeal_in_queue,
     notify_new_renewal_in_queue,
     notify_renewal_approved,
     notify_renewal_received,
@@ -46,6 +49,8 @@ from notifications.helpers import (
 )
 
 from ..models import (
+    AppealStatus,
+    AwardAppeal,
     AwardEvent,
     AwardStatus,
     CgpaScale,
@@ -339,3 +344,114 @@ def terminate_award(*, award, actor, reason=''):
     _event(award, actor, 'terminated', reason or 'Terminated by administrator')
     record_admin_action(actor, 'Award terminated', 'Award', str(award.id))
     return award
+
+
+# ── Appeals: the breach-recovery path ──────────────────────────────────────
+
+def submit_appeal(*, award, student, reason, evidence=None):
+    """A suspended student appeals the unresolved installment that suspended
+    them. The installment may be ``withheld`` (CGPA breach) or ``cancelled``
+    (missed/again-invalid renewal) — both are appealable. At most one pending
+    appeal per installment; not available once the award is terminated."""
+    if award.student_id != student.pk:
+        raise LifecycleError('You can only appeal your own award.')
+    if award.status == AwardStatus.TERMINATED:
+        raise LifecycleError('A terminated award cannot be appealed.')
+    if award.status != AwardStatus.SUSPENDED:
+        raise LifecycleError('Only a suspended award can be appealed.')
+
+    reason = (reason or '').strip()
+    if not reason:
+        raise LifecycleError('A reason is required to file an appeal.')
+
+    installment = (
+        award.installments
+        .filter(status__in=[InstallmentStatus.WITHHELD,
+                            InstallmentStatus.CANCELLED])
+        .order_by('-year_index')
+        .first()
+    )
+    if installment is None:
+        raise LifecycleError('There is no unresolved installment to appeal.')
+
+    if AwardAppeal.objects.filter(installment=installment,
+                                  status=AppealStatus.PENDING).exists():
+        raise LifecycleError('An appeal is already pending for this installment.')
+
+    if evidence is not None:
+        try:
+            validate_upload(evidence, 'evidence', required=False)
+        except FileValidationError as exc:
+            raise LifecycleError(str(exc)) from exc
+
+    appeal = AwardAppeal.objects.create(
+        award=award, installment=installment, reason=reason, evidence=evidence,
+    )
+    _event(award, student, 'appeal.submitted',
+           f'year {installment.year_index}: {reason}')
+    _side_effect('notify_appeal_received', notify_appeal_received, appeal)
+    _side_effect('notify_new_appeal_in_queue', notify_new_appeal_in_queue, appeal)
+    return appeal
+
+
+def review_appeal(*, appeal, reviewer, decision, note=''):
+    """Review a pending appeal.
+
+    ``upheld`` reinstates the award: a withheld year becomes ``approved`` (a
+    human waives the CGPA gate), a cancelled year reopens to
+    ``pending_renewal`` so the student can actually submit. ``rejected``
+    terminates the award.
+    """
+    if appeal.status != AppealStatus.PENDING:
+        raise LifecycleError('This appeal has already been reviewed.')
+
+    note = (note or '').strip()
+    if decision not in ('upheld', 'rejected'):
+        raise LifecycleError("decision must be 'upheld' or 'rejected'.")
+    if not note:
+        raise LifecycleError('A note is required when reviewing an appeal.')
+
+    award = appeal.award
+    installment = appeal.installment
+
+    if decision == 'upheld':
+        if installment.status == InstallmentStatus.WITHHELD:
+            installment.status = InstallmentStatus.APPROVED
+        elif installment.status == InstallmentStatus.CANCELLED:
+            installment.status = InstallmentStatus.PENDING_RENEWAL
+        else:
+            raise LifecycleError(
+                'The appealed installment is no longer in a reviewable state.')
+        installment.save(update_fields=['status', 'updated_at'])
+
+        award.status = AwardStatus.ACTIVE
+        award.suspended_reason = ''
+        award.suspended_at = None
+        award.save(update_fields=['status', 'suspended_reason', 'suspended_at',
+                                  'updated_at'])
+        appeal.status = AppealStatus.UPHELD
+        event_action = 'appeal.upheld'
+    else:
+        # Rejected: the award ends. terminate_award cancels non-disbursed
+        # installments and clears the active-award label.
+        terminate_award(award=award, actor=reviewer,
+                        reason='Appeal rejected')
+        appeal.status = AppealStatus.REJECTED
+        event_action = 'appeal.rejected'
+
+    appeal.reviewed_by = reviewer
+    appeal.reviewed_at = timezone.now()
+    appeal.review_note = note
+    appeal.save(update_fields=['status', 'reviewed_by', 'reviewed_at',
+                               'review_note'])
+
+    _event(award, reviewer, event_action,
+           f'year {installment.year_index}: {note}')
+    record_admin_action(
+        reviewer,
+        f'Award appeal {decision} — year {installment.year_index}',
+        'Award',
+        str(award.id),
+    )
+    _side_effect('notify_appeal_decision', notify_appeal_decision, appeal)
+    return appeal

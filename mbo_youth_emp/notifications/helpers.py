@@ -279,3 +279,59 @@ def notify_award_graduated(award) -> Notification:
             f'payment years of your "{award.scheme.name}" award.'
         ),
     )
+
+
+def notify_new_appeal_in_queue(appeal) -> None:
+    """Alert verifier/admin staff that a suspended student filed an appeal."""
+    from accounts.models import User, Role
+    award = appeal.award
+    for staff in User.objects.filter(
+        role__in=[Role.VERIFIER, Role.ADMIN, Role.SUPERADMIN],
+    ):
+        Notification.objects.create(
+            user=staff,
+            type='alert',
+            title='Award Appeal Filed',
+            message=(
+                f'{award.student.full_name} appealed the suspension of their '
+                f'"{award.scheme.name}" award. It is ready for review.'
+            ),
+        )
+
+
+def notify_appeal_received(appeal) -> Notification:
+    """Confirmation to the student that their appeal was received."""
+    return Notification.objects.create(
+        user=appeal.award.student,
+        type='application',
+        title='Appeal Submitted',
+        message=(
+            f'Your appeal for the "{appeal.award.scheme.name}" award has been '
+            f'received. A review officer will look into it.'
+        ),
+    )
+
+
+def notify_appeal_decision(appeal) -> Notification:
+    """Tell the student the outcome of their appeal."""
+    award = appeal.award
+    if appeal.status == 'upheld':
+        title = 'Appeal Upheld'
+        message = (
+            f'Your appeal for the "{award.scheme.name}" award was upheld. The '
+            f'award has been reinstated.'
+        )
+    else:
+        title = 'Appeal Not Successful'
+        message = (
+            f'Your appeal for the "{award.scheme.name}" award was reviewed and '
+            f'not upheld. The award has been terminated.'
+        )
+    if appeal.review_note:
+        message += f' Note: {appeal.review_note}'
+    return Notification.objects.create(
+        user=award.student,
+        type='application',
+        title=title,
+        message=message,
+    )
