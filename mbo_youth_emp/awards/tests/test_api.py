@@ -10,8 +10,8 @@ from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from awards.models import AwardStatus, InstallmentStatus
-from awards.services.lifecycle import submit_renewal
+from awards.models import AppealStatus, AwardStatus, InstallmentStatus
+from awards.services.lifecycle import submit_appeal, submit_renewal
 
 from .base import AwardTestBase
 
@@ -182,3 +182,57 @@ class AwardApiTests(AwardTestBase):
         resp = self.client.post(terminate, {'reason': 'final'}, format='json')
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data['status'], AwardStatus.TERMINATED)
+
+    # ── Appeals ────────────────────────────────────────────────────────────
+    def _suspended_award(self):
+        award = self.make_award()
+        award.status = AwardStatus.SUSPENDED
+        award.suspended_reason = 'CGPA below threshold'
+        award.save()
+        self.add_installment(award, year_index=2,
+                             status=InstallmentStatus.WITHHELD)
+        return award
+
+    def test_appeal_submit_endpoint(self):
+        award = self._suspended_award()
+        self.client.force_authenticate(user=award.student)
+        resp = self.client.post(
+            reverse('award-appeal', kwargs={'pk': award.pk}),
+            {'reason': 'Medical evidence attached'}, format='multipart')
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertEqual(resp.data['status'], AppealStatus.PENDING)
+
+    def test_appeal_submit_by_other_student_404(self):
+        award = self._suspended_award()
+        self.client.force_authenticate(user=self.make_student())
+        resp = self.client.post(
+            reverse('award-appeal', kwargs={'pk': award.pk}),
+            {'reason': 'x'}, format='multipart')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_appeals_queue_is_staff_only(self):
+        award = self._suspended_award()
+        submit_appeal(award=award, student=award.student, reason='x')
+        url = reverse('award-appeal-list')
+
+        self.client.force_authenticate(user=self.make_student())
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+        self.client.force_authenticate(user=self.make_staff('verifier'))
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['count'], 1)
+
+    def test_appeal_review_endpoint(self):
+        award = self._suspended_award()
+        appeal = submit_appeal(award=award, student=award.student, reason='x')
+        url = reverse('award-appeal-review', kwargs={'pk': appeal.pk})
+
+        self.client.force_authenticate(user=self.make_staff('verifier'))
+        resp = self.client.post(url, {'decision': 'upheld', 'note': 'Evidence ok'},
+                                format='json')
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertEqual(resp.data['status'], AppealStatus.UPHELD)
+
+        award.refresh_from_db()
+        self.assertEqual(award.status, AwardStatus.ACTIVE)
