@@ -8,7 +8,7 @@ installment timeline.
 
 from rest_framework import serializers
 
-from .models import Award, AwardInstallment, CgpaScale
+from .models import AppealStatus, Award, AwardAppeal, AwardInstallment, CgpaScale
 
 
 def scheme_brief(scheme):
@@ -126,9 +126,69 @@ class AwardListSerializer(serializers.ModelSerializer):
 
 class AwardSerializer(AwardListSerializer):
     installments = InstallmentSerializer(many=True, read_only=True)
+    pending_appeal = serializers.SerializerMethodField()
 
     class Meta(AwardListSerializer.Meta):
-        fields = AwardListSerializer.Meta.fields + ['installments']
+        fields = AwardListSerializer.Meta.fields + ['installments', 'pending_appeal']
+
+    def get_pending_appeal(self, obj):
+        for appeal in obj.appeals.all():
+            if appeal.status == AppealStatus.PENDING:
+                return AppealSerializer(appeal).data
+        return None
+
+
+class AppealSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    evidence       = serializers.SerializerMethodField()
+    installment    = serializers.SerializerMethodField()
+    award          = serializers.SerializerMethodField()
+    reviewed_by    = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AwardAppeal
+        fields = [
+            'id', 'status', 'status_display', 'reason', 'evidence',
+            'installment', 'award', 'reviewed_by', 'reviewed_at',
+            'review_note', 'created_at',
+        ]
+
+    def get_evidence(self, obj):
+        if not obj.evidence:
+            return None
+        try:
+            return obj.evidence.url
+        except Exception:
+            return None
+
+    def get_installment(self, obj):
+        inst = obj.installment
+        return {
+            'id':         str(inst.id),
+            'year_index': inst.year_index,
+            'status':     inst.status,
+        }
+
+    def get_reviewed_by(self, obj):
+        if not obj.reviewed_by_id:
+            return None
+        return {'id': str(obj.reviewed_by_id), 'full_name': obj.reviewed_by.full_name}
+
+    def get_award(self, obj):
+        award = obj.award
+        return {
+            'id':              str(award.id),
+            'status':          award.status,
+            'total_years':     award.total_years,
+            'current_year_index': award.current_year_index,
+            'student': {
+                'id':        str(award.student_id),
+                'full_name': award.student.full_name,
+                'email':     award.student.email,
+                'ward':      award.student.ward,
+            },
+            'scheme': scheme_brief(award.scheme),
+        }
 
 
 # ── Request serializers ────────────────────────────────────────────────────
@@ -154,3 +214,13 @@ class DisburseSerializer(serializers.Serializer):
 
 class AwardActionSerializer(serializers.Serializer):
     reason = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class AppealSubmitSerializer(serializers.Serializer):
+    reason   = serializers.CharField()
+    evidence = serializers.FileField(required=False, allow_null=True)
+
+
+class AppealReviewSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(choices=['upheld', 'rejected'])
+    note     = serializers.CharField(required=False, allow_blank=True, default='')

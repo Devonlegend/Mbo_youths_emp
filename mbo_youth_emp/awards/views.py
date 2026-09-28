@@ -20,8 +20,11 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from accounts.permissions import IsAdmin, IsVerifier
 from schemes.models import Cycle
 
-from .models import Award, AwardInstallment, InstallmentStatus
+from .models import Award, AwardAppeal, AwardInstallment, AppealStatus, InstallmentStatus
 from .serializers import (
+    AppealReviewSerializer,
+    AppealSerializer,
+    AppealSubmitSerializer,
     AwardActionSerializer,
     AwardListSerializer,
     AwardSerializer,
@@ -34,6 +37,8 @@ from .serializers import (
 from .services.lifecycle import (
     LifecycleError,
     disburse_installment,
+    review_appeal,
+    submit_appeal,
     submit_renewal,
     suspend_award,
     terminate_award,
@@ -49,7 +54,7 @@ def _award_queryset():
     return (
         Award.objects
         .select_related('scheme__provider', 'start_cycle', 'student')
-        .prefetch_related('installments__cycle')
+        .prefetch_related('installments__cycle', 'appeals__installment')
         .order_by('-created_at')
     )
 
@@ -178,6 +183,36 @@ class AwardViewSet(viewsets.ViewSet):
             return Response({'error': str(exc)}, status=400)
 
         return Response(InstallmentSerializer(installment).data)
+
+    # ── Student: appeal a suspension ───────────────────────────────────────
+    @extend_schema(
+        summary="Appeal a suspended award",
+        description="Multipart: reason, evidence(file). Suspended awards only.",
+        request=AppealSubmitSerializer,
+        responses=AppealSerializer,
+    )
+    @action(detail=True, methods=['post'], url_path='appeal')
+    def appeal(self, request, pk=None):
+        award = get_object_or_404(
+            Award.objects.select_related('scheme', 'student'), pk=pk)
+        student = getattr(request.user, 'student_profile', None)
+        if student is None or award.student_id != student.pk:
+            return Response({'error': 'Award not found'}, status=404)
+
+        payload = AppealSubmitSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+
+        try:
+            appeal = submit_appeal(
+                award=award,
+                student=student,
+                reason=payload.validated_data['reason'],
+                evidence=payload.validated_data.get('evidence'),
+            )
+        except LifecycleError as exc:
+            return Response({'error': str(exc)}, status=400)
+
+        return Response(AppealSerializer(appeal).data, status=201)
 
     # ── Staff: renewal queue ───────────────────────────────────────────────
     @extend_schema(
@@ -356,6 +391,67 @@ class InstallmentViewSet(viewsets.ViewSet):
         except LifecycleError as exc:
             return Response({'error': str(exc)}, status=400)
         return Response(InstallmentSerializer(installment).data)
+
+
+class AppealViewSet(viewsets.ViewSet):
+    """Staff appeal queue + decision. Students file appeals via
+    POST /awards/{id}/appeal/."""
+
+    permission_classes = [IsVerifier]
+    pagination_class = PageNumberPagination
+
+    def _paginate(self, request, queryset, serializer_class):
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        if page is not None:
+            return paginator.get_paginated_response(
+                serializer_class(page, many=True).data)
+        return Response(serializer_class(queryset, many=True).data)
+
+    @extend_schema(
+        summary="Appeal queue",
+        description="Pending award appeals by default; ?status= for all/other.",
+        parameters=[OpenApiParameter('status', str)],
+        responses=OpenApiResponse(description='Paginated appeal queue.'),
+    )
+    def list(self, request):
+        status_param = request.query_params.get('status', AppealStatus.PENDING)
+        qs = (
+            AwardAppeal.objects
+            .select_related('award__scheme__provider', 'award__student',
+                            'installment', 'reviewed_by')
+            .order_by('-created_at')
+        )
+        if status_param != 'all':
+            qs = qs.filter(status=status_param)
+        return self._paginate(request, qs, AppealSerializer)
+
+    @extend_schema(
+        summary="Review an appeal",
+        description="{ decision: upheld|rejected, note }",
+        request=AppealReviewSerializer,
+        responses=AppealSerializer,
+    )
+    @action(detail=True, methods=['post'], url_path='review')
+    def review(self, request, pk=None):
+        appeal = get_object_or_404(
+            AwardAppeal.objects.select_related(
+                'award__scheme__provider', 'award__student',
+                'installment', 'reviewed_by'),
+            pk=pk,
+        )
+        payload = AppealReviewSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        try:
+            review_appeal(
+                appeal=appeal,
+                reviewer=request.user,
+                decision=payload.validated_data['decision'],
+                note=payload.validated_data.get('note', ''),
+            )
+        except LifecycleError as exc:
+            return Response({'error': str(exc)}, status=400)
+        return Response(AppealSerializer(appeal).data)
 
 
 # ── CSV helpers ────────────────────────────────────────────────────────────
