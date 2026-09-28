@@ -2,6 +2,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.db import transaction
+from django.utils import timezone
 
 from .models import ScholarshipScheme, Cycle, SchemeProvider
 from .serializers import ScholarshipSchemeSerializer, CycleSerializer, SchemeProviderSerializer
@@ -63,7 +65,7 @@ class CycleViewSet(viewsets.ModelViewSet):
         cycle = serializer.save()
         record_admin_action(
             self.request.user,
-            f"Created cycle '{cycle.label}'",
+            f"Created cycle '{cycle.name}'",
             "Cycle",
             str(cycle.id),
         )
@@ -72,16 +74,16 @@ class CycleViewSet(viewsets.ModelViewSet):
         cycle = serializer.save()
         record_admin_action(
             self.request.user,
-            f"Updated cycle '{cycle.label}'",
+            f"Updated cycle '{cycle.name}'",
             "Cycle",
             str(cycle.id),
         )
 
     def perform_destroy(self, instance):
-        label = instance.label
+        name = instance.name
         record_admin_action(
             self.request.user,
-            f"Deleted cycle '{label}'",
+            f"Deleted cycle '{name}'",
             "Cycle",
             str(instance.id),
         )
@@ -89,19 +91,33 @@ class CycleViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='activate')
     def activate(self, request, pk=None):
-        """POST /schemes/cycles/{id}/activate/ — make this the active cycle."""
-        # Deactivate all others first
-        Cycle.objects.all().update(is_active=False)
-        cycle = self.get_object()
-        cycle.is_active = True
-        cycle.save()
+        """POST /schemes/cycles/{id}/activate/ — make this the active cycle,
+        then open the next payment year for every active recurring award."""
+        # Atomic so a crash can never leave zero active cycles.
+        with transaction.atomic():
+            Cycle.objects.all().update(is_active=False)
+            cycle = self.get_object()
+            cycle.is_active = True
+            cycle.activated_at = timezone.now()
+            cycle.save(update_fields=['is_active', 'activated_at'])
+
         record_admin_action(
             request.user,
-            f"Activated cycle '{cycle.label}'",
+            f"Activated cycle '{cycle.name}'",
             "Cycle",
             str(cycle.id),
         )
-        return Response({'status': 'Cycle activated', 'cycle': CycleSerializer(cycle).data})
+
+        # Rollover opens the next installment for active awards. Runs after the
+        # activation commits; its per-award savepoints isolate failures.
+        from awards.services.rollover import run_cycle_rollover
+        rollover = run_cycle_rollover(cycle)
+
+        return Response({
+            'status': 'Cycle activated',
+            'cycle': CycleSerializer(cycle).data,
+            'rollover': rollover,
+        })
 
 
 
