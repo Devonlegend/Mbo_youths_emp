@@ -239,3 +239,93 @@ class EmailService:
                 'student_name': student.full_name,
             }
         )
+
+    # ── Recurring (multi-year) scholarships ──────────────────────────────────
+
+    @classmethod
+    def send_renewal_open(cls, award, cycle, year_index) -> bool:
+        """Yearly reminder that the next renewal is open."""
+        return cls._send(
+            to_email=award.student.user.email,
+            subject=f'Renewal Open — {award.scheme.name} ({cycle.name})',
+            template='renewal_open',
+            context={
+                'student_name': award.student.full_name,
+                'scheme_name':  award.scheme.name,
+                'cycle_name':   cycle.name,
+                'year_index':   year_index,
+                'total_years':  award.total_years,
+                'threshold':    f'{float(award.min_cgpa_snapshot):.2f}',
+                'award_id':     str(award.id),
+            }
+        )
+
+    @classmethod
+    def send_award_suspended(cls, award, reason='') -> bool:
+        """Suspension notice — must include the appeal path."""
+        return cls._send(
+            to_email=award.student.user.email,
+            subject=f'Award Suspended — {award.scheme.name}',
+            template='award_suspended',
+            context={
+                'student_name': award.student.full_name,
+                'scheme_name':  award.scheme.name,
+                'reason':       reason or 'Not specified',
+                'award_id':     str(award.id),
+            }
+        )
+
+    @classmethod
+    def send_installment_disbursed(cls, installment) -> bool:
+        """Payment confirmation for one disbursed year."""
+        award = installment.award
+        return cls._send(
+            to_email=award.student.user.email,
+            subject=f'Payment Disbursed — {award.scheme.name}',
+            template='installment_disbursed',
+            context={
+                'student_name':     award.student.full_name,
+                'scheme_name':      award.scheme.name,
+                'year_index':       installment.year_index,
+                'total_years':      award.total_years,
+                'amount':           f'{float(installment.amount):,.2f}',
+                'disbursement_ref': installment.disbursement_ref or '—',
+                'disbursed_date':   (installment.disbursed_at.strftime('%d %B %Y')
+                                     if installment.disbursed_at else '—'),
+                'award_id':         str(award.id),
+            }
+        )
+
+    @classmethod
+    def send_award_graduated(cls, award) -> bool:
+        """Congratulation email when the final year is paid."""
+        return cls._send(
+            to_email=award.student.user.email,
+            subject=f'Scholarship Completed — {award.scheme.name}',
+            template='award_graduated',
+            context={
+                'student_name': award.student.full_name,
+                'scheme_name':  award.scheme.name,
+                'total_years':  award.total_years,
+                'award_id':     str(award.id),
+            }
+        )
+
+    @classmethod
+    def send_appeal_decision(cls, appeal) -> bool:
+        """Outcome of an award appeal."""
+        award = appeal.award
+        upheld = appeal.status == 'upheld'
+        return cls._send(
+            to_email=award.student.user.email,
+            subject=(f'Appeal Upheld — {award.scheme.name}' if upheld
+                     else f'Appeal Decision — {award.scheme.name}'),
+            template='appeal_decision',
+            context={
+                'student_name': award.student.full_name,
+                'scheme_name':  award.scheme.name,
+                'upheld':       upheld,
+                'review_note':  appeal.review_note or '',
+                'award_id':     str(award.id),
+            }
+        )

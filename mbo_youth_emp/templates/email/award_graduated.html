@@ -1,0 +1,38 @@
+{% extends "email/base.html" %}
+
+{% block status_strip %}
+<tr>
+  <td class="status-strip-cell status-strip--blue" style="padding:16px 32px; border-bottom:1px solid #bfdbfe; background:#eff6ff;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="status-strip-icon" style="width:32px; height:32px; border-radius:9px; background:#ffffff; border:1px solid #bfdbfe; font-family: Arial, Helvetica, sans-serif; font-weight:800; font-size:15px; line-height:32px; text-align:center; color:#3b82f6;">
+          &#9733;
+        </td>
+        <td style="padding-left:10px; vertical-align:middle;">
+          <span class="status-strip-text" style="font-size:12.5px; font-weight:700; letter-spacing:-0.01em; color:#1e40af;">Scholarship Completed</span>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+{% endblock %}
+
+{% block content %}
+  <h2>Congratulations, {{ student_name }}!</h2>
+  <p>
+    You have completed all <strong>{{ total_years }}</strong> payment years of
+    your <strong>{{ scheme_name }}</strong> scholarship. The Trust wishes you
+    every success in the next stage of your studies and career.
+  </p>
+
+  <div class="info-box info-box--blue">
+    Your award is now marked as <strong>graduated</strong>, and no further
+    payments are scheduled.
+  </div>
+
+  <div class="cta-wrap">
+    <a href="{{ portal_url }}/dashboard/awards/{{ award_id }}" class="cta-button">
+      View My Award
+    </a>
+  </div>
+{% endblock %}

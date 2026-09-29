@@ -1,0 +1,42 @@
+{% extends "email/base.html" %}
+
+{% block status_strip %}
+<tr>
+  <td class="status-strip-cell status-strip--red" style="padding:16px 32px; border-bottom:1px solid #fecaca; background:#fef2f2;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="status-strip-icon" style="width:32px; height:32px; border-radius:9px; background:#ffffff; border:1px solid #fecaca; font-family: Arial, Helvetica, sans-serif; font-weight:800; font-size:15px; line-height:32px; text-align:center; color:#ef4444;">
+          !
+        </td>
+        <td style="padding-left:10px; vertical-align:middle;">
+          <span class="status-strip-text" style="font-size:12.5px; font-weight:700; letter-spacing:-0.01em; color:#b91c1c;">Award Suspended</span>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+{% endblock %}
+
+{% block content %}
+  <h2>Your {{ scheme_name }} award is suspended</h2>
+  <p>
+    Dear {{ student_name }}, your multi-year <strong>{{ scheme_name }}</strong>
+    award has been suspended.
+  </p>
+
+  <div class="info-box info-box--red">
+    <strong>Reason:</strong> {{ reason }}
+  </div>
+
+  <p>
+    If you believe this is a mistake, you can submit an appeal from your
+    scholarship dashboard. An appeal must be filed within the appeal window
+    shown there; after that the award may be terminated.
+  </p>
+
+  <div class="cta-wrap">
+    <a href="{{ portal_url }}/dashboard/awards/{{ award_id }}" class="cta-button">
+      Submit an Appeal
+    </a>
+  </div>
+{% endblock %}

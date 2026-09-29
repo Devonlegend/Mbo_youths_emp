@@ -1,0 +1,50 @@
+{% extends "email/base.html" %}
+
+{% block status_strip %}
+<tr>
+  <td class="status-strip-cell {% if upheld %}status-strip--green{% else %}status-strip--red{% endif %}" style="padding:16px 32px; border-bottom:1px solid {% if upheld %}#bbf7d0; background:#f0fdf4;{% else %}#fecaca; background:#fef2f2;{% endif %}">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td class="status-strip-icon" style="width:32px; height:32px; border-radius:9px; background:#ffffff; border:1px solid {% if upheld %}#bbf7d0; color:#15803d;{% else %}#fecaca; color:#ef4444;{% endif %} font-family: Arial, Helvetica, sans-serif; font-weight:800; font-size:15px; line-height:32px; text-align:center;">
+          {% if upheld %}&#10003;{% else %}&#10007;{% endif %}
+        </td>
+        <td style="padding-left:10px; vertical-align:middle;">
+          <span class="status-strip-text" style="font-size:12.5px; font-weight:700; letter-spacing:-0.01em; color:{% if upheld %}#166534{% else %}#b91c1c{% endif %};">
+            {% if upheld %}Appeal Upheld{% else %}Appeal Not Successful{% endif %}
+          </span>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+{% endblock %}
+
+{% block content %}
+  <h2>{% if upheld %}Your appeal was upheld{% else %}Appeal decision{% endif %}, {{ student_name }}</h2>
+
+  {% if upheld %}
+  <p>
+    Your appeal for the <strong>{{ scheme_name }}</strong> scholarship was
+    upheld. The award has been reinstated. Depending on the year involved, you
+    may be asked to submit a renewal so the payment can proceed.
+  </p>
+  {% else %}
+  <p>
+    Your appeal for the <strong>{{ scheme_name }}</strong> scholarship was
+    reviewed and was not upheld. As a result, the award has been terminated and
+    no further payments will be scheduled.
+  </p>
+  {% endif %}
+
+  {% if review_note %}
+  <div class="info-box {% if upheld %}info-box--green{% else %}info-box--red{% endif %}">
+    <strong>Reviewer note:</strong><br>{{ review_note }}
+  </div>
+  {% endif %}
+
+  <div class="cta-wrap">
+    <a href="{{ portal_url }}/dashboard/awards/{{ award_id }}" class="cta-button">
+      View My Award
+    </a>
+  </div>
+{% endblock %}
