@@ -49,6 +49,11 @@ class EligibilityEngine:
             cgpa_result, _ = cls._check_cgpa(student, scheme, details)
             checks['cgpa']  = cgpa_result
             checks['level'] = cls._check_level(student, scheme, details)
+            # Recurring scholarships also gate on the programme type (HND / PG /
+            # undergrad). No-op for one-shot schemes.
+            if scheme.is_recurring:
+                checks['programme_type'] = cls._check_programme_type(
+                    student, scheme, details)
         elif scheme.award_type == 'empowerment':
             checks['age']   = cls._check_age(student, scheme)
             checks['trade'] = cls._check_trade(student, scheme, details)
@@ -110,9 +115,11 @@ class EligibilityEngine:
         min_cgpa   = Decimal(str(scheme.eligibility_criteria.get('min_cgpa', 0)))
         relaxation = None
 
-        # CGPA submitted with this application takes precedence over the profile.
+        # CGPA submitted with this application is the only source — the old
+        # student.cgpa profile fallback is a dead field (removed in migration
+        # 0010) and would AttributeError if reached.
         submitted    = details.get('cgpa')
-        raw_cgpa     = submitted if submitted is not None else (student.cgpa or Decimal('0'))
+        raw_cgpa     = submitted if submitted is not None else 0
         student_cgpa = Decimal(str(raw_cgpa))
         passed       = student_cgpa >= min_cgpa
 
@@ -129,16 +136,56 @@ class EligibilityEngine:
         allowed = scheme.eligibility_criteria.get('allowed_levels', [])
         if not allowed:
             return CheckResult(True, note="No level restriction")
-        # Level submitted with this application takes precedence over the profile.
-        level = details.get('current_level', student.level)
-        # eligibility_criteria is admin-authored JSON (levels may be "200" or 200)
-        # and the level may be an int — compare as strings so they always line up.
+        # Level submitted with this application is the only source — the old
+        # student.level profile fallback is a dead field (removed in migration
+        # 0010). eligibility_criteria is admin-authored JSON (levels may be
+        # "200" or 200) and the level may be an int — compare as strings.
+        level = details.get('current_level', '')
         allowed_str = [str(lvl) for lvl in allowed]
         passed = str(level) in allowed_str
         return CheckResult(
             passed,
             student_level=level,
             allowed_levels=allowed
+        )
+
+    @classmethod
+    def _check_programme_type(cls, student, scheme, details=None) -> CheckResult:
+        """Recurring-scholarship gate: the student's programme type must be in
+        the scheme's `applicable_programme_types` (empty list = undergrad only).
+
+        Missing profile data passes with a note rather than hard-failing an
+        applicant over data an admin can fix — the verifier sees the gap.
+        """
+        from students.models import ProgrammeType
+
+        details    = details or {}
+        applicable = scheme.applicable_programme_types or [ProgrammeType.UNDERGRADUATE]
+        student_type = student.programme_type
+        inferred     = False
+
+        if not student_type:
+            # Fall back to inferring undergraduate from a numeric level.
+            level = details.get('current_level')
+            if level is not None:
+                digits = ''.join(ch for ch in str(level) if ch.isdigit())
+                if digits and 100 <= int(digits) <= 500:
+                    student_type = ProgrammeType.UNDERGRADUATE
+                    inferred = True
+
+        if not student_type:
+            return CheckResult(
+                True,
+                note="Programme type not on file — verify manually",
+                applicable_programme_types=applicable,
+            )
+
+        passed = student_type in applicable
+        return CheckResult(
+            passed,
+            student_programme_type=student_type,
+            applicable_programme_types=applicable,
+            inferred=inferred,
         )
 
     @classmethod
@@ -213,6 +260,22 @@ class EligibilityEngine:
             max_allowed=max_prior
         )
 
+    @staticmethod
+    def _same_type_conflict(new_scheme, existing_scheme) -> bool:
+        """The stacking predicate — reused verbatim for application rows and
+        recurring awards. `open` still stacks, so it is never a conflict."""
+        min_major = Decimal('50000')
+        return (
+            new_scheme.stacking_policy == 'exclusive' or
+            existing_scheme.stacking_policy == 'exclusive' or
+            (
+                new_scheme.stacking_policy == 'major_only' and
+                existing_scheme.stacking_policy == 'major_only' and
+                Decimal(str(new_scheme.award_amount))      >= min_major and
+                Decimal(str(existing_scheme.award_amount)) >= min_major
+            )
+        )
+
     @classmethod
     def _check_double_dip(cls, student, scheme) -> CheckResult:
         # Applications live in per-scheme tables, so a same-academic-year scan is a
@@ -224,6 +287,14 @@ class EligibilityEngine:
         conflict_details = []
         active_count     = 0
 
+        def _add_hard(scheme_id, detail):
+            sid = str(scheme_id)
+            if sid in conflicting_ids:
+                return
+            conflicting_ids.append(sid)
+            conflict_details.append(detail)
+
+        # ── Approved application rows for the SAME academic year ──────────
         for existing_scheme, model in iter_application_models():
             if existing_scheme.academic_year != scheme.academic_year:
                 continue
@@ -236,24 +307,13 @@ class EligibilityEngine:
                 active_count += 1
 
                 is_cross_type = scheme.award_type != existing_scheme.award_type
-
-                # RULE 2: Same-type conflicts depend on stacking policy
                 is_same_type_conflict = (
-                    not is_cross_type and (
-                        scheme.stacking_policy == 'exclusive' or
-                        existing_scheme.stacking_policy == 'exclusive' or
-                        (
-                            scheme.stacking_policy == 'major_only' and
-                            existing_scheme.stacking_policy == 'major_only' and
-                            scheme.award_amount     >= 50000 and
-                            existing_scheme.award_amount >= 50000
-                        )
-                    )
+                    not is_cross_type
+                    and cls._same_type_conflict(scheme, existing_scheme)
                 )
 
                 if is_cross_type or is_same_type_conflict:
-                    conflicting_ids.append(str(existing_scheme.id))
-                    conflict_details.append({
+                    _add_hard(existing_scheme.id, {
                         "scheme_id":   str(existing_scheme.id),
                         "scheme_name": existing_scheme.name,
                         "award_type":  existing_scheme.award_type,
@@ -264,7 +324,59 @@ class EligibilityEngine:
                         )
                     })
 
-        if active_count == 0:
+        # ── Recurring (multi-year) awards: cycle-independent conflicts ─────
+        # A live award is a commitment spanning every cycle it covers, so it
+        # conflicts with a new application regardless of academic year. It also
+        # conflicts with the same scheme under ANY policy (else an `open`-policy
+        # scheme double-pays a student who re-applies).
+        from awards.models import Award, AwardStatus
+
+        awards = (
+            Award.objects
+            .filter(student=student)
+            .exclude(status__in=[AwardStatus.TERMINATED, AwardStatus.GRADUATED])
+            .select_related('scheme', 'start_cycle')
+        )
+        for award in awards:
+            existing_scheme = award.scheme
+            is_cross_type   = scheme.award_type != existing_scheme.award_type
+            is_same_scheme  = existing_scheme.id == scheme.id
+
+            if not (is_same_scheme or is_cross_type
+                    or cls._same_type_conflict(scheme, existing_scheme)):
+                continue
+
+            if is_same_scheme:
+                reason = "You already hold an active recurring award for this scheme"
+            elif is_cross_type:
+                reason = ("Cross-type conflict: cannot hold awards of different "
+                          "types simultaneously")
+            else:
+                reason = ("Stacking policy conflict: award amounts exceed major "
+                          "threshold")
+
+            detail = {
+                "scheme_id":   str(existing_scheme.id),
+                "scheme_name": existing_scheme.name,
+                "award_type":  existing_scheme.award_type,
+                "award_id":    str(award.id),
+                "award_year":  f"{award.current_year_index + 1}/{award.total_years}",
+                "start_cycle": (award.start_cycle.name
+                                if award.start_cycle_id else None),
+                "reason":      reason,
+            }
+
+            if award.status == AwardStatus.SUSPENDED:
+                # Soft flag only — a suspended (possibly terminating) award must
+                # not hard-block every new application.
+                detail["soft"] = True
+                if str(existing_scheme.id) not in conflicting_ids:
+                    conflict_details.append(detail)
+                continue
+
+            _add_hard(existing_scheme.id, detail)
+
+        if not conflicting_ids and not conflict_details and active_count == 0:
             return CheckResult(True, conflicting_ids=[], note="No active awards found")
 
         passed = len(conflicting_ids) == 0
