@@ -62,19 +62,20 @@ class StudentViewSet(viewsets.ModelViewSet):
         except ValueError:
             return Response({"error": "Invalid parameters"}, status=400)
 
-        
-
-        student_cgpa = float(student.cgpa) if student.cgpa else 0.0
-        cgpa_ok      = student_cgpa >= min_cgpa
-        level_ok     = (str(student.level) == str(required_level)) if required_level else True
-        conflict     = student.has_active_award()
+        # CGPA/level were removed from the Student profile (migration 0010) —
+        # they only exist on per-scheme application rows now, so this
+        # label-based pre-check cannot evaluate them. The authoritative
+        # CGPA/level checks run at submit time via EligibilityEngine.
+        conflict = student.has_active_award()
 
         return Response({
             "student":  student.full_name,
-            "eligible": cgpa_ok and level_ok and not conflict,
+            "eligible": not conflict,
             "checks": {
-                "cgpa":     {"passed": cgpa_ok,  "value": student_cgpa, "required": min_cgpa},
-                "level":    {"passed": level_ok, "value": student.level, "required": required_level},
+                "cgpa":  {"passed": True, "value": None, "required": min_cgpa,
+                          "note": "Evaluated against the application at submit time."},
+                "level": {"passed": True, "value": None, "required": required_level,
+                          "note": "Evaluated against the application at submit time."},
                 "conflict": {"has_conflict": conflict, "active_award": student.active_award},
             }
         })
