@@ -58,14 +58,18 @@ class AwardTestBase(TestCase):
             nin_hash=f'nin-hash-staff-{n:04d}', password='x', passport='')
 
     def make_scheme(self, *, is_recurring=True, min_renewal_cgpa='3.00',
-                    amount='150000.00', award_type='scholarship'):
+                    amount='150000.00', award_type='scholarship',
+                    academic_year='2026/2027', stacking_policy='major_only',
+                    applicable_programme_types=None):
         n = self._next()
         return ScholarshipScheme.objects.create(
             provider=self.provider, cycle=self.cycle,
             name=f'Scheme {n}', award_type=award_type,
-            description='x', academic_year='2026/2027', award_amount=amount,
+            description='x', academic_year=academic_year, award_amount=amount,
             total_slots=5, remaining_slots=5, is_recurring=is_recurring,
             min_renewal_cgpa=min_renewal_cgpa,
+            stacking_policy=stacking_policy,
+            applicable_programme_types=applicable_programme_types or [],
             eligibility_criteria={'min_cgpa': 2.50},
             application_open_date='2026-01-01', application_close_date='2026-12-31',
         )
