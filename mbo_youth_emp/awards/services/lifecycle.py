@@ -35,6 +35,7 @@ from django.utils import timezone
 
 from accounts.validators import validate_upload, FileValidationError
 from audit.services import record_admin_action
+from .dispatch import dispatch_email
 from notifications.helpers import (
     notify_appeal_decision,
     notify_appeal_received,
@@ -124,6 +125,8 @@ def _suspend(award, actor, reason, event_action='suspended', note=''):
                               'updated_at'])
     _event(award, actor, event_action, note or reason)
     _side_effect('notify_award_suspended', notify_award_suspended, award, reason)
+    from verification.tasks import send_award_suspended_email
+    dispatch_email(send_award_suspended_email, award_id=str(award.id), reason=reason)
 
 
 # ── Student: submit a yearly renewal ───────────────────────────────────────
@@ -308,6 +311,14 @@ def disburse_installment(*, installment, admin, disbursement_ref=''):
                  installment)
     if graduated:
         _side_effect('notify_award_graduated', notify_award_graduated, award)
+
+    from verification.tasks import (
+        send_award_graduated_email, send_installment_disbursed_email,
+    )
+    dispatch_email(send_installment_disbursed_email,
+                   installment_id=str(installment.id))
+    if graduated:
+        dispatch_email(send_award_graduated_email, award_id=str(award.id))
     return award
 
 
@@ -454,4 +465,6 @@ def review_appeal(*, appeal, reviewer, decision, note=''):
         str(award.id),
     )
     _side_effect('notify_appeal_decision', notify_appeal_decision, appeal)
+    from verification.tasks import send_appeal_decision_email
+    dispatch_email(send_appeal_decision_email, appeal_id=str(appeal.id))
     return appeal

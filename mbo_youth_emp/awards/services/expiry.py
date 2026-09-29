@@ -23,6 +23,7 @@ from django.utils import timezone
 
 from notifications.helpers import notify_award_suspended
 
+from .dispatch import dispatch_email
 from ..models import (
     AppealStatus,
     Award,
@@ -89,6 +90,12 @@ def expire_overdue_renewals(now=None):
         except Exception:
             logger.exception('Grace-expiry notification failed for award %s',
                              award.id)
+
+    if suspended_awards:
+        from verification.tasks import send_award_suspended_email
+        for award in suspended_awards:
+            dispatch_email(send_award_suspended_email, award_id=str(award.id),
+                           reason='No renewal submitted')
 
     return results
 

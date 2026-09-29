@@ -26,6 +26,7 @@ from django.db import transaction
 from notifications.helpers import build_renewal_open_notification
 from notifications.models import Notification
 
+from .dispatch import dispatch_email
 from ..models import (
     Award,
     AwardEvent,
@@ -73,6 +74,7 @@ def run_cycle_rollover(new_cycle):
     )
 
     notifications = []
+    email_jobs    = []
 
     for award in awards:
         try:
@@ -128,6 +130,7 @@ def run_cycle_rollover(new_cycle):
                 )
                 notifications.append(
                     build_renewal_open_notification(award, new_cycle, next_index))
+                email_jobs.append((str(award.id), str(new_cycle.id), next_index))
                 results['created'] += 1
 
         except Exception:
@@ -137,6 +140,12 @@ def run_cycle_rollover(new_cycle):
 
     if notifications:
         Notification.objects.bulk_create(notifications)
+
+    if email_jobs:
+        from verification.tasks import send_award_renewal_open_email
+        for award_id, cycle_id, year_index in email_jobs:
+            dispatch_email(send_award_renewal_open_email, award_id=award_id,
+                           cycle_id=cycle_id, year_index=year_index)
 
     results['already_rolled'] = results['created'] == 0
     return results
