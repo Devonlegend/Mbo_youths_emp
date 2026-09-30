@@ -30,6 +30,7 @@
 
 - `awards/services/rollover.py::run_cycle_rollover` — cycle-locked, per-award savepoints, skips unresolved/complete/suspended awards with reasons, never advances the index and never graduates; idempotent (`already_rolled`). Wired into `CycleViewSet.activate`, which now sets `activated_at`.
 - `awards/services/expiry.py` + `expire_renewals` management command (`--dry-run`) — cancels overdue renewals (suspend) and expires lapsed appeal windows (terminate).
+- **Scheduling** — `awards/tasks.py::expire_awards` is scheduled daily at 01:00 UTC from a static `beat_schedule` in `config/celery.py`; a dedicated `beat` service was added to `docker-compose.yml` (one instance only). `CELERY_BEAT_SCHEDULE` is version-controlled; no extra dependency.
 
 ### 🎯 Eligibility (`applications/services/eligibility.py`)
 

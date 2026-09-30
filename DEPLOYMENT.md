@@ -254,7 +254,23 @@ curl https://back.mboempowerment.com/api/schema/
 | Backend logs      | `docker compose logs -f backend`                               |
 | Rebuild           | `docker compose up -d --build`                                 |
 | Create superuser  | `docker compose exec backend python manage.py createsuperuser` |
+| Run expiry now    | `docker compose exec backend python manage.py expire_renewals` |
+| Expiry dry-run    | `docker compose exec backend python manage.py expire_renewals --dry-run` |
+| Beat logs         | `docker compose logs -f beat`                                  |
 | DB shell (Coolify)| Coolify UI → database → Terminal, or `psql` via the Internal URL |
+
+### Scheduled jobs (Celery Beat)
+
+The `beat` service runs the static schedule in `config/celery.py`. Today that is
+one daily job — `expire-recurring-renewals` (`awards.tasks.expire_awards`) at
+01:00 UTC — which cancels overdue scholarship renewals (suspending the award)
+and expires lapsed appeal windows (terminating the award). The same work is
+runnable by hand with `manage.py expire_renewals` (add `--dry-run` to preview).
+
+Exactly **one** `beat` instance must run; do not run beat inside the `worker`
+container. After changing the schedule, redeploy/restart `beat`. The windows are
+controlled by `RENEWAL_GRACE_DAYS` (default 56) and `APPEAL_WINDOW_DAYS`
+(default 60) env vars.
 
 > Security: never publish Postgres/Redis to the public internet. In Option A the
 > database is internal-only in Coolify; in Option B it is `expose`d only, and the
