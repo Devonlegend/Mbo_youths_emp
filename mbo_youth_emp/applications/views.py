@@ -74,6 +74,27 @@ def _dispatch_email(task, application, scheme):
             "Failed to enqueue %s for application %s", task.name, application.id)
 
 
+def _ended_award_application_ids(scheme, application_ids):
+    """Application ids whose recurring Award has ENDED (terminated/graduated).
+
+    The approved-list / disbursement export reads *application* rows, which
+    know nothing about later award status, so a student whose multi-year award
+    was terminated or who has graduated would otherwise still export as a
+    current beneficiary. Drop those. No-op for one-shot schemes (no Awards).
+
+    (Edge #24, RECURRING_SCHOLARSHIPS_PLAN.md.)
+    """
+    if not scheme.is_recurring or not application_ids:
+        return set()
+    from awards.models import Award, AwardStatus
+    return set(
+        Award.objects.filter(
+            application_id__in=list(application_ids),
+            status__in=[AwardStatus.TERMINATED, AwardStatus.GRADUATED],
+        ).values_list('application_id', flat=True)
+    )
+
+
 class ApplicationViewSet(viewsets.ViewSet):
     """Applications live in per-scheme tables (see applications/dynamic.py).
 
@@ -267,6 +288,12 @@ class ApplicationViewSet(viewsets.ViewSet):
             qs = qs.filter(status=status_filter)
 
         apps = list(qs)
+        # When listing the approved cohort, drop applicants whose recurring
+        # award has since ended (terminated/graduated) — edge #24.
+        if status_filter == ApplicationStatus.APPROVED:
+            ended = _ended_award_application_ids(scheme, [a.id for a in apps])
+            if ended:
+                apps = [a for a in apps if a.id not in ended]
         # Live counts: how many still need a decision, and how many approval
         # emails are staged for the Publish button.
         pending_review = model.objects.filter(status__in=REVIEWABLE_STATUSES).count()
@@ -338,6 +365,12 @@ class ApplicationViewSet(viewsets.ViewSet):
             qs.select_related('student', 'scheme')
             .order_by('created_at')
         )
+
+        # Exclude applicants whose recurring award has ended (terminated or
+        # graduated) — they are not current beneficiaries.
+        ended = _ended_award_application_ids(scheme, [r.id for r in rows])
+        if ended:
+            rows = [r for r in rows if r.id not in ended]
 
         # application_id -> latest time the row moved into 'approved'.
         approved_at_map = {
