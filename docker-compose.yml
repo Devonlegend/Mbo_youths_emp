@@ -134,6 +134,38 @@ services:
       retries: 3
       start_period: 60s
 
+  # ── Celery beat (periodic scheduler) ──────────────────────────────────
+  # Runs the static beat_schedule from config/celery.py — currently the daily
+  # `expire-recurring-renewals` job (renewal grace + appeal-window expiry).
+  # Exactly ONE beat instance; never run beat inside the worker container.
+  beat:
+    build:
+      context: ./mbo_youth_emp
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT:-5432}
+      # Coolify-managed Redis database Internal URL.
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG:-False}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PAYSTACK_MOCK_MODE: ${PAYSTACK_MOCK_MODE:-False}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      ZEPTO_MOCK_MODE: ${ZEPTO_MOCK_MODE:-False}
+      ZEPTO_API_KEY: ${ZEPTO_API_KEY:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-dwn6p3qmd}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+    command: celery -A config beat -l info
+    networks:
+      - default
+      - coolify
+
   #  Reverse proxy 
   # Managed by Coolify's built-in proxy (Traefik by default). Do NOT run a
   # proxy container here — it would fight Coolify's proxy for ports 80/443.
