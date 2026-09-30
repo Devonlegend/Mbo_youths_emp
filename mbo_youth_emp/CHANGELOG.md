@@ -1,5 +1,56 @@
 # Changelog
 
+## v1.2.0 (recurring-scholarships)
+
+**Multi-year scholarships: a recurring-award contract that pays every academic year until graduation, gated by a yearly CGPA threshold, with renewal verification, suspension/appeal recovery, and an automatic cycle-rollover engine.**
+
+### 🗃️ Data model
+
+- **`schemes.ScholarshipScheme`** — new `is_recurring` (master switch; default `False` = today's one-shot behaviour), `min_renewal_cgpa` (yearly gate; falls back to `eligibility_criteria.min_cgpa`) and `applicable_programme_types` (JSON list; empty = undergrad only). Serializer handles them as flat top-level keys, same convention as the eligibility keys.
+- **`students.Student`** — new optional academic profile: `faculty`, `programme_type` (`ProgrammeType` choices), `programme_duration_years`, `entry_level`. Exposed on `StudentSerializer`.
+- **`schemes.Cycle`** — new `activated_at`, the anchor for the renewal grace window.
+- **New app `awards`** — `Award` (the multi-year contract; `scheme` is `PROTECT`ed), `AwardInstallment` (one row per payment year), `AwardAppeal`, `AwardEvent` (append-only audit trail). `Award.current_year_index` is a **paid-years counter starting at 0** — advanced on disbursement only.
+- **Migrations**: `schemes/0002`, `students/0012`, `schemes/0003`, `awards/0001`.
+
+### 🧮 Tenure resolver (`awards/services/tenure.py`)
+
+- `resolve_total_years(student, application_row)` → `TenureResolution(total_years, confidence, programme_type, flags)`. Counts from the student's **current** level (never entry level), clamps to `[1, 6]` with a flag, and **never raises** (it runs inside the approval transaction). Free-text inference is `inferred` + flagged; unresolvable input degrades to 1 year + a flag.
+
+### ✅ Award creation
+
+- `awards/services/creation.py::create_award` hooked into `review()` and `staff_create` inside the approval transaction — idempotent via `unique(application_id)`, snapshots amount + threshold, creates the year-1 installment as `approved`.
+- Withdrawal of an approved application cascades: `terminate_award_for_withdrawal` terminates the award and cancels non-disbursed installments (disbursed money is terminal).
+
+### 🔄 Lifecycle + API (`awards/services/lifecycle.py`, `awards/views.py`)
+
+- Source-status-guarded transitions, each writing an `AwardEvent` (+ `audit.record_admin_action` for staff): `submit_renewal` (normalized 5.0-scale CGPA), `verify_installment` (approve/reject/withhold; server-side CGPA gate; reject-cap → cancel + suspend), `disburse_installment` (the only path that advances the index and the only path that graduates), `suspend_award` / `terminate_award`, and the `submit_appeal` / `review_appeal` recovery flow.
+- Endpoints: `GET /awards/`, `/awards/mine/`, `/awards/{id}/`, `POST /awards/{id}/renew/`, `/appeal/`, `/suspend/`, `/terminate/`, `GET /awards/renewals/`, `GET /awards/appeals/`, `POST /awards/installments/{id}/verify/`, `/disburse/`, `POST /awards/appeals/{id}/review/`, `GET /awards/export/?export=csv`.
+
+### ⏱️ Rollover + expiry
+
+- `awards/services/rollover.py::run_cycle_rollover` — cycle-locked, per-award savepoints, skips unresolved/complete/suspended awards with reasons, never advances the index and never graduates; idempotent (`already_rolled`). Wired into `CycleViewSet.activate`, which now sets `activated_at`.
+- `awards/services/expiry.py` + `expire_renewals` management command (`--dry-run`) — cancels overdue renewals (suspend) and expires lapsed appeal windows (terminate).
+
+### 🎯 Eligibility (`applications/services/eligibility.py`)
+
+- Recurring scholarships gate on `programme_type` (missing data passes with a verifier note).
+- Recurring `Award` rows participate in double-dip detection **across every cycle they span**, with a same-scheme-any-policy rule and dedup against the originating approved row; suspended awards raise a soft flag (not a hard conflict). The stacking predicate is shared verbatim with the application-row scan.
+
+### 📧 Emails
+
+- `EmailService` methods + Celery tasks + templates for renewal-open, suspension, disbursement, graduation, and appeal-decision. All dispatched via `transaction.on_commit` (a broker blip never breaks a committed transition), with the renewal fan-out using `bulk_create` for in-app notifications.
+
+### 🛠️ Fixes
+
+- **Pre-existing `CycleViewSet` 500**: `create`/`update`/`destroy`/`activate` referenced the non-existent `cycle.label`; now `cycle.name`. Activation is now atomic (can no longer leave zero active cycles).
+- **Dead `student.cgpa` / `student.level` reads** removed from `EligibilityEngine._check_cgpa`/`_check_level` and from `students/views.py::eligibility_check` (fields were removed from `Student` in migration 0010).
+
+### 🧪 Tests
+
+- New `awards` test package (tenure, creation, lifecycle, API, appeals, rollover, expiry, eligibility, emails) — Postgres-native, since the scheme `post_save` signal builds each physical application table via `schema_editor`.
+
+---
+
 ## v1.1.8 (email-provider)
 
 **Transactional email provider switched from Brevo to ZeptoMail (Zoho) — all Brevo SDK usage removed. Healthchecks added for every service (Coolify-ready).**
