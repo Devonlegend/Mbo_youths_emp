@@ -14,11 +14,12 @@ from rest_framework.test import APITestCase
 from django.utils import timezone
 
 from accounts.models import User
-from schemes.models import ScholarshipScheme, SchemeProvider
+from schemes.models import ScholarshipScheme, SchemeProvider, Cycle
 from students.models import Student
 
 from applications.dynamic import build_application_table, get_application_model
 from applications.models import ApplicationStatus, ApplicationStatusHistory
+from awards.models import Award, AwardStatus
 
 from .services.slots import consume_slot, release_slot
 from .services.withdrawal import withdraw_application
@@ -413,3 +414,104 @@ class ApprovedListExportTests(APITestCase):
         resp = self.client.get(
             '/applications/approved-list/?scheme={}'.format(self.scheme.id))
         self.assertEqual(resp.status_code, 403)
+
+
+class EndedRecurringAwardExportTests(APITestCase):
+    """Edge #24 — an applicant whose recurring award ENDED (terminated or
+    graduated) must not export as a current beneficiary."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.provider = SchemeProvider.objects.create(
+            name='Edge24 Provider', provider_type='lga')
+        cls.cycle = Cycle.objects.create(
+            name='2026/2027', start_year=2026, end_year=2027, is_active=True)
+        cls.verifier = User.objects.create_user(
+            email='verifier@edge24.test', firstname='Veri', lastname='Fier',
+            phone_number='08090000024', role='verifier',
+            nin_hash='nin-hash-edge24-ver', password='x', passport='')
+        student_user = User.objects.create_user(
+            email='student@edge24.test', firstname='Ada', lastname='Okon',
+            phone_number='08030000024', role='student',
+            nin_hash='nin-hash-edge24-stu', password='x', passport='')
+        cls.student = Student.attach_to_user(student_user, ward='efiat')
+        cls.scheme = ScholarshipScheme.objects.create(
+            provider=cls.provider, cycle=cls.cycle, name='Edge24 Recurring',
+            description='x', academic_year='2026/2027', award_amount=100000,
+            total_slots=5, remaining_slots=5, is_recurring=True,
+            application_open_date=timezone.now().date() - timedelta(days=1),
+            application_close_date=timezone.now().date() + timedelta(days=30),
+        )
+        cls.model = build_application_table(cls.scheme)
+
+    def setUp(self):
+        self.client.force_authenticate(user=self.verifier)
+
+    def _make_approved(self):
+        app = self.model.objects.create(
+            student=self.student, scheme=self.scheme,
+            status=ApplicationStatus.APPROVED,
+            submission_date=timezone.now(),
+            self_declaration_received_support=False,
+            self_declaration_details=[],
+            attestation_agreed=True,
+            attestation_at=timezone.now(),
+            documents={},
+            eligibility_passed=True,
+            eligibility_details={},
+            waiver_submitted=False,
+            bank_name='UBA', bank_code='033',
+            account_number='1010101010', account_name='Ada Okon',
+            name_match_passed=True,
+            institution_name='University of Uyo', course_of_study='Computer Science',
+            current_level='300', cgpa=Decimal('3.50'),
+            admission_year=2023, matric_number='U2023/0001',
+        )
+        ApplicationStatusHistory.objects.create(
+            application_id=app.id, scheme=self.scheme,
+            from_status=ApplicationStatus.SUBMITTED,
+            to_status=ApplicationStatus.APPROVED,
+            changed_by=self.verifier, reason='meets criteria',
+        )
+        return app
+
+    def _make_award(self, app, status):
+        return Award.objects.create(
+            student=self.student, scheme=self.scheme, application_id=app.id,
+            total_years=4, start_cycle=self.cycle, annual_amount=100000,
+            min_cgpa_snapshot=Decimal('3.00'), status=status,
+        )
+
+    def test_active_award_applicant_is_listed(self):
+        app = self._make_approved()
+        self._make_award(app, AwardStatus.ACTIVE)
+        resp = self.client.get(
+            '/applications/approved-list/?scheme={}'.format(self.scheme.id))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['count'], 1)
+
+    def test_terminated_award_applicant_excluded(self):
+        app = self._make_approved()
+        self._make_award(app, AwardStatus.TERMINATED)
+        resp = self.client.get(
+            '/applications/approved-list/?scheme={}'.format(self.scheme.id))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['count'], 0)
+        self.assertEqual(resp.data['applications'], [])
+
+    def test_graduated_award_applicant_excluded_from_csv(self):
+        app = self._make_approved()
+        self._make_award(app, AwardStatus.GRADUATED)
+        resp = self.client.get(
+            '/applications/approved-list/?scheme={}&export=csv'.format(self.scheme.id))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn('Ada Okon', resp.content.decode('utf-8'))
+
+    def test_by_scheme_approved_excludes_ended_award(self):
+        app = self._make_approved()
+        self._make_award(app, AwardStatus.GRADUATED)
+        resp = self.client.get(
+            '/applications/by-scheme/{}/?status=approved'.format(self.scheme.id))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['applications'], [])
+        self.assertEqual(resp.data['scheme']['total'], 0)
