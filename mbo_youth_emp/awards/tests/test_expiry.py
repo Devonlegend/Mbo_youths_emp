@@ -23,6 +23,7 @@ from awards.services.expiry import (
     expire_appeals,
     expire_overdue_renewals,
 )
+from awards.tasks import expire_awards
 
 from .base import AwardTestBase
 
@@ -122,5 +123,25 @@ class ExpireCommandTests(AwardTestBase):
     def test_command_applies_changes(self):
         award = self._overdue()
         call_command('expire_renewals', stdout=io.StringIO())
+        award.refresh_from_db()
+        self.assertEqual(award.status, AwardStatus.SUSPENDED)
+
+
+class ExpireTaskTests(AwardTestBase):
+    """The periodic Celery task (beat entrypoint) — same work as the command."""
+
+    def test_task_suspends_overdue_renewal(self):
+        award = self.make_award()
+        self.cycle.activated_at = timezone.now() - timedelta(days=GRACE_DAYS + 1)
+        self.cycle.save(update_fields=['activated_at'])
+        self.add_installment(award, year_index=2,
+                             status=InstallmentStatus.PENDING_RENEWAL,
+                             cycle=self.cycle)
+
+        result = expire_awards.apply().get()
+
+        self.assertEqual(result['renewals_cancelled'], 1)
+        self.assertEqual(result['awards_suspended'], 1)
+        self.assertEqual(result['appeal_windows_expired'], 0)
         award.refresh_from_db()
         self.assertEqual(award.status, AwardStatus.SUSPENDED)
