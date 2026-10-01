@@ -83,3 +83,52 @@ class PendingApplicationNotification(models.Model):
     def __str__(self):
         state = 'sent' if self.sent_at else 'pending'
         return f"{self.notification_type} {self.application_id} ({state})"
+
+
+class ApplicationIndex(models.Model):
+    """Cross-scheme read model (CQRS projection) for applications.
+
+    Applications live in per-scheme physical tables, so a cross-scheme read
+    (verifier queue, dashboards, the admin list) would otherwise loop over every
+    scheme table and sort the whole result in Python. This single indexed table
+    mirrors exactly the fields those *summaries* need, so they become one indexed
+    query with SQL-side pagination.
+
+    The per-scheme table stays the source of truth for full detail. Rows are
+    kept in sync on every status transition (see applications/signals.py) and can
+    be rebuilt with `manage.py rebuild_application_index`. Reads opt in via
+    settings.APPLICATIONS_USE_INDEX so a live deployment can backfill before the
+    switch flips.
+
+    The list serializer reads `.id` and `.get_status_display()`, so `id` is
+    exposed as a property and `status` carries choices — meaning the existing
+    `serialize_application_list` works on an index row unchanged.
+    """
+    application_id = models.UUIDField(primary_key=True)
+    scheme  = models.ForeignKey('schemes.ScholarshipScheme', on_delete=models.CASCADE,
+                                related_name='+')
+    student = models.ForeignKey('students.Student', on_delete=models.CASCADE,
+                                related_name='+')
+
+    status             = models.CharField(max_length=30, choices=ApplicationStatus.choices)
+    submission_date    = models.DateTimeField(null=True, blank=True)
+    eligibility_passed = models.BooleanField(null=True)
+    has_conflict       = models.BooleanField(default=False)
+    waiver_submitted   = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField()          # mirrors the application row
+    indexed_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['student', '-created_at']),
+            models.Index(fields=['scheme', 'status']),
+        ]
+
+    @property
+    def id(self):
+        return self.application_id
+
+    def __str__(self):
+        return f"ApplicationIndex({self.application_id}, {self.status})"
