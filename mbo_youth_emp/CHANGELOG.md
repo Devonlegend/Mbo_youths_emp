@@ -25,6 +25,7 @@
 
 - Source-status-guarded transitions, each writing an `AwardEvent` (+ `audit.record_admin_action` for staff): `submit_renewal` (normalized 5.0-scale CGPA), `verify_installment` (approve/reject/withhold; server-side CGPA gate; reject-cap → cancel + suspend), `disburse_installment` (the only path that advances the index and the only path that graduates), `suspend_award` / `terminate_award`, and the `submit_appeal` / `review_appeal` recovery flow.
 - Endpoints: `GET /awards/`, `/awards/mine/`, `/awards/{id}/`, `POST /awards/{id}/renew/`, `/appeal/`, `/suspend/`, `/terminate/`, `GET /awards/renewals/`, `GET /awards/appeals/`, `POST /awards/installments/{id}/verify/`, `/disburse/`, `POST /awards/appeals/{id}/review/`, `GET /awards/export/?export=csv`.
+- `GET /awards/` returns a `summary` block next to the paginated results — `{active, suspended, graduated, terminated, graduating_this_year, committed_annual}` — so the admin stat strip (incl. "Committed ₦/yr") is server-side, not summed client-side. Computed over the filtered queryset **before** the `status` filter, so the facets stay meaningful while filtering.
 
 ### ⏱️ Rollover + expiry
 
