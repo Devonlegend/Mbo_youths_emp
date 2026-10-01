@@ -37,6 +37,41 @@ class AwardApiTests(AwardTestBase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data['count'], 1)
 
+    def test_list_returns_summary_aggregates(self):
+        active = self.make_award()
+        active.current_year_index = active.total_years - 1  # final year
+        active.save(update_fields=['current_year_index'])
+        suspended = self.make_award()
+        suspended.status = AwardStatus.SUSPENDED
+        suspended.save()
+        graduated = self.make_award()
+        graduated.status = AwardStatus.GRADUATED
+        graduated.save()
+
+        self.client.force_authenticate(user=self.make_staff('verifier'))
+        resp = self.client.get(reverse('award-list'))
+
+        self.assertEqual(resp.status_code, 200)
+        s = resp.data['summary']
+        self.assertEqual(s['active'], 1)
+        self.assertEqual(s['suspended'], 1)
+        self.assertEqual(s['graduated'], 1)
+        self.assertEqual(s['terminated'], 0)
+        self.assertEqual(s['graduating_this_year'], 1)
+        self.assertEqual(s['committed_annual'], '150000.00')
+
+    def test_summary_ignores_status_filter(self):
+        self.make_award()
+        suspended = self.make_award()
+        suspended.status = AwardStatus.SUSPENDED
+        suspended.save()
+
+        self.client.force_authenticate(user=self.make_staff('verifier'))
+        resp = self.client.get(reverse('award-list'), {'status': 'suspended'})
+
+        self.assertEqual(resp.data['count'], 1)              # list is filtered
+        self.assertEqual(resp.data['summary']['active'], 1)  # facets are not
+
     # ── Mine (student) ─────────────────────────────────────────────────────
     def test_mine_returns_own_awards_with_installments(self):
         award = self.make_award()
