@@ -6,7 +6,7 @@ here; every state transition lives in awards/services/lifecycle.py.
 
 import csv
 
-from django.db.models import Q
+from django.db.models import Count, F, Q, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -20,7 +20,10 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from accounts.permissions import IsAdmin, IsVerifier
 from schemes.models import Cycle
 
-from .models import Award, AwardAppeal, AwardInstallment, AppealStatus, InstallmentStatus
+from .models import (
+    AppealStatus, Award, AwardAppeal, AwardInstallment, AwardStatus,
+    InstallmentStatus,
+)
 from .serializers import (
     AppealReviewSerializer,
     AppealSerializer,
@@ -59,6 +62,33 @@ def _award_queryset():
     )
 
 
+def _award_summary(queryset):
+    """Register stat strip. Computed over whatever filters the caller applied
+    (the list action computes it *before* the status filter, so the facets stay
+    meaningful while filtering by status). `committed_annual` is the sum of
+    `annual_amount` over ACTIVE awards — the "Committed ₦/yr" figure."""
+    agg = queryset.aggregate(
+        active      = Count('id', filter=Q(status=AwardStatus.ACTIVE)),
+        suspended   = Count('id', filter=Q(status=AwardStatus.SUSPENDED)),
+        graduated   = Count('id', filter=Q(status=AwardStatus.GRADUATED)),
+        terminated  = Count('id', filter=Q(status=AwardStatus.TERMINATED)),
+        # Active awards in their final payment year (about to graduate).
+        graduating  = Count('id', filter=Q(
+            status=AwardStatus.ACTIVE,
+            current_year_index__gte=F('total_years') - 1,
+        )),
+        committed   = Sum('annual_amount', filter=Q(status=AwardStatus.ACTIVE)),
+    )
+    return {
+        'active':                agg['active'],
+        'suspended':             agg['suspended'],
+        'graduated':             agg['graduated'],
+        'terminated':            agg['terminated'],
+        'graduating_this_year':  agg['graduating'],
+        'committed_annual':      str(agg['committed'] or 0),
+    }
+
+
 class AwardViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = PageNumberPagination
@@ -70,13 +100,19 @@ class AwardViewSet(viewsets.ViewSet):
             return [IsAdmin()]
         return [IsAuthenticated()]
 
-    def _paginate(self, request, queryset, serializer_class):
+    def _paginate(self, request, queryset, serializer_class, extra=None):
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request, view=self)
         if page is not None:
-            return paginator.get_paginated_response(
+            response = paginator.get_paginated_response(
                 serializer_class(page, many=True).data)
-        return Response(serializer_class(queryset, many=True).data)
+            if extra:
+                response.data['summary'] = extra
+            return response
+        data = serializer_class(queryset, many=True).data
+        if extra:
+            return Response({'summary': extra, 'results': data})
+        return Response(data)
 
     # ── Staff register ─────────────────────────────────────────────────────
     @extend_schema(
@@ -90,14 +126,10 @@ class AwardViewSet(viewsets.ViewSet):
             OpenApiParameter('programme_type', str),
             OpenApiParameter('search', str, description='Student name search.'),
         ],
-        responses=OpenApiResponse(description='Paginated award list.'),
+        responses=OpenApiResponse(description='Paginated award list with a `summary` block.'),
     )
     def list(self, request):
         qs = _award_queryset()
-
-        status_param = request.query_params.get('status')
-        if status_param:
-            qs = qs.filter(status=status_param)
 
         scheme_param = request.query_params.get('scheme')
         if scheme_param:
@@ -122,7 +154,15 @@ class AwardViewSet(viewsets.ViewSet):
                 | Q(student__email__icontains=search)
             )
 
-        return self._paginate(request, qs, AwardListSerializer)
+        # Facet counts over the filtered set, BEFORE the status filter — so the
+        # stat strip still shows the full picture while filtering by status.
+        summary = _award_summary(qs)
+
+        status_param = request.query_params.get('status')
+        if status_param:
+            qs = qs.filter(status=status_param)
+
+        return self._paginate(request, qs, AwardListSerializer, extra=summary)
 
     # ── Detail ─────────────────────────────────────────────────────────────
     @extend_schema(
