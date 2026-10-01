@@ -17,6 +17,7 @@ Sharp edges this design accepts (chosen deliberately):
 
 import uuid
 
+from django.conf import settings
 from django.db import connection, models
 
 from schemes.models import ScholarshipScheme
@@ -27,6 +28,15 @@ from .models import ApplicationStatus
 # essential — rebuilding a model with the same class name/app_label twice trips
 # Django's app registry. One class per scheme per process.
 _MODEL_CACHE = {}
+
+
+def _use_index():
+    """True when cross-scheme reads should use the ApplicationIndex read model.
+
+    Off by default: a live deployment must backfill the index before flipping
+    this on, otherwise existing applications would vanish from summaries.
+    """
+    return getattr(settings, 'APPLICATIONS_USE_INDEX', False)
 
 
 # ── Field builders ────────────────────────────────────────────────────────────
@@ -191,6 +201,10 @@ def drop_application_table(scheme):
     if scheme.table_name in connection.introspection.table_names():
         with connection.schema_editor() as se:
             se.delete_model(model)
+    # The read model is derived; drop its rows for this scheme too. (FK cascade
+    # already handles scheme deletion; this covers a bare table drop/rebuild.)
+    from .models import ApplicationIndex
+    ApplicationIndex.objects.filter(scheme=scheme).delete()
 
 
 # ── Cross-scheme union helpers ────────────────────────────────────────────────
@@ -209,9 +223,23 @@ def iter_application_models():
 def find_application(app_id):
     """Locate an application by id across all per-scheme tables.
 
-    Returns (scheme, Model, row) or None. This is the UNION cost for detail/
-    review/waiver/history routes that only receive an application id.
+    Returns (scheme, Model, row) or None. When the read model is enabled this
+    is O(1): one indexed lookup resolves the scheme, then one query into that
+    scheme's table. Falls back to the UNION scan if the index has no row (e.g.
+    an application created before the backfill).
     """
+    if _use_index():
+        from .models import ApplicationIndex
+        indexed = (ApplicationIndex.objects
+                   .filter(application_id=app_id)
+                   .select_related('scheme')
+                   .first())
+        if indexed is not None and indexed.scheme.table_name:
+            model = get_application_model(indexed.scheme)
+            row = model.objects.filter(id=app_id).first()
+            if row is not None:
+                return indexed.scheme, model, row
+
     for scheme, model in iter_application_models():
         row = model.objects.filter(id=app_id).first()
         if row is not None:
@@ -219,11 +247,39 @@ def find_application(app_id):
     return None
 
 
+def applications_all():
+    """Every application across all schemes, newest first.
+
+    With the read model enabled this is a single indexed database query.
+    """
+    if _use_index():
+        from .models import ApplicationIndex
+        return (ApplicationIndex.objects
+                .select_related('scheme__provider', 'scheme__cycle', 'student__user')
+                .order_by('-created_at'))
+
+    rows = []
+    for _scheme, model in iter_application_models():
+        rows.extend(model.objects.select_related(
+            'scheme__provider', 'scheme__cycle', 'student__user'))
+    rows.sort(key=lambda r: r.created_at, reverse=True)
+    return rows
+
+
 def applications_for_student(student, statuses=None):
     """All of a student's applications across every scheme table.
 
-    Returns a list of rows (each carries `.scheme`), newest first.
+    With the read model enabled this returns a real queryset (SQL pagination).
     """
+    if _use_index():
+        from .models import ApplicationIndex
+        qs = ApplicationIndex.objects.filter(student=student)
+        if statuses:
+            qs = qs.filter(status__in=list(statuses))
+        return (qs
+                .select_related('scheme__provider', 'scheme__cycle', 'student__user')
+                .order_by('-created_at'))
+
     rows = []
     for _scheme, model in iter_application_models():
         qs = model.objects.filter(student=student).select_related(
@@ -236,7 +292,16 @@ def applications_for_student(student, statuses=None):
 
 
 def applications_by_status(statuses):
-    """Every application across all schemes matching the given status(es)."""
+    """Every application across all schemes matching the given status(es).
+
+    With the read model enabled this returns a real queryset (SQL pagination).
+    """
+    if _use_index():
+        from .models import ApplicationIndex
+        return (ApplicationIndex.objects.filter(status__in=list(statuses))
+                .select_related('scheme__provider', 'scheme__cycle', 'student__user')
+                .order_by('-created_at'))
+
     rows = []
     for _scheme, model in iter_application_models():
         qs = model.objects.filter(status__in=statuses).select_related(

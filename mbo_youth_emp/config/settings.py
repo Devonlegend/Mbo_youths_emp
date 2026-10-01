@@ -280,6 +280,15 @@ APPEAL_WINDOW_DAYS      = int(os.getenv('APPEAL_WINDOW_DAYS', '60'))
 RENEWAL_RESUBMISSION_CAP = int(os.getenv('RENEWAL_RESUBMISSION_CAP', '2'))
 
 
+# ── Applications read model ────────────────────────────────────────────────
+# When True, cross-scheme application reads (verifier queue, dashboards, admin
+# list) use the single indexed ApplicationIndex projection instead of looping
+# over every per-scheme table. Flip on only AFTER running
+# `manage.py rebuild_application_index`, or existing applications will be
+# missing from summaries until backfilled.
+APPLICATIONS_USE_INDEX = _env_bool('APPLICATIONS_USE_INDEX', 'False')
+
+
 
 # HTTPS/cookie hardening. Active when DEBUG is off; relaxed locally so http
 # development keeps working. Individual flags can be overridden via env.

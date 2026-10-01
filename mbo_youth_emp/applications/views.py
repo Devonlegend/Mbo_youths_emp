@@ -38,6 +38,7 @@ from .dynamic import (
     iter_application_models,
     applications_for_student,
     applications_by_status,
+    applications_all,
 )
 from .services.creation import create_application
 from .services.slots import consume_slot, SlotUnavailable
@@ -162,15 +163,11 @@ class ApplicationViewSet(viewsets.ViewSet):
                 qs = qs.filter(status=status_filter)
             return self._paginate(request, qs, serialize_application_list)
 
-        # Otherwise union across every scheme table.
+        # Otherwise union across every scheme table (or the read-model index).
         if status_filter:
             rows = applications_by_status([status_filter])
         else:
-            rows = []
-            for _scheme, model in iter_application_models():
-                rows.extend(model.objects.select_related(
-                    'scheme__provider', 'scheme__cycle', 'student__user'))
-            rows.sort(key=lambda r: r.created_at, reverse=True)
+            rows = applications_all()
         return self._paginate(request, rows, serialize_application_list)
 
     # ── Retrieve ──────────────────────────────────────────────────────────────
