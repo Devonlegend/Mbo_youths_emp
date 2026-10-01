@@ -43,6 +43,7 @@
 
 ### 🛠️ Fixes
 
+- **Edge #24 — ended awards no longer export as beneficiaries.** `GET /applications/approved-list/` (JSON + disbursement CSV) and `GET /applications/by-scheme/{id}/?status=approved` now drop applicants whose recurring `Award` has `terminated` or `graduated` status; the export reads application rows and previously knew nothing about later award status. One-shot schemes are unaffected (no `Award` rows, no extra query).
 - **Pre-existing `CycleViewSet` 500**: `create`/`update`/`destroy`/`activate` referenced the non-existent `cycle.label`; now `cycle.name`. Activation is now atomic (can no longer leave zero active cycles).
 - **Dead `student.cgpa` / `student.level` reads** removed from `EligibilityEngine._check_cgpa`/`_check_level` and from `students/views.py::eligibility_check` (fields were removed from `Student` in migration 0010).
 
