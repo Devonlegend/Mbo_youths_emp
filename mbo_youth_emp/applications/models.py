@@ -85,50 +85,88 @@ class PendingApplicationNotification(models.Model):
         return f"{self.notification_type} {self.application_id} ({state})"
 
 
-class ApplicationIndex(models.Model):
-    """Cross-scheme read model (CQRS projection) for applications.
+class Application(models.Model):
+    """The unified application table (Phase 2).
 
-    Applications live in per-scheme physical tables, so a cross-scheme read
-    (verifier queue, dashboards, the admin list) would otherwise loop over every
-    scheme table and sort the whole result in Python. This single indexed table
-    mirrors exactly the fields those *summaries* need, so they become one indexed
-    query with SQL-side pagination.
+    Applications currently still live in per-scheme dynamic tables (the write
+    source of truth). This single, fully-typed table is a maintained replica of
+    every application — populated by dual-write on each status transition
+    (applications/signals.py) and backfilled with
+    `manage.py rebuild_application_projection`. It carries the full row (common
+    fields + every award type's answer columns + bank snapshot), so it can serve
+    *both* list summaries and detail without touching the per-scheme tables.
 
-    The per-scheme table stays the source of truth for full detail. Rows are
-    kept in sync on every status transition (see applications/signals.py) and can
-    be rebuilt with `manage.py rebuild_application_index`. Reads opt in via
-    settings.APPLICATIONS_USE_INDEX so a live deployment can backfill before the
-    switch flips.
-
-    The list serializer reads `.id` and `.get_status_display()`, so `id` is
-    exposed as a property and `status` carries choices — meaning the existing
-    `serialize_application_list` works on an index row unchanged.
+    That makes cross-scheme reads (verifier queue, dashboards, admin list,
+    `find_application`, per-scheme drill-downs) one indexed query instead of an
+    O(N_schemes) scan, and is the stepping stone to dropping the dynamic tables
+    entirely (see SYSTEM_DESIGN.md §5.3). Reads opt in via
+    settings.APPLICATIONS_USE_PROJECTION so a live deployment backfills first.
     """
-    application_id = models.UUIDField(primary_key=True)
-    scheme  = models.ForeignKey('schemes.ScholarshipScheme', on_delete=models.CASCADE,
-                                related_name='+')
-    student = models.ForeignKey('students.Student', on_delete=models.CASCADE,
-                                related_name='+')
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    status             = models.CharField(max_length=30, choices=ApplicationStatus.choices)
-    submission_date    = models.DateTimeField(null=True, blank=True)
-    eligibility_passed = models.BooleanField(null=True)
-    has_conflict       = models.BooleanField(default=False)
-    waiver_submitted   = models.BooleanField(default=False)
+    student     = models.ForeignKey('students.Student', on_delete=models.CASCADE,
+                                    related_name='applications')
+    scheme      = models.ForeignKey('schemes.ScholarshipScheme', on_delete=models.CASCADE,
+                                    related_name='applications')
+    reviewed_by = models.ForeignKey('accounts.User', null=True, blank=True,
+                                    on_delete=models.SET_NULL, related_name='+')
 
-    created_at = models.DateTimeField()          # mirrors the application row
-    indexed_at = models.DateTimeField(auto_now=True)
+    status          = models.CharField(max_length=30, choices=ApplicationStatus.choices,
+                                       default=ApplicationStatus.DRAFT)
+    submission_date = models.DateTimeField(null=True, blank=True)
+
+    self_declaration_received_support = models.BooleanField(null=True)
+    self_declaration_details          = models.JSONField(default=list, blank=True)
+    attestation_agreed = models.BooleanField(default=False)
+    attestation_at     = models.DateTimeField(null=True, blank=True)
+    documents          = models.JSONField(default=dict, blank=True)
+
+    eligibility_passed  = models.BooleanField(null=True)
+    eligibility_details = models.JSONField(default=dict)
+    has_conflict        = models.BooleanField(default=False)
+    conflict_scheme_ids = models.JSONField(default=list)
+    waiver_submitted    = models.BooleanField(default=False)
+
+    reviewed_at      = models.DateTimeField(null=True, blank=True)
+    reviewer_notes   = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True)
+
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    # Bank snapshot — collected fresh per application
+    bank_name         = models.CharField(max_length=120, blank=True, default='')
+    bank_code         = models.CharField(max_length=10, blank=True, default='')
+    account_number    = models.CharField(max_length=20, blank=True, default='')
+    account_name      = models.CharField(max_length=200, blank=True, default='')
+    name_match_passed = models.BooleanField(default=False)
+
+    # Award-type answers (nullable; only the relevant set is populated per row)
+    institution_name = models.CharField(max_length=200, blank=True, default='')
+    course_of_study  = models.CharField(max_length=200, blank=True, default='')
+    current_level    = models.CharField(max_length=20, blank=True, default='')
+    cgpa             = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    admission_year   = models.IntegerField(null=True, blank=True)
+    matric_number    = models.CharField(max_length=50, blank=True, default='')
+
+    trade_or_skill           = models.CharField(max_length=120, blank=True, default='')
+    training_provider        = models.CharField(max_length=200, blank=True, default='')
+    training_duration_months = models.PositiveSmallIntegerField(null=True, blank=True)
+    prior_experience         = models.TextField(blank=True, default='')
+
+    business_name        = models.CharField(max_length=200, blank=True, default='')
+    business_stage       = models.CharField(max_length=30, blank=True, default='')
+    business_description = models.TextField(blank=True, default='')
+    requested_amount     = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    intended_use         = models.TextField(blank=True, default='')
 
     class Meta:
         indexes = [
             models.Index(fields=['status', '-created_at']),
             models.Index(fields=['student', '-created_at']),
             models.Index(fields=['scheme', 'status']),
+            models.Index(fields=['scheme', '-created_at']),
         ]
 
-    @property
-    def id(self):
-        return self.application_id
-
     def __str__(self):
-        return f"ApplicationIndex({self.application_id}, {self.status})"
+        return f"Application({self.id}, {self.scheme_id}, {self.status})"
