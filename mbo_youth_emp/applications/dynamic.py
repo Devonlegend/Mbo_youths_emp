@@ -30,13 +30,13 @@ from .models import ApplicationStatus
 _MODEL_CACHE = {}
 
 
-def _use_index():
-    """True when cross-scheme reads should use the ApplicationIndex read model.
+def projection_enabled():
+    """True when cross-scheme reads should use the unified Application table.
 
-    Off by default: a live deployment must backfill the index before flipping
-    this on, otherwise existing applications would vanish from summaries.
+    Off by default: a live deployment must backfill the projection before
+    flipping this on, otherwise existing applications would vanish from reads.
     """
-    return getattr(settings, 'APPLICATIONS_USE_INDEX', False)
+    return getattr(settings, 'APPLICATIONS_USE_PROJECTION', False)
 
 
 # ── Field builders ────────────────────────────────────────────────────────────
@@ -201,10 +201,11 @@ def drop_application_table(scheme):
     if scheme.table_name in connection.introspection.table_names():
         with connection.schema_editor() as se:
             se.delete_model(model)
-    # The read model is derived; drop its rows for this scheme too. (FK cascade
-    # already handles scheme deletion; this covers a bare table drop/rebuild.)
-    from .models import ApplicationIndex
-    ApplicationIndex.objects.filter(scheme=scheme).delete()
+    # The unified Application table is derived; drop its rows for this scheme
+    # too. (FK cascade already handles scheme deletion; this covers a bare
+    # table drop/rebuild.)
+    from .models import Application
+    Application.objects.filter(scheme=scheme).delete()
 
 
 # ── Cross-scheme union helpers ────────────────────────────────────────────────
@@ -221,24 +222,28 @@ def iter_application_models():
 
 
 def find_application(app_id):
-    """Locate an application by id across all per-scheme tables.
+    """Locate an application by id across all schemes.
 
-    Returns (scheme, Model, row) or None. When the read model is enabled this
-    is O(1): one indexed lookup resolves the scheme, then one query into that
-    scheme's table. Falls back to the UNION scan if the index has no row (e.g.
-    an application created before the backfill).
+    Returns (scheme, model, row) or None. The returned row is ALWAYS the
+    source-of-truth row from the scheme's own table, because callers mutate it
+    (review/waiver/withdraw). When the projection is enabled it is used only to
+    resolve the scheme in O(1), avoiding the full-table scan; the row is then
+    loaded from that scheme's table. Falls back to the scan if the projection
+    has no entry (e.g. an application created before the backfill).
     """
-    if _use_index():
-        from .models import ApplicationIndex
-        indexed = (ApplicationIndex.objects
-                   .filter(application_id=app_id)
-                   .select_related('scheme')
-                   .first())
-        if indexed is not None and indexed.scheme.table_name:
-            model = get_application_model(indexed.scheme)
-            row = model.objects.filter(id=app_id).first()
-            if row is not None:
-                return indexed.scheme, model, row
+    if projection_enabled():
+        from .models import Application
+        scheme_id = (Application.objects
+                     .filter(id=app_id)
+                     .values_list('scheme_id', flat=True)
+                     .first())
+        if scheme_id is not None:
+            sch = ScholarshipScheme.objects.filter(id=scheme_id).first()
+            if sch is not None and sch.table_name:
+                model = get_application_model(sch)
+                row = model.objects.filter(id=app_id).first()
+                if row is not None:
+                    return sch, model, row
 
     for scheme, model in iter_application_models():
         row = model.objects.filter(id=app_id).first()
@@ -250,11 +255,11 @@ def find_application(app_id):
 def applications_all():
     """Every application across all schemes, newest first.
 
-    With the read model enabled this is a single indexed database query.
+    With the projection enabled this is a single indexed database query.
     """
-    if _use_index():
-        from .models import ApplicationIndex
-        return (ApplicationIndex.objects
+    if projection_enabled():
+        from .models import Application
+        return (Application.objects
                 .select_related('scheme__provider', 'scheme__cycle', 'student__user')
                 .order_by('-created_at'))
 
@@ -267,13 +272,13 @@ def applications_all():
 
 
 def applications_for_student(student, statuses=None):
-    """All of a student's applications across every scheme table.
+    """All of a student's applications across every scheme.
 
-    With the read model enabled this returns a real queryset (SQL pagination).
+    With the projection enabled this returns a real queryset (SQL pagination).
     """
-    if _use_index():
-        from .models import ApplicationIndex
-        qs = ApplicationIndex.objects.filter(student=student)
+    if projection_enabled():
+        from .models import Application
+        qs = Application.objects.filter(student=student)
         if statuses:
             qs = qs.filter(status__in=list(statuses))
         return (qs
@@ -294,11 +299,11 @@ def applications_for_student(student, statuses=None):
 def applications_by_status(statuses):
     """Every application across all schemes matching the given status(es).
 
-    With the read model enabled this returns a real queryset (SQL pagination).
+    With the projection enabled this returns a real queryset (SQL pagination).
     """
-    if _use_index():
-        from .models import ApplicationIndex
-        return (ApplicationIndex.objects.filter(status__in=list(statuses))
+    if projection_enabled():
+        from .models import Application
+        return (Application.objects.filter(status__in=list(statuses))
                 .select_related('scheme__provider', 'scheme__cycle', 'student__user')
                 .order_by('-created_at'))
 

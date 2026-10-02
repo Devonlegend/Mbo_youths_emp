@@ -282,11 +282,11 @@ RENEWAL_RESUBMISSION_CAP = int(os.getenv('RENEWAL_RESUBMISSION_CAP', '2'))
 
 # ── Applications read model ────────────────────────────────────────────────
 # When True, cross-scheme application reads (verifier queue, dashboards, admin
-# list) use the single indexed ApplicationIndex projection instead of looping
-# over every per-scheme table. Flip on only AFTER running
-# `manage.py rebuild_application_index`, or existing applications will be
-# missing from summaries until backfilled.
-APPLICATIONS_USE_INDEX = _env_bool('APPLICATIONS_USE_INDEX', 'False')
+# list) use the unified, indexed `Application` table instead of looping over
+# every per-scheme table. Flip on only AFTER running
+# `manage.py rebuild_application_projection`, or existing applications will be
+# missing from reads until backfilled.
+APPLICATIONS_USE_PROJECTION = _env_bool('APPLICATIONS_USE_PROJECTION', 'False')
 
 
 

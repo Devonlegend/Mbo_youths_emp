@@ -10,8 +10,9 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django.core.files.storage import default_storage
-from django.http import HttpResponse
 from django.db import transaction
+from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
@@ -39,6 +40,7 @@ from .dynamic import (
     applications_for_student,
     applications_by_status,
     applications_all,
+    projection_enabled,
 )
 from .services.creation import create_application
 from .services.slots import consume_slot, SlotUnavailable
@@ -275,8 +277,11 @@ class ApplicationViewSet(viewsets.ViewSet):
         if not scheme.table_name:
             return Response({"error": "Scheme has no application table"}, status=400)
 
-        model = get_application_model(scheme)
-        qs = model.objects.select_related(
+        # Query the unified projection when enabled, else this scheme's table.
+        from .models import Application
+        qs_source = Application.objects.filter(scheme=scheme) if projection_enabled() \
+            else get_application_model(scheme).objects
+        qs = qs_source.select_related(
             'scheme__provider', 'scheme__cycle', 'student__user', 'reviewed_by'
         ).order_by('-created_at')
 
@@ -293,7 +298,7 @@ class ApplicationViewSet(viewsets.ViewSet):
                 apps = [a for a in apps if a.id not in ended]
         # Live counts: how many still need a decision, and how many approval
         # emails are staged for the Publish button.
-        pending_review = model.objects.filter(status__in=REVIEWABLE_STATUSES).count()
+        pending_review = qs_source.filter(status__in=REVIEWABLE_STATUSES).count()
         unpublished = PendingApplicationNotification.objects.filter(
             scheme=scheme, sent_at__isnull=True
         ).count()
@@ -354,8 +359,13 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         ward = request.query_params.get('ward', '').strip()
 
-        model = get_application_model(scheme)
-        qs = model.objects.filter(status=ApplicationStatus.APPROVED)
+        from .models import Application
+        if projection_enabled():
+            qs = Application.objects.filter(scheme=scheme,
+                                            status=ApplicationStatus.APPROVED)
+        else:
+            qs = get_application_model(scheme).objects.filter(
+                status=ApplicationStatus.APPROVED)
         if ward:
             qs = qs.filter(student__ward__iexact=ward)
         rows = list(
@@ -985,14 +995,15 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         sent = 0
         model = None
+        from .models import Application
         for notification in pending:
-            if model is None and scheme.table_name:
-                model = get_application_model(scheme)
-            # Resolve the application row (may have been deleted, skip gracefully)
-            if model:
-                row = model.objects.filter(id=notification.application_id).first()
+            if projection_enabled():
+                row = Application.objects.filter(id=notification.application_id).first()
             else:
-                row = None
+                if model is None and scheme.table_name:
+                    model = get_application_model(scheme)
+                # Resolve the application row (may have been deleted, skip gracefully)
+                row = model.objects.filter(id=notification.application_id).first() if model else None
             if row is not None:
                 _dispatch_email(send_application_approved_email, row, scheme)
                 try:
@@ -1037,6 +1048,38 @@ class ApplicationViewSet(viewsets.ViewSet):
         applications still need review and how many approved emails are staged
         but not yet published.
         """
+        # Projection path: one GROUP BY instead of a scan per scheme table.
+        if projection_enabled():
+            from .models import Application
+            counts = (Application.objects.values('scheme')
+                      .annotate(total=Count('id'),
+                                pending_review=Count(
+                                    'id', filter=Q(status__in=REVIEWABLE_STATUSES))))
+            scheme_ids = [row['scheme'] for row in counts]
+            schemes = {s.id: s for s in
+                       ScholarshipScheme.objects.filter(id__in=scheme_ids)}
+            unpublished = dict(
+                PendingApplicationNotification.objects
+                .filter(scheme_id__in=scheme_ids, sent_at__isnull=True)
+                .values_list('scheme_id')
+                .annotate(c=Count('id'))
+            )
+            return Response([
+                {
+                    "scheme": {
+                        "id":              str(scheme.id),
+                        "name":            scheme.name,
+                        "award_type":      scheme.award_type,
+                        "total_slots":     scheme.total_slots,
+                        "remaining_slots": scheme.remaining_slots,
+                    },
+                    "pending_review": row['pending_review'],
+                    "unpublished":    unpublished.get(row['scheme'], 0),
+                }
+                for row in counts
+                if (scheme := schemes.get(row['scheme'])) is not None
+            ])
+
         result = []
         for scheme, model in iter_application_models():
             total_in_scheme = model.objects.count()
