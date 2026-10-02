@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased (applications read-model)
+
+**Cross-scheme application reads (verifier queue, dashboards, admin list, `find_application`) now use a single indexed `ApplicationIndex` projection instead of looping over every per-scheme table and sorting the whole result in Python — one indexed query with SQL-side pagination.**
+
+### Read model
+- **New `applications.ApplicationIndex`** — mirrors `application_id`, `scheme`, `student`, `status`, `submission_date`, `eligibility_passed`, `has_conflict`, `waiver_submitted`, `created_at`. Indexes on `(status, -created_at)`, `(student, -created_at)`, `(scheme, status)`. Exposes `.id` + `get_status_display()` so the existing list serializer works unchanged.
+- **Dual-write**: a `post_save` receiver on `ApplicationStatusHistory` (the single chokepoint every status transition passes through) upserts the projection. Best-effort — a projection failure never breaks the application write.
+- **`manage.py rebuild_application_index`** — idempotent, batched backfill (`--batch-size`, `--since` for incremental repair). `drop_application_table` also clears the scheme's index rows.
+- **`applications_by_status` / `applications_for_student` / `applications_all` / `find_application`** use the index when `APPLICATIONS_USE_INDEX` is on; otherwise the legacy UNION path (unchanged). `find_application` falls back to the scan if an application has no index row yet.
+- **`APPLICATIONS_USE_INDEX`** (default **`False`**) gates reads so a live deployment can backfill before the switch. Cutover steps in `DEPLOYMENT.md`.
+- **Migration** `applications/0004_applicationindex` (additive).
+- **Tests**: dual-write on create + status transition, waiver projection, backfill, legacy-vs-index parity, and `find_application` index + fallback.
+
+---
+
 ## v1.2.0 (recurring-scholarships)
 
 **Multi-year scholarships: a recurring-award contract that pays every academic year until graduation, gated by a yearly CGPA threshold, with renewal verification, suspension/appeal recovery, and an automatic cycle-rollover engine.**

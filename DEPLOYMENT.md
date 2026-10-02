@@ -256,8 +256,27 @@ curl https://back.mboempowerment.com/api/schema/
 | Create superuser  | `docker compose exec backend python manage.py createsuperuser` |
 | Run expiry now    | `docker compose exec backend python manage.py expire_renewals` |
 | Expiry dry-run    | `docker compose exec backend python manage.py expire_renewals --dry-run` |
+| Rebuild app index | `docker compose exec backend python manage.py rebuild_application_index` |
 | Beat logs         | `docker compose logs -f beat`                                  |
 | DB shell (Coolify)| Coolify UI → database → Terminal, or `psql` via the Internal URL |
+
+### Applications read-model cutover
+
+Cross-scheme application reads (verifier queue, dashboards, admin list) can use a
+single indexed projection (`ApplicationIndex`) instead of scanning every
+per-scheme table. The table is created by the normal `migrate` (safe, additive)
+and every status change keeps it in sync automatically, but on an **existing**
+database it starts empty — so reads are gated behind a flag that is **off by
+default**. To cut over without losing anything:
+
+1. Deploy (backend runs `migrate`, which only *adds* the `applications_applicationindex` table).
+2. Backfill the projection: `docker compose exec backend python manage.py rebuild_application_index`
+3. Verify counts line up (e.g. `rebuild_application_index` output vs the admin lists).
+4. Set `APPLICATIONS_USE_INDEX=True` in the environment and redeploy/restart the backend.
+5. If anything looks wrong, set it back to `False` — the legacy scan path is unchanged.
+
+Re-run `rebuild_application_index` (optionally with `--since <iso>`) any time you
+suspect drift; it is idempotent.
 
 ### Scheduled jobs (Celery Beat)
 
