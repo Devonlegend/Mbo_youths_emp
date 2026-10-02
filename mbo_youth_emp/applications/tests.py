@@ -9,7 +9,9 @@ permissions) is still TODO and should be added here.
 from datetime import timedelta
 from decimal import Decimal
 
-from django.test import TestCase
+from django.core.management import call_command
+from django.db.models import QuerySet
+from django.test import TestCase, override_settings
 from rest_framework.test import APITestCase
 from django.utils import timezone
 
@@ -17,8 +19,11 @@ from accounts.models import User
 from schemes.models import ScholarshipScheme, SchemeProvider, Cycle
 from students.models import Student
 
-from applications.dynamic import build_application_table, get_application_model
-from applications.models import ApplicationStatus, ApplicationStatusHistory
+from applications.dynamic import (
+    build_application_table, get_application_model,
+    applications_by_status, applications_all, find_application,
+)
+from applications.models import ApplicationIndex, ApplicationStatus, ApplicationStatusHistory
 from awards.models import Award, AwardStatus
 
 from .services.slots import consume_slot, release_slot
@@ -515,3 +520,126 @@ class EndedRecurringAwardExportTests(APITestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data['applications'], [])
         self.assertEqual(resp.data['scheme']['total'], 0)
+
+
+class ApplicationIndexTests(TestCase):
+    """Phase-1 read model: dual-write on transitions, backfill, and parity
+    between the legacy per-scheme UNION and the ApplicationIndex projection."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.provider = SchemeProvider.objects.create(
+            name='Index Provider', provider_type='lga')
+        cls.cycle = Cycle.objects.create(
+            name='2026/2027', start_year=2026, end_year=2027, is_active=True)
+        cls.verifier = User.objects.create_user(
+            email='verifier@index.test', firstname='Veri', lastname='Fier',
+            phone_number='08090000031', role='verifier',
+            nin_hash='nin-hash-index-ver', password='x', passport='')
+        student_user = User.objects.create_user(
+            email='student@index.test', firstname='Ada', lastname='Okon',
+            phone_number='08030000031', role='student',
+            nin_hash='nin-hash-index-stu', password='x', passport='')
+        cls.student = Student.attach_to_user(student_user, ward='efiat')
+        cls.scheme = ScholarshipScheme.objects.create(
+            provider=cls.provider, cycle=cls.cycle, name='Index Scheme',
+            award_type='scholarship', description='x', academic_year='2026/2027',
+            award_amount=100000, total_slots=5, remaining_slots=5,
+            application_open_date=timezone.now().date() - timedelta(days=1),
+            application_close_date=timezone.now().date() + timedelta(days=30),
+        )
+        cls.model = build_application_table(cls.scheme)
+
+    def _make_app(self, status=ApplicationStatus.SUBMITTED):
+        app = self.model.objects.create(
+            student=self.student, scheme=self.scheme, status=status,
+            submission_date=timezone.now(),
+            self_declaration_received_support=False,
+            self_declaration_details=[],
+            attestation_agreed=True, attestation_at=timezone.now(),
+            documents={}, eligibility_passed=True, eligibility_details={},
+            waiver_submitted=False,
+            bank_name='UBA', bank_code='033', account_number='1010101010',
+            account_name='Ada Okon', name_match_passed=True,
+            institution_name='University of Uyo', course_of_study='Computer Science',
+            current_level='300', cgpa=Decimal('3.50'),
+            admission_year=2023, matric_number='U2023/0001',
+        )
+        ApplicationStatusHistory.objects.create(
+            application_id=app.id, scheme=self.scheme, from_status='',
+            to_status=status, changed_by=self.verifier, reason='created')
+        return app
+
+    def test_history_write_projects_index_row(self):
+        app = self._make_app()
+        idx = ApplicationIndex.objects.get(application_id=app.id)
+        self.assertEqual(idx.status, ApplicationStatus.SUBMITTED)
+        self.assertEqual(idx.student_id, self.student.pk)
+        self.assertEqual(idx.scheme_id, self.scheme.id)
+        self.assertEqual(idx.id, app.id)  # list-serializer compatibility
+
+    def test_status_transition_updates_index(self):
+        app = self._make_app()
+        app.status = ApplicationStatus.APPROVED
+        app.save()
+        ApplicationStatusHistory.objects.create(
+            application_id=app.id, scheme=self.scheme,
+            from_status=ApplicationStatus.SUBMITTED,
+            to_status=ApplicationStatus.APPROVED,
+            changed_by=self.verifier, reason='ok')
+        idx = ApplicationIndex.objects.get(application_id=app.id)
+        self.assertEqual(idx.status, ApplicationStatus.APPROVED)
+
+    def test_waiver_flag_projected(self):
+        app = self._make_app(ApplicationStatus.DOUBLE_DIP_FLAG)
+        app.waiver_submitted = True
+        app.status = ApplicationStatus.DOCUMENT_REVIEW
+        app.save()
+        ApplicationStatusHistory.objects.create(
+            application_id=app.id, scheme=self.scheme,
+            from_status=ApplicationStatus.DOUBLE_DIP_FLAG,
+            to_status=ApplicationStatus.DOCUMENT_REVIEW,
+            changed_by=self.verifier, reason='waiver')
+        idx = ApplicationIndex.objects.get(application_id=app.id)
+        self.assertTrue(idx.waiver_submitted)
+        self.assertEqual(idx.status, ApplicationStatus.DOCUMENT_REVIEW)
+
+    def test_backfill_rebuilds_index(self):
+        import io
+        app = self._make_app()
+        ApplicationIndex.objects.all().delete()
+        call_command('rebuild_application_index', stdout=io.StringIO())
+        idx = ApplicationIndex.objects.get(application_id=app.id)
+        self.assertEqual(idx.status, ApplicationStatus.SUBMITTED)
+
+    def test_parity_legacy_union_vs_index(self):
+        first = self._make_app(ApplicationStatus.SUBMITTED)
+        second = self._make_app(ApplicationStatus.DOUBLE_DIP_FLAG)
+        statuses = [ApplicationStatus.SUBMITTED, ApplicationStatus.DOUBLE_DIP_FLAG]
+
+        legacy = {str(r.id) for r in applications_by_status(statuses)}
+        with override_settings(APPLICATIONS_USE_INDEX=True):
+            indexed = {str(r.id) for r in applications_by_status(statuses)}
+            all_ids = {str(r.id) for r in applications_all()}
+
+        self.assertEqual(legacy, indexed)
+        self.assertEqual(all_ids, {str(first.id), str(second.id)})
+
+    @override_settings(APPLICATIONS_USE_INDEX=True)
+    def test_index_reads_return_queryset(self):
+        self._make_app()
+        rows = applications_by_status([ApplicationStatus.SUBMITTED])
+        self.assertIsInstance(rows, QuerySet)
+
+    @override_settings(APPLICATIONS_USE_INDEX=True)
+    def test_find_application_uses_index_then_falls_back(self):
+        app = self._make_app()
+        found = find_application(app.id)
+        self.assertIsNotNone(found)
+        _scheme, _model, row = found
+        self.assertEqual(str(row.id), str(app.id))
+
+        # Missing index row (e.g. pre-backfill) must still resolve via the scan.
+        ApplicationIndex.objects.filter(application_id=app.id).delete()
+        self.assertIsNotNone(find_application(app.id))
+
