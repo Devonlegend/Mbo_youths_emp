@@ -41,6 +41,7 @@ from .dynamic import (
     applications_by_status,
     applications_all,
     projection_enabled,
+    write_unified,
 )
 from .services.creation import create_application
 from .services.slots import consume_slot, SlotUnavailable
@@ -279,7 +280,7 @@ class ApplicationViewSet(viewsets.ViewSet):
 
         # Query the unified projection when enabled, else this scheme's table.
         from .models import Application
-        qs_source = Application.objects.filter(scheme=scheme) if projection_enabled() \
+        qs_source = Application.objects.filter(scheme=scheme) if (projection_enabled() or write_unified()) \
             else get_application_model(scheme).objects
         qs = qs_source.select_related(
             'scheme__provider', 'scheme__cycle', 'student__user', 'reviewed_by'
@@ -360,7 +361,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         ward = request.query_params.get('ward', '').strip()
 
         from .models import Application
-        if projection_enabled():
+        if projection_enabled() or write_unified():
             qs = Application.objects.filter(scheme=scheme,
                                             status=ApplicationStatus.APPROVED)
         else:
@@ -997,7 +998,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         model = None
         from .models import Application
         for notification in pending:
-            if projection_enabled():
+            if projection_enabled() or write_unified():
                 row = Application.objects.filter(id=notification.application_id).first()
             else:
                 if model is None and scheme.table_name:
@@ -1049,7 +1050,7 @@ class ApplicationViewSet(viewsets.ViewSet):
         but not yet published.
         """
         # Projection path: one GROUP BY instead of a scan per scheme table.
-        if projection_enabled():
+        if projection_enabled() or write_unified():
             from .models import Application
             counts = (Application.objects.values('scheme')
                       .annotate(total=Count('id'),

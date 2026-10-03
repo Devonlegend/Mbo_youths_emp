@@ -39,6 +39,18 @@ def projection_enabled():
     return getattr(settings, 'APPLICATIONS_USE_PROJECTION', False)
 
 
+def write_unified():
+    """True when the unified Application table is the write source of truth
+    (Phase-2 cutover). The per-scheme table is then kept as a mirror."""
+    return getattr(settings, 'APPLICATIONS_WRITE_UNIFIED', False)
+
+
+def _unified_reads():
+    """Reads come from the unified table when it is the source OR the selected
+    read model."""
+    return projection_enabled() or write_unified()
+
+
 # ── Field builders ────────────────────────────────────────────────────────────
 # Field instances bind to exactly one model, so every build must create FRESH
 # instances — never share them between classes.
@@ -231,6 +243,15 @@ def find_application(app_id):
     loaded from that scheme's table. Falls back to the scan if the projection
     has no entry (e.g. an application created before the backfill).
     """
+    if write_unified():
+        from .models import Application
+        app = (Application.objects
+               .filter(id=app_id)
+               .select_related('scheme')
+               .first())
+        if app is not None:
+            return app.scheme, Application, app
+
     if projection_enabled():
         from .models import Application
         scheme_id = (Application.objects
@@ -257,7 +278,7 @@ def applications_all():
 
     With the projection enabled this is a single indexed database query.
     """
-    if projection_enabled():
+    if _unified_reads():
         from .models import Application
         return (Application.objects
                 .select_related('scheme__provider', 'scheme__cycle', 'student__user')
@@ -276,7 +297,7 @@ def applications_for_student(student, statuses=None):
 
     With the projection enabled this returns a real queryset (SQL pagination).
     """
-    if projection_enabled():
+    if _unified_reads():
         from .models import Application
         qs = Application.objects.filter(student=student)
         if statuses:
@@ -301,7 +322,7 @@ def applications_by_status(statuses):
 
     With the projection enabled this returns a real queryset (SQL pagination).
     """
-    if projection_enabled():
+    if _unified_reads():
         from .models import Application
         return (Application.objects.filter(status__in=list(statuses))
                 .select_related('scheme__provider', 'scheme__cycle', 'student__user')

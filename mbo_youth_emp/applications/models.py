@@ -132,7 +132,7 @@ class Application(models.Model):
     rejection_reason = models.TextField(blank=True)
 
     created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    updated_at = models.DateTimeField(auto_now=True)
 
     # Bank snapshot — collected fresh per application
     bank_name         = models.CharField(max_length=120, blank=True, default='')

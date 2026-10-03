@@ -16,8 +16,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from .eligibility import EligibilityEngine
+from .projection import write_unified
 from ..dynamic import get_application_model
-from ..models import ApplicationStatus, ApplicationStatusHistory
+from ..models import Application, ApplicationStatus, ApplicationStatusHistory
 
 
 def decide_status(result):
@@ -69,7 +70,6 @@ def create_application(
     Returns:
         (application_row, eligibility_result)
     """
-    model  = get_application_model(scheme)
     result = EligibilityEngine.run_full_check(student, scheme, answers)
 
     status = status_override if status_override is not None else decide_status(result)
@@ -83,23 +83,38 @@ def create_application(
 
     now = timezone.now()
     with transaction.atomic():
-        application = model.objects.create(
-            student              = student,
-            scheme               = scheme,
-            status               = status,
-            submission_date      = now,
-            self_declaration_received_support = self_declaration_received_support,
-            self_declaration_details          = self_declaration_details or [],
-            attestation_agreed   = attestation_agreed,
-            attestation_at       = now if attestation_agreed else None,
-            documents            = documents or {},
-            eligibility_passed   = result['eligible'],
-            eligibility_details  = result['checks'],
-            has_conflict         = result['has_conflict'],
-            conflict_scheme_ids  = result['conflict_scheme_ids'],
-            **bank,
-            **answers,
-        )
+        if write_unified():
+            application = Application.objects.create(
+                student=student, scheme=scheme, status=status, submission_date=now,
+                self_declaration_received_support=self_declaration_received_support,
+                self_declaration_details=self_declaration_details or [],
+                attestation_agreed=attestation_agreed,
+                attestation_at=now if attestation_agreed else None,
+                documents=documents or {},
+                eligibility_passed=result['eligible'],
+                eligibility_details=result['checks'],
+                has_conflict=result['has_conflict'],
+                conflict_scheme_ids=result['conflict_scheme_ids'],
+                created_at=now,
+                **bank,
+                **answers,
+            )
+        else:
+            model = get_application_model(scheme)
+            application = model.objects.create(
+                student=student, scheme=scheme, status=status, submission_date=now,
+                self_declaration_received_support=self_declaration_received_support,
+                self_declaration_details=self_declaration_details or [],
+                attestation_agreed=attestation_agreed,
+                attestation_at=now if attestation_agreed else None,
+                documents=documents or {},
+                eligibility_passed=result['eligible'],
+                eligibility_details=result['checks'],
+                has_conflict=result['has_conflict'],
+                conflict_scheme_ids=result['conflict_scheme_ids'],
+                **bank,
+                **answers,
+            )
 
         ApplicationStatusHistory.objects.create(
             application_id = application.id,

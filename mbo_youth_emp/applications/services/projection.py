@@ -1,24 +1,33 @@
-"""Keep the unified ``Application`` table in sync with the per-scheme tables.
+"""Keep the unified ``Application`` table and the per-scheme tables in sync.
 
-The per-scheme dynamic tables are still the write source of truth; this module
-projects each application into the single unified ``Application`` table. Called
-from the ``ApplicationStatusHistory`` post-save signal (every status transition
-writes a history row), so all write paths — submit, staff create, waiver, review,
-withdrawal — stay in sync without touching each one individually.
+Phase 2 transition:
+* **Default (`APPLICATIONS_WRITE_UNIFIED=False`)** — the per-scheme tables are the
+  write source of truth; the history signal projects each row into unified
+  ``Application`` (read model).
+* **Cutover (`APPLICATIONS_WRITE_UNIFIED=True`)** — the unified ``Application``
+  table is the write source of truth; the history signal mirrors it back into the
+  scheme's dynamic table so legacy consumers (email tasks, rollback) still work.
 
-This is the Phase-2 foundation: once the projection is trusted, reads switch to
-``Application`` and the dynamic tables can be dropped (see SYSTEM_DESIGN.md).
+Both directions run through the ``ApplicationStatusHistory`` post-save signal —
+the single chokepoint every status transition passes through.
 """
 
 import logging
+
+from django.conf import settings
 
 from ..dynamic import get_application_model
 
 logger = logging.getLogger(__name__)
 
 
-# Scalar/shared columns copied verbatim from the source row. Field names match
-# the unified Application model exactly.
+def write_unified():
+    """True when the unified Application table is the write source of truth."""
+    return getattr(settings, 'APPLICATIONS_WRITE_UNIFIED', False)
+
+
+# Columns copied between the source row and the unified Application. Names match
+# on both sides; only those physically present on the source/destination are used.
 _COPIED_FIELDS = [
     'status', 'submission_date',
     'self_declaration_received_support', 'self_declaration_details',
@@ -26,7 +35,7 @@ _COPIED_FIELDS = [
     'eligibility_passed', 'eligibility_details',
     'has_conflict', 'conflict_scheme_ids', 'waiver_submitted',
     'reviewed_at', 'reviewer_notes', 'rejection_reason',
-    'created_at', 'updated_at',
+    'created_at',
     'bank_name', 'bank_code', 'account_number', 'account_name', 'name_match_passed',
     # scholarship
     'institution_name', 'course_of_study', 'current_level', 'cgpa',
@@ -40,15 +49,13 @@ _COPIED_FIELDS = [
 ]
 
 
-def application_kwargs(scheme, row):
-    """Map an application row to unified Application constructor kwargs.
+def _present_fields(row):
+    return {f.name for f in row._meta.fields}
 
-    Only copies fields that physically exist on the source row — each scheme
-    table carries just its award type's answer columns — so the unified model
-    falls back to its defaults for the rest. Award type is immutable per scheme,
-    so a field is never expected to change type over the row's life.
-    """
-    present = {f.name for f in row._meta.fields}
+
+def application_kwargs(scheme, row):
+    """Map an application row (source) to unified Application kwargs."""
+    present = _present_fields(row)
     data = {field: getattr(row, field) for field in _COPIED_FIELDS if field in present}
     data['id']             = row.id
     data['scheme']         = scheme
@@ -57,13 +64,24 @@ def application_kwargs(scheme, row):
     return data
 
 
-def upsert_application(scheme, application_id):
-    """Create/update the unified Application row for one application.
+def legacy_kwargs(scheme, application):
+    """Map a unified Application to kwargs for the scheme's dynamic model.
 
-    Re-reads the source row so status/eligibility/waiver/details changes are all
-    captured. If the row no longer exists, the unified row is removed. Returns
-    the Application (or None if the source application is gone).
+    Filtered to the destination table's fields — a scholarship table has no
+    `trade_or_skill`, etc. — so the unified model's other-type columns are
+    dropped rather than passed as invalid kwargs.
     """
+    model = get_application_model(scheme)
+    present = _present_fields(model)
+    data = {field: getattr(application, field) for field in _COPIED_FIELDS if field in present}
+    data['scheme']         = scheme
+    data['student_id']     = application.student_id
+    data['reviewed_by_id'] = application.reviewed_by_id
+    return data
+
+
+def upsert_application(scheme, application_id):
+    """Project a source (dynamic) row into the unified Application table."""
     from ..models import Application
 
     row = get_application_model(scheme).objects.filter(id=application_id).first()
@@ -73,8 +91,24 @@ def upsert_application(scheme, application_id):
 
     defaults = application_kwargs(scheme, row)
     defaults.pop('id', None)  # the pk is the lookup, not a default
-    obj, _created = Application.objects.update_or_create(
-        id=application_id,
-        defaults=defaults,
-    )
+    obj, _created = Application.objects.update_or_create(id=application_id, defaults=defaults)
+    return obj
+
+
+def mirror_to_legacy(scheme, application_id):
+    """Mirror the unified Application back into the scheme's dynamic table.
+
+    Only used during the walk-up to Phase 2 (``APPLICATIONS_WRITE_UNIFIED``) so
+    the dynamic tables stay in sync for legacy consumers and rollback.
+    """
+    from ..models import Application
+
+    application = Application.objects.filter(id=application_id).first()
+    model = get_application_model(scheme)
+    if application is None:
+        model.objects.filter(id=application_id).delete()
+        return None
+
+    defaults = legacy_kwargs(scheme, application)
+    obj, _created = model.objects.update_or_create(id=application_id, defaults=defaults)
     return obj

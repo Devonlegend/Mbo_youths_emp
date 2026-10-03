@@ -15,7 +15,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from .models import ApplicationStatusHistory
-from .services.projection import upsert_application
+from .services.projection import mirror_to_legacy, upsert_application, write_unified
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,13 @@ logger = logging.getLogger(__name__)
           dispatch_uid='applications.sync_application_projection')
 def sync_application_projection(sender, instance, **kwargs):
     try:
-        upsert_application(instance.scheme, instance.application_id)
+        if write_unified():
+            # Unified table is the source of truth; keep the dynamic table
+            # in sync for legacy consumers / rollback.
+            mirror_to_legacy(instance.scheme, instance.application_id)
+        else:
+            # Dynamic table is the source of truth; project into unified.
+            upsert_application(instance.scheme, instance.application_id)
     except Exception:
         logger.exception(
             "Failed to sync Application projection for %s",

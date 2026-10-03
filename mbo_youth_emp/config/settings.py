@@ -288,6 +288,12 @@ RENEWAL_RESUBMISSION_CAP = int(os.getenv('RENEWAL_RESUBMISSION_CAP', '2'))
 # missing from reads until backfilled.
 APPLICATIONS_USE_PROJECTION = _env_bool('APPLICATIONS_USE_PROJECTION', 'False')
 
+# Phase-2 cutover: when True the unified Application table becomes the write
+# source of truth and the per-scheme tables are mirrored (for rollback) instead
+# of the reverse. Leave False until the read projection has soaked; see
+# DEPLOYMENT.md "Phase-2 write cutover".
+APPLICATIONS_WRITE_UNIFIED = _env_bool('APPLICATIONS_WRITE_UNIFIED', 'False')
+
 
 
 # HTTPS/cookie hardening. Active when DEBUG is off; relaxed locally so http

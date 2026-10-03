@@ -14,13 +14,20 @@ def _load_application(application_id, scheme_id):
     (logged, not retried — a missing record won't fix itself on retry).
     """
     from schemes.models import ScholarshipScheme
-    from applications.dynamic import get_application_model
+    from applications.dynamic import get_application_model, write_unified
 
     try:
         scheme = ScholarshipScheme.objects.get(id=scheme_id)
     except ScholarshipScheme.DoesNotExist:
         logger.error(f"[Task Error] Scheme {scheme_id} not found.")
         return None
+
+    if write_unified():
+        from applications.models import Application
+        row = Application.objects.filter(id=application_id, scheme=scheme).first()
+        if row is None:
+            logger.error(f"[Task Error] Application {application_id} not found (unified).")
+        return row
 
     model = get_application_model(scheme)
     row = model.objects.filter(id=application_id).first()
