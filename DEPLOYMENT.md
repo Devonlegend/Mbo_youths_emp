@@ -260,16 +260,16 @@ curl https://back.mboempowerment.com/api/schema/
 | Beat logs         | `docker compose logs -f beat`                                  |
 | DB shell (Coolify)| Coolify UI → database → Terminal, or `psql` via the Internal URL |
 
-### Applications read-model cutover
+### Applications read-model cutover (Phase 1 — read the projection)
 
-Cross-scheme application reads (verifier queue, dashboards, admin list) can use a
-single indexed projection (`ApplicationIndex`) instead of scanning every
-per-scheme table. The table is created by the normal `migrate` (safe, additive)
-and every status change keeps it in sync automatically, but on an **existing**
-database it starts empty — so reads are gated behind a flag that is **off by
-default**. To cut over without losing anything:
+Cross-scheme application reads (verifier queue, dashboards, admin list,
+`schemes-overview`) can use the unified, indexed `Application` table instead of
+scanning every per-scheme table. The table is created by the normal `migrate`
+(safe, additive) and every status change keeps it in sync automatically, but on
+an **existing** database it starts empty — so reads are gated behind a flag that
+is **off by default**. To cut over without losing anything:
 
-1. Deploy (backend runs `migrate`, which only *adds* the `applications_applicationindex` table).
+1. Deploy (backend runs `migrate`, which only *adds* the `applications_application` table).
 2. Backfill the projection: `docker compose exec backend python manage.py rebuild_application_projection`
 3. Verify counts line up (e.g. `rebuild_application_projection` output vs the admin lists).
 4. Set `APPLICATIONS_USE_PROJECTION=True` in the environment and redeploy/restart the backend.
@@ -277,6 +277,49 @@ default**. To cut over without losing anything:
 
 Re-run `rebuild_application_projection` (optionally with `--since <iso>`) any time you
 suspect drift; it is idempotent.
+
+While `APPLICATIONS_WRITE_UNIFIED` is off, the **per-scheme tables remain the write
+source of truth** and the unified table is a projection of them.
+
+### Phase-2 write cutover (unified table becomes the source of truth)
+
+Once reads have soaked on the projection, flip writes so the unified `Application`
+table is authoritative and the per-scheme tables become a mirror (kept for
+rollback / legacy consumers):
+
+1. Confirm reads are healthy with `APPLICATIONS_USE_PROJECTION=True`.
+2. Set `APPLICATIONS_WRITE_UNIFIED=True` and redeploy/restart the backend.
+3. From now on every create/review/waiver/withdraw writes `Application` and the
+   history signal mirrors it back into the per-scheme table.
+4. Optionally resync the mirror: `docker compose exec backend python manage.py sync_legacy_from_projection`.
+5. **Rollback**: set `APPLICATIONS_WRITE_UNIFIED=False` and (to catch writes made
+   while cut over) `APPLICATIONS_USE_PROJECTION=False`. The per-scheme tables are
+   current thanks to the mirror.
+
+Soak on write-unified before the destructive step below.
+
+### Phase-2 final contract (drop the dynamic tables) — manual, after a soak
+
+Only after write-unified has run cleanly for a full cycle, and with a fresh DB
+backup, remove the now-dead machinery:
+
+1. Back up the DB.
+2. Stop writing/reading the per-scheme tables: remove `APPLICATIONS_USE_PROJECTION`
+   / `APPLICATIONS_WRITE_UNIFIED` (make the unified path unconditional) and delete
+   `applications/dynamic.py`, the `schemes` table-building signal
+   (`schemes/signals.py` + its `apps.py` import), `manage.py rebuild_application_tables`,
+   and the `apps.py` signal import for the projection.
+3. Drop the physical tables (generate the list first):
+   ```sql
+   SELECT format('DROP TABLE IF EXISTS %I CASCADE;', table_name)
+   FROM information_schema.tables
+   WHERE table_name LIKE 'app\_%';
+   ```
+   Run the emitted `DROP TABLE` statements.
+4. Remove `ScholarshipScheme.table_name` (optional; a follow-up migration) and the
+   `ApplicationTableRebuild`-style management commands.
+
+Until that step is done, the per-scheme tables are harmless (mirrors).
 
 ### Scheduled jobs (Celery Beat)
 

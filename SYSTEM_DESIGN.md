@@ -150,11 +150,11 @@ fully-typed table (`applications.Application`) mirrors the whole application row
 every award type's answers, bank snapshot — kept in sync by a `post_save` receiver on
 `ApplicationStatusHistory` and backfillable with `manage.py rebuild_application_projection`. When
 `APPLICATIONS_USE_PROJECTION` is on, cross-scheme reads become one indexed query with SQL-side
-pagination and `schemes_overview` becomes one `GROUP BY`. The per-scheme tables remain the **write**
-source of truth for now, so `find_application` still returns the source row (mutations must write it)
-and only uses the projection to resolve the scheme in O(1). The flag defaults **off** so a live
-deployment backfills before switching (see `DEPLOYMENT.md`). Dropping the dynamic tables entirely is
-the final Phase-2 step.
+pagination and `schemes_overview` becomes one `GROUP BY`. A second flag, `APPLICATIONS_WRITE_UNIFIED`,
+flips the source of truth: the unified table is written and the per-scheme table is mirrored from it
+(for rollback and legacy consumers), with `manage.py sync_legacy_from_projection` to rebuild the
+mirror. Both flags default **off** so a live deployment backfills/soaks before each step (see
+`DEPLOYMENT.md`). Dropping the dynamic tables entirely is the final Phase-2 step.
 
 ### 5.4 Async (`config/celery.py`, `verification/tasks.py`, `awards/tasks.py`)
 
@@ -450,7 +450,7 @@ graph LR
 
 - **Build the frontend for recurring scholarships** (`src/docs/Recurring_Scholarships_Frontend_Handoff.md`).
 - **Applications read-model cutover** — run `rebuild_application_projection` and set `APPLICATIONS_USE_PROJECTION=True` (see `DEPLOYMENT.md`).
-- **Phase 2 (in progress)**: the unified `Application` table exists and is dual-written; the remaining step is to make it the **write** source of truth and then drop the per-scheme dynamic tables and `schemes/signals.py` table machinery.
+- **Phase 2**: unified `Application` table built, dual-written, and cutover-ready (`APPLICATIONS_USE_PROJECTION` read flag, `APPLICATIONS_WRITE_UNIFIED` write flag, `sync_legacy_from_projection`). Remaining: soak on write-unified, then execute the documented drop of the dynamic tables / `schemes/signals.py` machinery (`DEPLOYMENT.md`).
 - Server-side route protection (currently client-only; `middleware.js` empty).
 - Dead service functions / endpoints cleanup (`verification.verifyNIN`, admin-user management).
 - Schedule/observe the `expire_renewals` beat job in every environment.

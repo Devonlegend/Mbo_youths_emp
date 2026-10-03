@@ -10,10 +10,17 @@
 - **`manage.py rebuild_application_projection`** — idempotent, batched backfill (`--batch-size`, `--since` for incremental repair). `drop_application_table` also clears the scheme's projection rows.
 - **Read paths**: when `APPLICATIONS_USE_PROJECTION` is on, `applications_by_status` / `applications_for_student` / `applications_all` return a real queryset (SQL pagination); `schemes_overview` becomes one `GROUP BY`; `by_scheme` / `approved_list` / `publish` read the projection. **`find_application` still returns the source-of-truth row** (mutations must write the per-scheme table) — it uses the projection only to resolve the scheme in O(1). The dynamic tables remain the write source of truth for now; the projection is kept in sync.
 - **`APPLICATIONS_USE_PROJECTION`** (default **`False`**) gates reads so a live deployment can backfill before the switch. Cutover steps in `DEPLOYMENT.md`.
-- **Migration** `applications/0004_application` (additive).
+- **Migration** `applications/0004_application` + `0005_alter_application_updated_at` (additive).
 - **Tests**: full-fidelity dual-write on create + transitions, waiver/approval projection, backfill, legacy-vs-projection parity, projection-backed serialization, and a mutation-stays-in-sync round-trip.
 
-> Remaining for full Phase 2 (separate step): flip the **write** path to `Application` and drop the dynamic tables + `schemes/signals.py` dynamic-table machinery.
+### Phase-2 write cutover
+- **`APPLICATIONS_WRITE_UNIFIED`** (default **`False`**): when on, `create_application` writes the unified `Application` row and `find_application` returns it; the `ApplicationStatusHistory` signal then **mirrors unified → the per-scheme table** (instead of the reverse), keeping the legacy tables current for rollback and for `verification.tasks` email workloads (which read unified while cut over).
+- **`manage.py sync_legacy_from_projection`** — rebuilds the per-scheme mirror from unified (rollback safety / post-cutover resync).
+- **Read paths** (`by_scheme`, `approved_list`, `publish`, `schemes-overview`, `submit` duplicate check) switch to the unified table when either flag is set.
+- **Tests**: write-unified create mirrors the legacy table, `find_application` returns the unified row, a mutation updates unified and re-mirrors legacy, and the resync command works.
+- **Cutover + final drop runbook**: `DEPLOYMENT.md` (read cutover → write cutover → soak → drop the dynamic tables; includes the `DROP TABLE app_%` SQL).
+
+> The per-scheme dynamic tables are now a mirror during the cutover; dropping them (and `applications/dynamic.py` / `schemes/signals.py` table-building / `rebuild_application_tables`) is the final documented step.
 
 ---
 
