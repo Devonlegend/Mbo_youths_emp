@@ -678,4 +678,102 @@ class ApplicationProjectionTests(TestCase):
                          ApplicationStatus.SHORTLISTED)
 
 
+class WriteUnifiedTests(TestCase):
+    """Phase-2 write cutover (`APPLICATIONS_WRITE_UNIFIED`): the unified table
+    is the source of truth and the per-scheme table is mirrored from it."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.provider = SchemeProvider.objects.create(
+            name='WriteUnified Provider', provider_type='lga')
+        cls.cycle = Cycle.objects.create(
+            name='2027/2028', start_year=2027, end_year=2028, is_active=True)
+        cls.verifier = User.objects.create_user(
+            email='verifier@wu.test', firstname='Veri', lastname='Fier',
+            phone_number='08090000041', role='verifier',
+            nin_hash='nin-hash-wu-ver', password='x', passport='')
+        student_user = User.objects.create_user(
+            email='student@wu.test', firstname='Ada', lastname='Okon',
+            phone_number='08030000041', role='student',
+            nin_hash='nin-hash-wu-stu', password='x', passport='')
+        cls.student = Student.attach_to_user(student_user, ward='efiat')
+        cls.scheme = ScholarshipScheme.objects.create(
+            provider=cls.provider, cycle=cls.cycle, name='WriteUnified Scheme',
+            award_type='scholarship', description='x', academic_year='2027/2028',
+            award_amount=100000, total_slots=5, remaining_slots=5,
+            application_open_date=timezone.now().date() - timedelta(days=1),
+            application_close_date=timezone.now().date() + timedelta(days=30),
+        )
+        cls.model = build_application_table(cls.scheme)
+
+    def _create(self):
+        from applications.services.creation import create_application
+        return create_application(
+            scheme=self.scheme, student=self.student,
+            answers={
+                'institution_name': 'University of Uyo',
+                'course_of_study': 'Computer Science',
+                'current_level': '300', 'cgpa': Decimal('3.50'),
+                'admission_year': 2023, 'matric_number': 'U2023/0001',
+            },
+            bank={'bank_name': 'UBA', 'bank_code': '033',
+                  'account_number': '1010101010', 'account_name': 'Ada Okon',
+                  'name_match_passed': True},
+            self_declaration_received_support=False,
+            self_declaration_details=[], attestation_agreed=True,
+            documents={}, changed_by=self.verifier,
+        )
+
+    @override_settings(APPLICATIONS_WRITE_UNIFIED=True)
+    def test_create_writes_unified_and_mirrors_legacy(self):
+        import io
+        app, _result = self._create()
+
+        unified = Application.objects.get(id=app.id)
+        self.assertEqual(unified.status, ApplicationStatus.SUBMITTED)
+        self.assertEqual(unified.cgpa, Decimal('3.50'))
+
+        # Legacy table mirrored from the unified source (not the reverse).
+        legacy = self.model.objects.get(id=app.id)
+        self.assertEqual(legacy.status, ApplicationStatus.SUBMITTED)
+        self.assertEqual(legacy.cgpa, Decimal('3.50'))
+
+    @override_settings(APPLICATIONS_WRITE_UNIFIED=True)
+    def test_find_application_returns_unified_row(self):
+        app, _result = self._create()
+        _scheme, model, row = find_application(app.id)
+        self.assertIs(model, Application)
+        self.assertEqual(row.id, app.id)
+
+    @override_settings(APPLICATIONS_WRITE_UNIFIED=True)
+    def test_mutation_updates_unified_and_remirrors_legacy(self):
+        app, _result = self._create()
+        _scheme, _model, row = find_application(app.id)
+        row.status = ApplicationStatus.DOCUMENT_REVIEW
+        row.waiver_submitted = True
+        row.save()
+        ApplicationStatusHistory.objects.create(
+            application_id=app.id, scheme=self.scheme,
+            from_status=ApplicationStatus.SUBMITTED,
+            to_status=ApplicationStatus.DOCUMENT_REVIEW,
+            changed_by=self.verifier, reason='waiver')
+
+        self.assertEqual(Application.objects.get(id=app.id).status,
+                         ApplicationStatus.DOCUMENT_REVIEW)
+        legacy = self.model.objects.get(id=app.id)
+        self.assertEqual(legacy.status, ApplicationStatus.DOCUMENT_REVIEW)
+        self.assertTrue(legacy.waiver_submitted)
+
+    @override_settings(APPLICATIONS_WRITE_UNIFIED=True)
+    def test_sync_legacy_from_projection_command(self):
+        import io
+        app, _result = self._create()
+        self.model.objects.all().delete()
+        call_command('sync_legacy_from_projection', stdout=io.StringIO())
+        legacy = self.model.objects.get(id=app.id)
+        self.assertEqual(legacy.status, ApplicationStatus.SUBMITTED)
+        self.assertEqual(legacy.matric_number, 'U2023/0001')
+
+
+
 
