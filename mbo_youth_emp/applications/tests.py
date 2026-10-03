@@ -23,7 +23,7 @@ from applications.dynamic import (
     build_application_table, get_application_model,
     applications_by_status, applications_all, find_application,
 )
-from applications.models import ApplicationIndex, ApplicationStatus, ApplicationStatusHistory
+from applications.models import Application, ApplicationStatus, ApplicationStatusHistory
 from awards.models import Award, AwardStatus
 
 from .services.slots import consume_slot, release_slot
@@ -522,27 +522,27 @@ class EndedRecurringAwardExportTests(APITestCase):
         self.assertEqual(resp.data['scheme']['total'], 0)
 
 
-class ApplicationIndexTests(TestCase):
-    """Phase-1 read model: dual-write on transitions, backfill, and parity
-    between the legacy per-scheme UNION and the ApplicationIndex projection."""
+class ApplicationProjectionTests(TestCase):
+    """Phase-2 foundation: the unified Application table is dual-written on
+    transitions, backfillable, and read-compatible with the legacy UNION."""
 
     @classmethod
     def setUpTestData(cls):
         cls.provider = SchemeProvider.objects.create(
-            name='Index Provider', provider_type='lga')
+            name='Projection Provider', provider_type='lga')
         cls.cycle = Cycle.objects.create(
             name='2026/2027', start_year=2026, end_year=2027, is_active=True)
         cls.verifier = User.objects.create_user(
-            email='verifier@index.test', firstname='Veri', lastname='Fier',
+            email='verifier@proj.test', firstname='Veri', lastname='Fier',
             phone_number='08090000031', role='verifier',
-            nin_hash='nin-hash-index-ver', password='x', passport='')
+            nin_hash='nin-hash-proj-ver', password='x', passport='')
         student_user = User.objects.create_user(
-            email='student@index.test', firstname='Ada', lastname='Okon',
+            email='student@proj.test', firstname='Ada', lastname='Okon',
             phone_number='08030000031', role='student',
-            nin_hash='nin-hash-index-stu', password='x', passport='')
+            nin_hash='nin-hash-proj-stu', password='x', passport='')
         cls.student = Student.attach_to_user(student_user, ward='efiat')
         cls.scheme = ScholarshipScheme.objects.create(
-            provider=cls.provider, cycle=cls.cycle, name='Index Scheme',
+            provider=cls.provider, cycle=cls.cycle, name='Projection Scheme',
             award_type='scholarship', description='x', academic_year='2026/2027',
             award_amount=100000, total_slots=5, remaining_slots=5,
             application_open_date=timezone.now().date() - timedelta(days=1),
@@ -557,7 +557,8 @@ class ApplicationIndexTests(TestCase):
             self_declaration_received_support=False,
             self_declaration_details=[],
             attestation_agreed=True, attestation_at=timezone.now(),
-            documents={}, eligibility_passed=True, eligibility_details={},
+            documents={'last_result': 'https://x/y.pdf'},
+            eligibility_passed=True, eligibility_details={},
             waiver_submitted=False,
             bank_name='UBA', bank_code='033', account_number='1010101010',
             account_name='Ada Okon', name_match_passed=True,
@@ -570,25 +571,32 @@ class ApplicationIndexTests(TestCase):
             to_status=status, changed_by=self.verifier, reason='created')
         return app
 
-    def test_history_write_projects_index_row(self):
+    def test_history_write_projects_full_row(self):
         app = self._make_app()
-        idx = ApplicationIndex.objects.get(application_id=app.id)
-        self.assertEqual(idx.status, ApplicationStatus.SUBMITTED)
-        self.assertEqual(idx.student_id, self.student.pk)
-        self.assertEqual(idx.scheme_id, self.scheme.id)
-        self.assertEqual(idx.id, app.id)  # list-serializer compatibility
+        projected = Application.objects.get(id=app.id)
+        self.assertEqual(projected.status, ApplicationStatus.SUBMITTED)
+        self.assertEqual(projected.student_id, self.student.pk)
+        self.assertEqual(projected.scheme_id, self.scheme.id)
+        # Full fidelity — detail columns are copied, not just summary fields.
+        self.assertEqual(projected.cgpa, Decimal('3.50'))
+        self.assertEqual(projected.course_of_study, 'Computer Science')
+        self.assertEqual(projected.documents, {'last_result': 'https://x/y.pdf'})
 
-    def test_status_transition_updates_index(self):
+    def test_status_transition_updates_projection(self):
         app = self._make_app()
         app.status = ApplicationStatus.APPROVED
+        app.reviewed_by = self.verifier
+        app.reviewer_notes = 'ok'
         app.save()
         ApplicationStatusHistory.objects.create(
             application_id=app.id, scheme=self.scheme,
             from_status=ApplicationStatus.SUBMITTED,
             to_status=ApplicationStatus.APPROVED,
             changed_by=self.verifier, reason='ok')
-        idx = ApplicationIndex.objects.get(application_id=app.id)
-        self.assertEqual(idx.status, ApplicationStatus.APPROVED)
+        projected = Application.objects.get(id=app.id)
+        self.assertEqual(projected.status, ApplicationStatus.APPROVED)
+        self.assertEqual(projected.reviewed_by_id, self.verifier.pk)
+        self.assertEqual(projected.reviewer_notes, 'ok')
 
     def test_waiver_flag_projected(self):
         app = self._make_app(ApplicationStatus.DOUBLE_DIP_FLAG)
@@ -600,46 +608,74 @@ class ApplicationIndexTests(TestCase):
             from_status=ApplicationStatus.DOUBLE_DIP_FLAG,
             to_status=ApplicationStatus.DOCUMENT_REVIEW,
             changed_by=self.verifier, reason='waiver')
-        idx = ApplicationIndex.objects.get(application_id=app.id)
-        self.assertTrue(idx.waiver_submitted)
-        self.assertEqual(idx.status, ApplicationStatus.DOCUMENT_REVIEW)
+        projected = Application.objects.get(id=app.id)
+        self.assertTrue(projected.waiver_submitted)
+        self.assertEqual(projected.status, ApplicationStatus.DOCUMENT_REVIEW)
 
-    def test_backfill_rebuilds_index(self):
+    def test_backfill_rebuilds_projection(self):
         import io
         app = self._make_app()
-        ApplicationIndex.objects.all().delete()
-        call_command('rebuild_application_index', stdout=io.StringIO())
-        idx = ApplicationIndex.objects.get(application_id=app.id)
-        self.assertEqual(idx.status, ApplicationStatus.SUBMITTED)
+        Application.objects.all().delete()
+        call_command('rebuild_application_projection', stdout=io.StringIO())
+        projected = Application.objects.get(id=app.id)
+        self.assertEqual(projected.status, ApplicationStatus.SUBMITTED)
+        self.assertEqual(projected.matric_number, 'U2023/0001')
 
-    def test_parity_legacy_union_vs_index(self):
+    def test_parity_legacy_union_vs_projection(self):
         first = self._make_app(ApplicationStatus.SUBMITTED)
         second = self._make_app(ApplicationStatus.DOUBLE_DIP_FLAG)
         statuses = [ApplicationStatus.SUBMITTED, ApplicationStatus.DOUBLE_DIP_FLAG]
 
         legacy = {str(r.id) for r in applications_by_status(statuses)}
-        with override_settings(APPLICATIONS_USE_INDEX=True):
-            indexed = {str(r.id) for r in applications_by_status(statuses)}
+        with override_settings(APPLICATIONS_USE_PROJECTION=True):
+            projected = {str(r.id) for r in applications_by_status(statuses)}
             all_ids = {str(r.id) for r in applications_all()}
 
-        self.assertEqual(legacy, indexed)
+        self.assertEqual(legacy, projected)
         self.assertEqual(all_ids, {str(first.id), str(second.id)})
 
-    @override_settings(APPLICATIONS_USE_INDEX=True)
-    def test_index_reads_return_queryset(self):
+    @override_settings(APPLICATIONS_USE_PROJECTION=True)
+    def test_projection_reads_return_queryset(self):
         self._make_app()
         rows = applications_by_status([ApplicationStatus.SUBMITTED])
         self.assertIsInstance(rows, QuerySet)
 
-    @override_settings(APPLICATIONS_USE_INDEX=True)
-    def test_find_application_uses_index_then_falls_back(self):
+    @override_settings(APPLICATIONS_USE_PROJECTION=True)
+    def test_find_application_uses_projection_then_falls_back(self):
         app = self._make_app()
         found = find_application(app.id)
         self.assertIsNotNone(found)
         _scheme, _model, row = found
         self.assertEqual(str(row.id), str(app.id))
+        self.assertEqual(row.cgpa, Decimal('3.50'))  # full row, not just summary
 
-        # Missing index row (e.g. pre-backfill) must still resolve via the scan.
-        ApplicationIndex.objects.filter(application_id=app.id).delete()
+        # Missing projection row (e.g. pre-backfill) must still resolve.
+        Application.objects.filter(id=app.id).delete()
         self.assertIsNotNone(find_application(app.id))
+
+    def test_approved_list_reads_projection(self):
+        app = self._make_app(ApplicationStatus.APPROVED)
+        with override_settings(APPLICATIONS_USE_PROJECTION=True):
+            from applications.serializers import serialize_application, serialize_application_list
+            projected = Application.objects.get(id=app.id)
+            # Both serializers must work on a projection row unchanged.
+            self.assertEqual(serialize_application_list(projected)['id'], str(app.id))
+            self.assertEqual(serialize_application(projected)['details']['cgpa'], Decimal('3.50'))
+
+    @override_settings(APPLICATIONS_USE_PROJECTION=True)
+    def test_review_mutation_keeps_projection_in_sync(self):
+        from rest_framework.test import APIClient
+        app = self._make_app(ApplicationStatus.SUBMITTED)
+        client = APIClient()
+        client.force_authenticate(user=self.verifier)
+
+        resp = client.post(f'/applications/{app.id}/review/',
+                           {'decision': 'shortlisted'}, format='json')
+
+        self.assertEqual(resp.status_code, 200, resp.data)
+        # Mutation wrote the source-of-truth row; the signal re-projected it.
+        self.assertEqual(Application.objects.get(id=app.id).status,
+                         ApplicationStatus.SHORTLISTED)
+
+
 
