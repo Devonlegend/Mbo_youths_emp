@@ -1,17 +1,19 @@
 # Changelog
 
-## Unreleased (applications read-model)
+## Unreleased (applications read-model — Phase 2)
 
-**Cross-scheme application reads (verifier queue, dashboards, admin list, `find_application`) now use a single indexed `ApplicationIndex` projection instead of looping over every per-scheme table and sorting the whole result in Python — one indexed query with SQL-side pagination.**
+**Cross-scheme application reads (verifier queue, dashboards, admin list, `schemes-overview`, per-scheme drill-downs) now use a single indexed, fully-typed `Application` table instead of looping over every per-scheme table and sorting the whole result in Python — one indexed query with SQL-side pagination.**
 
-### Read model
-- **New `applications.ApplicationIndex`** — mirrors `application_id`, `scheme`, `student`, `status`, `submission_date`, `eligibility_passed`, `has_conflict`, `waiver_submitted`, `created_at`. Indexes on `(status, -created_at)`, `(student, -created_at)`, `(scheme, status)`. Exposes `.id` + `get_status_display()` so the existing list serializer works unchanged.
-- **Dual-write**: a `post_save` receiver on `ApplicationStatusHistory` (the single chokepoint every status transition passes through) upserts the projection. Best-effort — a projection failure never breaks the application write.
-- **`manage.py rebuild_application_index`** — idempotent, batched backfill (`--batch-size`, `--since` for incremental repair). `drop_application_table` also clears the scheme's index rows.
-- **`applications_by_status` / `applications_for_student` / `applications_all` / `find_application`** use the index when `APPLICATIONS_USE_INDEX` is on; otherwise the legacy UNION path (unchanged). `find_application` falls back to the scan if an application has no index row yet.
-- **`APPLICATIONS_USE_INDEX`** (default **`False`**) gates reads so a live deployment can backfill before the switch. Cutover steps in `DEPLOYMENT.md`.
-- **Migration** `applications/0004_applicationindex` (additive).
-- **Tests**: dual-write on create + status transition, waiver projection, backfill, legacy-vs-index parity, and `find_application` index + fallback.
+### Unified application table
+- **New `applications.Application`** — the future single application table, carrying the full row (common fields + every award type's answer columns + bank snapshot). Indexes on `(status, -created_at)`, `(student, -created_at)`, `(scheme, status)`, `(scheme, -created_at)`. Because it is full-fidelity, both `serialize_application` and `serialize_application_list` work on a projection row unchanged.
+- **Dual-write**: a `post_save` receiver on `ApplicationStatusHistory` (the single chokepoint every status transition passes through) projects the source row into `Application`. Best-effort — a projection failure never breaks the application write.
+- **`manage.py rebuild_application_projection`** — idempotent, batched backfill (`--batch-size`, `--since` for incremental repair). `drop_application_table` also clears the scheme's projection rows.
+- **Read paths**: when `APPLICATIONS_USE_PROJECTION` is on, `applications_by_status` / `applications_for_student` / `applications_all` return a real queryset (SQL pagination); `schemes_overview` becomes one `GROUP BY`; `by_scheme` / `approved_list` / `publish` read the projection. **`find_application` still returns the source-of-truth row** (mutations must write the per-scheme table) — it uses the projection only to resolve the scheme in O(1). The dynamic tables remain the write source of truth for now; the projection is kept in sync.
+- **`APPLICATIONS_USE_PROJECTION`** (default **`False`**) gates reads so a live deployment can backfill before the switch. Cutover steps in `DEPLOYMENT.md`.
+- **Migration** `applications/0004_application` (additive).
+- **Tests**: full-fidelity dual-write on create + transitions, waiver/approval projection, backfill, legacy-vs-projection parity, projection-backed serialization, and a mutation-stays-in-sync round-trip.
+
+> Remaining for full Phase 2 (separate step): flip the **write** path to `Application` and drop the dynamic tables + `schemes/signals.py` dynamic-table machinery.
 
 ---
 

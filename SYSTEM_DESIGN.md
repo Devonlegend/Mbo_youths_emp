@@ -143,16 +143,18 @@ There is **no shared `Application` table**. Each `ScholarshipScheme` owns a phys
 Consequence for ops/tests: the suite is **Postgres-native** (SQLite can't run `schema_editor` DDL
 inside `TestCase`). `manage.py rebuild_application_tables` repairs drift.
 
-**Cross-scheme reads — `ApplicationIndex` read model.** Looping over every table per request
-(`applications_by_status` / `applications_for_student` / `find_application`) is `O(N_schemes)`
-queries plus an in-Python sort and post-materialization pagination. A single indexed projection
-(`applications.ApplicationIndex`) mirrors the fields list endpoints need (`status`, `student`,
-`scheme`, dates, eligibility/waiver flags), kept in sync by a `post_save` receiver on
-`ApplicationStatusHistory` and backfillable with `manage.py rebuild_application_index`. When
-`APPLICATIONS_USE_INDEX` is on, those reads become one indexed query with SQL-side pagination;
-`find_application` resolves the scheme in one lookup (with a fallback scan). Full detail still comes
-from the per-scheme table. The flag defaults **off** so a live deployment backfills before switching
-(see `DEPLOYMENT.md`).
+**Cross-scheme reads — unified `Application` projection (Phase 2).** Looping over every table per
+request (`applications_by_status` / `applications_for_student` / `find_application`) is
+`O(N_schemes)` queries plus an in-Python sort and post-materialization pagination. A single indexed,
+fully-typed table (`applications.Application`) mirrors the whole application row — common fields,
+every award type's answers, bank snapshot — kept in sync by a `post_save` receiver on
+`ApplicationStatusHistory` and backfillable with `manage.py rebuild_application_projection`. When
+`APPLICATIONS_USE_PROJECTION` is on, cross-scheme reads become one indexed query with SQL-side
+pagination and `schemes_overview` becomes one `GROUP BY`. The per-scheme tables remain the **write**
+source of truth for now, so `find_application` still returns the source row (mutations must write it)
+and only uses the projection to resolve the scheme in O(1). The flag defaults **off** so a live
+deployment backfills before switching (see `DEPLOYMENT.md`). Dropping the dynamic tables entirely is
+the final Phase-2 step.
 
 ### 5.4 Async (`config/celery.py`, `verification/tasks.py`, `awards/tasks.py`)
 
@@ -447,8 +449,8 @@ graph LR
 ## 16. Roadmap / open items
 
 - **Build the frontend for recurring scholarships** (`src/docs/Recurring_Scholarships_Frontend_Handoff.md`).
-- **Applications read-model cutover** — run `rebuild_application_index` and set `APPLICATIONS_USE_INDEX=True` (see `DEPLOYMENT.md`).
-- **Phase 2 (if scheme count grows past ~50–100)**: consolidate the per-scheme application tables into one `Application` table (typed columns or an `answers` JSON, optionally partitioned by scheme). The read model mitigates the fan-out but still leaves one detail query per scheme touched on a page.
+- **Applications read-model cutover** — run `rebuild_application_projection` and set `APPLICATIONS_USE_PROJECTION=True` (see `DEPLOYMENT.md`).
+- **Phase 2 (in progress)**: the unified `Application` table exists and is dual-written; the remaining step is to make it the **write** source of truth and then drop the per-scheme dynamic tables and `schemes/signals.py` table machinery.
 - Server-side route protection (currently client-only; `middleware.js` empty).
 - Dead service functions / endpoints cleanup (`verification.verifyNIN`, admin-user management).
 - Schedule/observe the `expire_renewals` beat job in every environment.
