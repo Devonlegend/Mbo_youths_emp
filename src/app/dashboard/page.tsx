@@ -4,26 +4,56 @@ import { useState, useEffect } from "react";
 import {
   Calendar, Clock, FileText, CheckCircle2,
   GraduationCap, Briefcase, Wrench, Banknote,
-  ArrowRight, ChevronRight, AlertCircle, Hourglass,
+  ArrowRight, ChevronRight, AlertCircle, Hourglass, type LucideIcon,
 } from "lucide-react";
 import ProfileCard from "./components/ProfileCard";
 import LoadingSpinner from "./components/LoadingSpinner";
 import styles from "./page.module.css";
 import { getMe, getStudentProfile, getApplications, getSchemes, getCycles } from "@/services";
+import type { ApplicationListItem, ApplicationStatus } from "@/types/application";
+import type { Cycle, Scheme } from "@/types/scheme";
 
-function getDaysLeftUntilNextDeadline(schemes) {
+interface ActivityMeta {
+  icon: LucideIcon;
+  iconClass: string;
+  title: string;
+}
+
+interface ActivityItem extends ActivityMeta {
+  desc: string;
+  time: string;
+}
+
+interface DashboardStats {
+  total: number;
+  approved: number;
+  underReview: number;
+}
+
+interface DashboardUser {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  lga: string;
+  ward: string;
+  is_verified: boolean;
+  passport_photo: string | null;
+}
+
+function getDaysLeftUntilNextDeadline(schemes: Scheme[]) {
   if (!schemes || schemes.length === 0) return null;
   const today = new Date();
   const upcoming = schemes
     .map((s) => new Date(s.application_close_date))
     .filter((d) => d > today)
-    .sort((a, b) => a - b);
+    .sort((a, b) => a.getTime() - b.getTime());
   if (upcoming.length === 0) return null;
-  return Math.ceil((upcoming[0] - today) / (1000 * 60 * 60 * 24));
+  return Math.ceil((upcoming[0].getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function formatTimeAgo(date) {
-  const days = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24));
+function formatTimeAgo(date: Date) {
+  const days = Math.floor((new Date().getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 7)  return `${days} days ago`;
@@ -31,8 +61,8 @@ function formatTimeAgo(date) {
   return `${Math.floor(days / 7)} weeks ago`;
 }
 
-function mapApplicationToActivity(app) {
-  const statusMap = {
+function mapApplicationToActivity(app: ApplicationListItem): ActivityItem {
+  const statusMap: Partial<Record<ApplicationStatus, ActivityMeta>> = {
     approved:        { icon: CheckCircle2, iconClass: "act_green", title: "Application approved"           },
     submitted:       { icon: Hourglass,    iconClass: "act_amber", title: "Application submitted"          },
     double_dip_flag: { icon: AlertCircle,  iconClass: "act_blue",  title: "Application flagged for review" },
@@ -46,12 +76,12 @@ function mapApplicationToActivity(app) {
     icon:      meta.icon,
     iconClass: meta.iconClass,
     title:     meta.title,
-    desc: app.scheme_name || app.scheme?.name || "Programme",
+    desc: app.scheme?.name || "Programme",
     time:      date ? formatTimeAgo(date) : "",
   };
 }
 
-function getSchemeIcon(awardType) {
+function getSchemeIcon(awardType: string) {
   switch (awardType) {
     case "scholarship":  return { icon: GraduationCap, iconClass: "qa_green"  };
     case "vocational":   return { icon: Wrench,        iconClass: "qa_amber"  };
@@ -64,13 +94,13 @@ function getSchemeIcon(awardType) {
 export default function DashboardPage() {
   const router = useRouter();
 
-  const [user,           setUser]          = useState(null);
-  const [stats,          setStats]         = useState(null);
-  const [recentActivity, setRecentActivity] = useState([]);
-  const [schemes,        setSchemes]       = useState([]);
+  const [user,           setUser]          = useState<DashboardUser | null>(null);
+  const [stats,          setStats]         = useState<DashboardStats | null>(null);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [schemes,        setSchemes]       = useState<Scheme[]>([]);
   const [loading,        setLoading]       = useState(true);
 
-  const [activeCycle, setActiveCycle] = useState(null);
+  const [activeCycle, setActiveCycle] = useState<Cycle | null>(null);
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
@@ -82,18 +112,18 @@ export default function DashboardPage() {
           const [authRes, studentRes, appsRes, schemesRes, cyclesRes] = await Promise.all([
             getMe(),
             getStudentProfile(),
-            getApplications().catch(() => ({ data: [] })),
-            getSchemes().catch(() => ({ data: [] })),
-            getCycles().catch(() => ({ data: [] })),
+            getApplications().catch(() => null),
+            getSchemes().catch(() => null),
+            getCycles().catch(() => null),
           ]);
 
         if (cancelled) return;
 
         const auth    = authRes.data;
         const profile = studentRes.data;
-        const apps = Array.isArray(appsRes.data?.results) ? appsRes.data.results : [];
-        const schemesList = Array.isArray(schemesRes.data?.results) ? schemesRes.data.results : [];
-        const cyclesList = Array.isArray(cyclesRes.data?.results) ? cyclesRes.data.results : (cyclesRes.data || []);
+        const apps: ApplicationListItem[] = appsRes?.data.results ?? [];
+        const schemesList: Scheme[] = schemesRes?.data.results ?? [];
+        const cyclesList: Cycle[] = cyclesRes?.data.results ?? [];
         const active = cyclesList.find((c) => c.is_active) || null;
         setActiveCycle(active);
 
@@ -118,7 +148,7 @@ export default function DashboardPage() {
         });
 
         const sorted = [...apps].sort((a, b) =>
-          new Date(b.submission_date) - new Date(a.submission_date)
+          new Date(b.submission_date ?? 0).getTime() - new Date(a.submission_date ?? 0).getTime()
         );
         setRecentActivity(sorted.slice(0, 3).map(mapApplicationToActivity));
         setSchemes(schemesList.slice(0, 4));

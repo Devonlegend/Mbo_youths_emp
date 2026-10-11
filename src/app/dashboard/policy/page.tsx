@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ShieldCheck, BookOpen, ChevronDown, ChevronUp,
   GraduationCap, Briefcase, Wrench, Banknote,
   LayoutGrid, AlertTriangle, Ban, RefreshCw,
-  Calendar, FileText, Users, Lock, Scale,
+  Calendar, FileText, Users, Lock, Scale, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -197,7 +197,14 @@ const policySections = [
 /* ─────────────────────────────────────────
    ACCORDION ITEM
 ───────────────────────────────────────── */
-function PolicySection({ num, title, icon: Icon, content }) {
+interface PolicySectionProps {
+  num: string;
+  title: string;
+  icon: LucideIcon;
+  content: ReactNode;
+}
+
+function PolicySection({ num, title, icon: Icon, content }: PolicySectionProps) {
   const [open, setOpen] = useState(false);
   return (
     <div className={`${styles.policyGroup} ${open ? styles.policyGroupOpen : ""}`}>

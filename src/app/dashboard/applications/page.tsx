@@ -4,13 +4,37 @@ import { useState, useEffect } from "react";
 import {
   GraduationCap, Briefcase, Banknote,
   CheckCircle2, Clock, XCircle, AlertCircle,
-  ArrowRight, Search, Filter, FolderOpen, ChevronDown,
+  ArrowRight, Search, Filter, FolderOpen, ChevronDown, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { getMyApplications } from "@/services";
+import type { ApplicationListItem, ApplicationStatus } from "@/types/application";
 
-const statusMap = {
+type UiStatus = "pending" | "flagged" | "approved" | "rejected";
+type CategoryColor = "green" | "amber" | "purple";
+
+interface CategoryConfig {
+  label: string;
+  color: CategoryColor;
+  icon: LucideIcon;
+}
+
+interface UiApplication {
+  id: string;
+  title: string;
+  category: string;
+  categoryColor: CategoryColor;
+  icon: LucideIcon;
+  date: string;
+  status: UiStatus;
+  flagNote: string;
+  rejectionReason: string;
+  reviewerNotes: string;
+  waiversSubmitted: boolean;
+}
+
+const statusMap: Partial<Record<ApplicationStatus, UiStatus>> = {
   submitted:         "pending",
   eligibility_check: "pending",
   document_review:   "pending",
@@ -22,13 +46,13 @@ const statusMap = {
   draft:             "pending",
 };
 
-const categoryConfig = {
+const categoryConfig: Record<string, CategoryConfig> = {
   scholarship: { label: "Scholarship", color: "green",  icon: GraduationCap },
   empowerment: { label: "Empowerment", color: "amber",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "purple", icon: Banknote      },
 };
 
-const colorMap = {
+const colorMap: Record<CategoryColor, { bg: string; border: string; text: string }> = {
   green:  { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
   amber:  { bg: "#fffbeb", border: "#fde68a", text: "#b45309" },
   purple: { bg: "#faf5ff", border: "#e9d5ff", text: "#7e22ce" },
@@ -36,7 +60,7 @@ const colorMap = {
 
 const FILTERS = ["All", "Pending", "Flagged", "Approved", "Rejected"];
 
-function mapApplication(app) {
+function mapApplication(app: ApplicationListItem): UiApplication {
   const uiStatus = statusMap[app.status] || "pending";
   const catKey   = (app.scheme?.award_type || "scholarship").toLowerCase();
   const config   = categoryConfig[catKey] || categoryConfig.scholarship;
@@ -60,13 +84,13 @@ function mapApplication(app) {
     date,
     status:           uiStatus,
     flagNote,
-    rejectionReason:  app.rejection_reason  || "",
-    reviewerNotes:    app.reviewer_notes    || "",
+    rejectionReason:  "",
+    reviewerNotes:    "",
     waiversSubmitted: app.waiver_submitted  || false,
   };
 }
 
-function StatusBadge({ status }) {
+function StatusBadge({ status }: { status: UiStatus }) {
   const map = {
     approved: { cls: styles.st_approved, icon: <CheckCircle2 size={11} strokeWidth={2.5} />, label: "Approved" },
     pending:  { cls: styles.st_pending,  icon: <Clock        size={11} strokeWidth={2.5} />, label: "Pending"  },
@@ -80,9 +104,9 @@ function StatusBadge({ status }) {
 export default function ApplicationsPage() {
   const router = useRouter();
 
-  const [applications, setApplications] = useState([]);
+  const [applications, setApplications] = useState<UiApplication[]>([]);
   const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
+  const [error,        setError]        = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState("All");
   const [filterOpen,   setFilterOpen]   = useState(false);
   const [search,       setSearch]       = useState("");

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import {
   HelpCircle, MessageSquare, ChevronDown, ChevronUp,
   MapPin, Mail, Phone, Send, CheckCircle,
@@ -73,7 +73,7 @@ const contactInfo = [
 /* ─────────────────────────────────────────
    FAQ ACCORDION ITEM
 ───────────────────────────────────────── */
-function FaqItem({ q, a }) {
+function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={`${styles.faqItem} ${open ? styles.faqItemOpen : ""}`}>
@@ -117,9 +117,9 @@ export default function HelpPage() {
 
   const totalResults = filtered.reduce((acc, f) => acc + f.items.length, 0);
 
-  function handleChange(e) { setForm({ ...form, [e.target.name]: e.target.value }); }
+  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) { setForm({ ...form, [e.target.name]: e.target.value }); }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSending(true);
     await new Promise((r) => setTimeout(r, 1200));

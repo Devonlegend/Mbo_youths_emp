@@ -1,4 +1,8 @@
-export default function LoadingSpinner({ fullPage = false }) {
+interface LoadingSpinnerProps {
+  fullPage?: boolean;
+}
+
+export default function LoadingSpinner({ fullPage = false }: LoadingSpinnerProps) {
   if (fullPage) {
     return (
       <div style={{

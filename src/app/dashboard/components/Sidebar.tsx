@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, FileText, ClipboardList,
   Files, UserCircle, Bell, BookOpen,
-  HelpCircle, Settings, LogOut, X,
+  HelpCircle, Settings, LogOut, X, type LucideIcon,
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
 import { useState, useEffect } from "react";
@@ -29,7 +29,20 @@ const navInfo = [
   { label: "Settings",       href: "/dashboard/settings",  icon: Settings },
 ];
 
-function NavItem({ item, active, onClick, badge }) {
+interface NavLinkItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+interface NavItemProps {
+  item: NavLinkItem;
+  active: boolean;
+  onClick?: () => void;
+  badge?: number;
+}
+
+function NavItem({ item, active, onClick, badge = 0 }: NavItemProps) {
   const Icon = item.icon;
   return (
     <Link
@@ -48,7 +61,12 @@ function NavItem({ item, active, onClick, badge }) {
   );
 }
 
-export default function Sidebar({ isOpen, onClose }) {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -65,7 +83,7 @@ export default function Sidebar({ isOpen, onClose }) {
     loadUnread();
   }, []);
 
-  function isActive(href) {
+  function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   }

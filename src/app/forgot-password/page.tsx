@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type FormEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import {
   Mail, ArrowRight, ShieldCheck, AlertCircle,
@@ -12,8 +12,15 @@ import {
   forgotPasswordReset,
 } from "@/services/auth";
 
-function getStrength(pw) {
-  const checks = {
+type Step = "email" | "otp" | "reset" | "done";
+type CheckKey = "length" | "upper" | "lower" | "number" | "special";
+
+interface ApiError {
+  response?: { data?: { error?: string; detail?: string; message?: string } };
+}
+
+function getStrength(pw: string) {
+  const checks: Record<CheckKey, boolean> = {
     length: pw.length >= 8,
     upper: /[A-Z]/.test(pw),
     lower: /[a-z]/.test(pw),
@@ -26,7 +33,7 @@ function getStrength(pw) {
   return { score, checks, label: labels[score] || "", color: colors[score] || "" };
 }
 
-function Shell({ children }) {
+function Shell({ children }: { children: ReactNode }) {
     return (
       <div className={styles.page}>
         <div className={styles.main}>
@@ -58,7 +65,7 @@ function Shell({ children }) {
   }
 
 export default function ForgotPasswordPage() {
-  const [step, setStep] = useState("email");
+  const [step, setStep] = useState<Step>("email");
 
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -67,14 +74,14 @@ export default function ForgotPasswordPage() {
   const [otpError, setOtpError] = useState("");
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
-  const countdownRef = useRef(null);
-  const otpInputs = useRef([]);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const otpInputs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [resetErrors, setResetErrors] = useState({});
+  const [resetErrors, setResetErrors] = useState<Record<string, string>>({});
 
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
@@ -104,7 +111,7 @@ export default function ForgotPasswordPage() {
     }, 1000);
   }
 
-  async function handleEmailSubmit(e) {
+  async function handleEmailSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!email.trim()) { setEmailError("Required"); return; }
     if (!/\S+@\S+\.\S+/.test(email)) { setEmailError("Enter a valid email address"); return; }
@@ -115,7 +122,8 @@ export default function ForgotPasswordPage() {
       await forgotPasswordRequest({ email });
       setStep("otp");
       startCountdown();
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setApiError(
         err?.response?.data?.error ||
         err?.response?.data?.detail ||
@@ -126,7 +134,7 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  function handleOtpChange(index, value) {
+  function handleOtpChange(index: number, value: string) {
   const digit = value.replace(/\D/g, "");
   if (!digit && value !== "") return;
 
@@ -151,7 +159,7 @@ export default function ForgotPasswordPage() {
   }
 }
 
-function handleOtpKeyDown(index, e) {
+function handleOtpKeyDown(index: number, e: KeyboardEvent<HTMLInputElement>) {
   if (e.key === "Backspace") {
     const newOtp = [...otp];
     if (otp[index]) {
@@ -167,7 +175,7 @@ function handleOtpKeyDown(index, e) {
   if (e.key === "ArrowRight" && index < 5) otpInputs.current[index + 1]?.focus();
 }
 
-  function handlePaste(e) {
+  function handlePaste(e: ClipboardEvent<HTMLInputElement>) {
     e.preventDefault();
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     if (!pasted) return;
@@ -187,11 +195,12 @@ function handleOtpKeyDown(index, e) {
     try {
       await forgotPasswordRequest({ email });
     } catch (err) {
-      setOtpError(err?.response?.data?.message || "Failed to resend. Please try again.");
+      const e = err as ApiError;
+      setOtpError(e?.response?.data?.message || "Failed to resend. Please try again.");
     }
   }
 
-  async function handleOtpSubmit(e) {
+  async function handleOtpSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const code = otp.join("");
     if (code.length < 6) { setOtpError("Please enter the complete 6-digit code."); return; }
@@ -201,7 +210,8 @@ function handleOtpKeyDown(index, e) {
     try {
       await forgotPasswordVerifyOtp({ email, code });
       setStep("reset");
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setOtpError(
         err?.response?.data?.error ||
         err?.response?.data?.detail ||
@@ -215,7 +225,7 @@ function handleOtpKeyDown(index, e) {
   const strength = getStrength(password);
 
   function validateReset() {
-    const e = {};
+    const e: Record<string, string> = {};
     if (!password) e.password = "Required";
     else if (strength.score < 3) e.password = "Password is too weak";
     if (!confirm) e.confirm = "Required";
@@ -223,7 +233,7 @@ function handleOtpKeyDown(index, e) {
     return e;
   }
 
-  async function handleResetSubmit(ev) {
+  async function handleResetSubmit(ev: FormEvent<HTMLFormElement>) {
     ev.preventDefault();
     const errs = validateReset();
     if (Object.keys(errs).length > 0) { setResetErrors(errs); return; }
@@ -233,7 +243,8 @@ function handleOtpKeyDown(index, e) {
     try {
       await forgotPasswordReset({ email, code: otp.join(""), new_password: password });
       setStep("done");
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setApiError(
         err?.response?.data?.error ||
         err?.response?.data?.detail ||
@@ -326,7 +337,7 @@ function handleOtpKeyDown(index, e) {
           {otp.map((digit, i) => (
             <input
   key={i}
-  ref={(el) => (otpInputs.current[i] = el)}
+  ref={(el) => { otpInputs.current[i] = el; }}
   type="text"
   inputMode="numeric"
   value={digit}
@@ -444,7 +455,7 @@ function handleOtpKeyDown(index, e) {
                   <span
                     key={key}
                     className={styles.checkItem}
-                    style={{ color: strength.checks[key] ? "#15803d" : "#94a3b8" }}
+                    style={{ color: strength.checks[key as CheckKey] ? "#15803d" : "#94a3b8" }}
                   >
                     <CheckCircle2 size={12} strokeWidth={2.5} />
                     {label}

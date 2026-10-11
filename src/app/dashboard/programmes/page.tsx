@@ -4,13 +4,39 @@ import { useState, useEffect } from "react";
 import {
   GraduationCap, Briefcase, Banknote,
   Clock, CheckCircle2, ArrowRight, Search, Filter,
-  AlertCircle, LayoutGrid, ShieldAlert,
+  AlertCircle, LayoutGrid, ShieldAlert, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { getSchemes, getStudentProfile } from "@/services";
+import type { Scheme } from "@/types/scheme";
 
-const categoryConfig = {
+type CategoryColor = "green" | "amber" | "purple";
+type ProgrammeStatus = "open" | "closed" | "applied" | "awarded";
+
+interface CategoryConfig {
+  label: string;
+  color: CategoryColor;
+  icon: LucideIcon;
+  applyPath: string;
+}
+
+interface Programme {
+  id: Scheme["id"];
+  title: string;
+  category: string;
+  color: CategoryColor;
+  icon: LucideIcon;
+  desc: string;
+  deadline: string;
+  daysLeft: number;
+  slots: number;
+  status: ProgrammeStatus;
+  applyPath: string;
+  schemeId: Scheme["id"];
+}
+
+const categoryConfig: Record<string, CategoryConfig> = {
   scholarship: {
     label:    "Scholarship",
     color:    "green",
@@ -31,7 +57,7 @@ const categoryConfig = {
   },
 };
 
-const colorMap = {
+const colorMap: Record<CategoryColor, { bg: string; border: string; text: string }> = {
   green:  { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
   amber:  { bg: "#fffbeb", border: "#fde68a", text: "#b45309" },
   purple: { bg: "#faf5ff", border: "#e9d5ff", text: "#7e22ce" },
@@ -39,13 +65,13 @@ const colorMap = {
 
 const categories = ["All", "Scholarship", "Empowerment", "Grant"];
 
-function mapScheme(scheme) {
+function mapScheme(scheme: Scheme): Programme {
   const config = categoryConfig[scheme.award_type] || categoryConfig.scholarship;
   const closeDate = new Date(scheme.application_close_date);
   const today     = new Date();
-  const daysLeft  = Math.ceil((closeDate - today) / (1000 * 60 * 60 * 24));
+  const daysLeft  = Math.ceil((closeDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-  let status = "open";
+  let status: ProgrammeStatus = "open";
   if (!scheme.is_published || !scheme.is_active) status = "closed";
   if (daysLeft < 0) status = "closed";
 
@@ -69,7 +95,7 @@ function mapScheme(scheme) {
   };
 }
 
-function StatusBadge({ status, daysLeft }) {
+function StatusBadge({ status, daysLeft }: { status: ProgrammeStatus; daysLeft: number }) {
   if (status === "awarded") return (
     <span className={`${styles.badge} ${styles.badgeAwarded}`}>
       <CheckCircle2 size={11} strokeWidth={2.5} /> Awarded
@@ -96,13 +122,13 @@ function StatusBadge({ status, daysLeft }) {
 export default function ProgrammesPage() {
   const router = useRouter();
 
-  const [programmes,   setProgrammes]  = useState([]);
+  const [programmes,   setProgrammes]  = useState<Programme[]>([]);
   const [loading,      setLoading]     = useState(true);
-  const [error,        setError]       = useState(null);
+  const [error,        setError]       = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState("All");
   const [filterOpen,   setFilterOpen]  = useState(false);
   const [search,       setSearch]      = useState("");
-  const [isVerified,   setIsVerified]  = useState(null);
+  const [isVerified,   setIsVerified]  = useState<boolean | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -130,7 +156,7 @@ export default function ProgrammesPage() {
     return matchCat && matchSearch;
   });
 
-  function handleApply(prog) {
+  function handleApply(prog: Programme) {
     if (prog.status === "awarded" || prog.status === "applied" || prog.status === "closed") return;
     router.push(`${prog.applyPath}?scheme_id=${prog.schemeId}`);
   }

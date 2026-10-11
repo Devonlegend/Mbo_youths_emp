@@ -5,12 +5,78 @@ import {
   GraduationCap, Briefcase, Banknote,
   ArrowLeft, CheckCircle2, Clock,
   XCircle, AlertCircle, FileText,
+  type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { getApplication } from "@/services";
 
-const statusMap = {
+type UiStatus = "approved" | "pending" | "flagged" | "rejected";
+type CategoryKey = "scholarship" | "empowerment" | "grant";
+type ColorKey = "green" | "amber" | "purple";
+
+interface FieldItem {
+  label: string;
+  value: string | number;
+  type?: "file";
+}
+
+interface FieldSection {
+  section: string;
+  items: FieldItem[];
+}
+
+interface FormDetails {
+  self_declaration_received_support?: boolean;
+  self_declaration_details?: { organisation: string; category: string; year: string | number }[];
+  bank_name?: string;
+  account_number?: string;
+  account_name?: string;
+  institution_name?: string;
+  course_of_study?: string;
+  current_level?: string;
+  cgpa?: string | number;
+  admission_year?: string | number;
+  matric_number?: string;
+  business_name?: string;
+  business_stage?: string;
+  business_description?: string;
+  requested_amount?: string | number;
+  intended_use?: string;
+  trade_or_skill?: string;
+  training_provider?: string;
+  training_duration_months?: string | number;
+  prior_experience?: string;
+}
+
+interface ApplicationData {
+  id: string | number;
+  status: string;
+  submission_date?: string;
+  has_conflict?: boolean;
+  rejection_reason?: string;
+  reviewer_notes?: string;
+  scheme?: { name?: string; award_type?: string };
+  details?: FormDetails;
+  documents?: Record<string, string>;
+}
+
+interface AppView {
+  id: string | number;
+  title: string;
+  category: string;
+  categoryColor: ColorKey;
+  icon: LucideIcon;
+  date: string;
+  status: UiStatus;
+  step: number;
+  flagNote: string;
+  rejectionReason: string;
+  reviewerNotes: string;
+  fields: FieldSection[];
+}
+
+const statusMap: Record<string, UiStatus> = {
   submitted:          "pending",
   eligibility_check:  "pending",
   document_review:    "pending",
@@ -22,13 +88,13 @@ const statusMap = {
   draft:              "pending",
 };
 
-const categoryConfig = {
+const categoryConfig: Record<CategoryKey, { label: string; color: ColorKey; icon: LucideIcon }> = {
   scholarship: { label: "Scholarship", color: "green",  icon: GraduationCap },
   empowerment: { label: "Empowerment", color: "amber",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "purple", icon: Banknote      },
 };
 
-const colorMap = {
+const colorMap: Record<ColorKey, { bg: string; border: string; text: string }> = {
   green:  { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
   amber:  { bg: "#fffbeb", border: "#fde68a", text: "#b45309" },
   purple: { bg: "#faf5ff", border: "#e9d5ff", text: "#7e22ce" },
@@ -36,24 +102,28 @@ const colorMap = {
 
 const STEPS = ["Submitted", "Verified", "Review", "Decision"];
 
-function buildFields(schemeType, formData, documents) {
+function buildFields(
+  schemeType: string,
+  formData: FormDetails,
+  documents: Record<string, string>
+): FieldSection[] {
   if (!formData || Object.keys(formData).length === 0) return [];
 
   const fd = formData;
 
-  const docItems = Object.entries(documents || {})
+  const docItems: FieldItem[] = Object.entries(documents || {})
     .filter(([, url]) => !!url)
     .map(([key, url]) => ({
       label: key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
       value: url,
-      type: "file",
+      type: "file" as const,
     }));
 
-  const documentsSection = docItems.length > 0
+  const documentsSection: FieldSection | null = docItems.length > 0
     ? { section: "Uploaded Documents", items: docItems }
     : null;
 
-  const declaration = {
+  const declaration: FieldSection = {
     section: "Self-Declaration",
     items: [
       {
@@ -67,7 +137,7 @@ function buildFields(schemeType, formData, documents) {
     ],
   };
 
-  const bankDetails = (fd.bank_name || fd.account_number || fd.account_name) ? {
+  const bankDetails: FieldSection | null = (fd.bank_name || fd.account_number || fd.account_name) ? {
     section: "Bank Details",
     items: [
       { label: "Bank Name",      value: fd.bank_name      || "—" },
@@ -133,8 +203,8 @@ function buildFields(schemeType, formData, documents) {
   return [...(documentsSection ? [documentsSection] : []), declaration];
 }
 
-function StatusBadge({ status }) {
-  const map = {
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, { cls: string; icon: React.ReactNode; label: string }> = {
     approved: { cls: styles.st_approved, icon: <CheckCircle2 size={12} strokeWidth={2.5} />, label: "Approved" },
     pending:  { cls: styles.st_pending,  icon: <Clock        size={12} strokeWidth={2.5} />, label: "Pending"  },
     flagged:  { cls: styles.st_flagged,  icon: <AlertCircle  size={12} strokeWidth={2.5} />, label: "Flagged"  },
@@ -144,8 +214,8 @@ function StatusBadge({ status }) {
   return <span className={`${styles.statusTag} ${s.cls}`}>{s.icon} {s.label}</span>;
 }
 
-function Stepper({ step, status }) {
-  const stepIcons = [CheckCircle2, CheckCircle2, FileText, CheckCircle2];
+function Stepper({ step, status }: { step: number; status: UiStatus }) {
+  const stepIcons: LucideIcon[] = [CheckCircle2, CheckCircle2, FileText, CheckCircle2];
 
   return (
     <div className={styles.stepper}>
@@ -184,11 +254,11 @@ function Stepper({ step, status }) {
 
 export default function ApplicationDetailPage() {
   const router = useRouter();
-  const params = useParams();
+  const params = useParams<{ id: string }>();
 
-  const [app,     setApp]     = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const [app,     setApp]     = useState<AppView | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error,   setError]   = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -196,11 +266,11 @@ export default function ApplicationDetailPage() {
       try {
         const res  = await getApplication(params.id);
         if (cancelled) return;
-        const data = res.data;
+        const data = res.data as ApplicationData | undefined;
         if (!data) throw new Error("No data returned");
 
         const catKey   = (data.scheme?.award_type || "scholarship").toLowerCase();
-        const config   = categoryConfig[catKey] || categoryConfig.scholarship;
+        const config   = categoryConfig[catKey as CategoryKey] || categoryConfig.scholarship;
         const uiStatus = statusMap[data.status] || "pending";
 
         const date = data.submission_date
@@ -209,7 +279,7 @@ export default function ApplicationDetailPage() {
             })
           : "—";
 
-        const stepMap = {
+        const stepMap: Record<string, number> = {
           submitted:         1,
           eligibility_check: 1,
           document_review:   2,
@@ -335,12 +405,12 @@ export default function ApplicationDetailPage() {
                   {sec.items.map((item, ii) => (
                     <div
                       key={ii}
-                      className={`${styles.fieldItem} ${item.type !== "file" && item.value?.length > 80 ? styles.fieldItemFull : ""}`}
+                      className={`${styles.fieldItem} ${item.type !== "file" && typeof item.value === "string" && item.value.length > 80 ? styles.fieldItemFull : ""}`}
                     >
                       <div className={styles.fieldLabel}>{item.label}</div>
                       {item.type === "file" ? (
                         <a
-                          href={item.value}
+                          href={String(item.value)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className={styles.fileChip}

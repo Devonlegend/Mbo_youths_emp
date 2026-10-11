@@ -1,27 +1,86 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   GraduationCap, Briefcase, Banknote,
   ArrowLeft, ArrowRight, AlertCircle, Check,
-  UploadCloud, FileText, Trash2, Loader2, CheckCircle2,
+  UploadCloud, FileText, Trash2, Loader2, CheckCircle2, type LucideIcon,
 } from "lucide-react";
 import styles from "./apply-form.module.css";
 import { getScheme, getSchemeFields, submitApplication, getBanks, verifyBank, getBankDetail } from "@/services";
 
+type FieldValue = string | boolean;
+type FieldChangeEvent = ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+
+interface SchemeInfo {
+  name: string;
+  award_type?: string;
+}
+
+interface SchemeField {
+  field_name: string;
+  field_label: string;
+  field_type: string;
+  placeholder?: string;
+  is_required?: boolean;
+  options?: string[];
+  section?: string;
+}
+
+interface Section {
+  title: string;
+  fields: SchemeField[];
+}
+
+interface Bank {
+  code: string;
+  name: string;
+}
+
+interface BankResult {
+  account_name: string;
+  name_match?: { passed: boolean };
+}
+
+interface FileEntry {
+  file: File;
+  uploading: boolean;
+  url: string | null;
+}
+
+interface DeclarationRow {
+  organisation: string;
+  category: string;
+  year: string;
+}
+
+interface ApiError {
+  response?: { data?: { error?: string; message?: string; detail?: string } };
+}
+
+interface DynamicFieldProps {
+  field: SchemeField;
+  value?: FieldValue;
+  onChange: (e: FieldChangeEvent) => void;
+  error?: string;
+  fileValue?: FileEntry;
+  onFileChange: (fieldName: string, file?: File) => void;
+  onFileRemove: (fieldName: string) => void;
+}
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { color: string; bg: string; border: string; icon: LucideIcon }> = {
   scholarship: { color: "#15803d", bg: "#f0fdf4", border: "#bbf7d0", icon: GraduationCap },
   empowerment: { color: "#b45309", bg: "#fffbeb", border: "#fde68a", icon: Briefcase     },
   grant:       { color: "#7e22ce", bg: "#faf5ff", border: "#e9d5ff", icon: Banknote      },
 };
 
 // ── GROUP FIELDS BY SECTION ───────────────────────────────────────────────────
-function groupBySection(fields) {
-  const sections = [];
-  const seen = {};
+function groupBySection(fields: SchemeField[]): Section[] {
+  const sections: Section[] = [];
+  const seen: Record<string, Section> = {};
   for (const field of fields) {
     const sec = field.section || "Other";
     if (!seen[sec]) {
@@ -34,7 +93,7 @@ function groupBySection(fields) {
 }
 
 // ── DYNAMIC FIELD RENDERER ────────────────────────────────────────────────────
-function DynamicField({ field, value, onChange, error, fileValue, onFileChange, onFileRemove }) {
+function DynamicField({ field, value, onChange, error, fileValue, onFileChange, onFileRemove }: DynamicFieldProps) {
   const { field_name, field_label, field_type, placeholder, is_required, options } = field;
 
   const label = (
@@ -50,7 +109,7 @@ function DynamicField({ field, value, onChange, error, fileValue, onFileChange, 
         {label}
         <textarea
           name={field_name}
-          value={value || ""}
+          value={(value as string) || ""}
           onChange={onChange}
           placeholder={placeholder || ""}
           rows={3}
@@ -67,7 +126,7 @@ function DynamicField({ field, value, onChange, error, fileValue, onFileChange, 
         {label}
         <select
           name={field_name}
-          value={value || ""}
+          value={(value as string) || ""}
           onChange={onChange}
           className={`${styles.input} ${error ? styles.inputError : ""}`}
         >
@@ -134,7 +193,7 @@ function DynamicField({ field, value, onChange, error, fileValue, onFileChange, 
             <input
               type="file"
               accept="application/pdf,image/jpeg,image/png"
-              onChange={(e) => onFileChange(field_name, e.target.files[0])}
+              onChange={(e) => onFileChange(field_name, e.target.files?.[0])}
               style={{ display: "none" }}
             />
             <UploadCloud size={22} color="#94a3b8" />
@@ -169,7 +228,7 @@ function DynamicField({ field, value, onChange, error, fileValue, onFileChange, 
       <input
         type={field_type === "number" ? "number" : "text"}
         name={field_name}
-        value={value || ""}
+        value={(value as string) || ""}
         onChange={onChange}
         placeholder={placeholder || ""}
         className={`${styles.input} ${error ? styles.inputError : ""}`}
@@ -185,31 +244,31 @@ export default function DynamicApplyPage() {
   const searchParams = useSearchParams();
   const schemeId     = searchParams.get("scheme_id");
 
-  const [scheme,     setScheme]     = useState(null);
-  const [fields,     setFields]     = useState([]);
+  const [scheme,     setScheme]     = useState<SchemeInfo | null>(null);
+  const [fields,     setFields]     = useState<SchemeField[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [fetchError, setFetchError] = useState("");
 
   // Form state
-  const [values,     setValues]     = useState({});
-  const [files,      setFiles]      = useState({});
-  const [errors,     setErrors]     = useState({});
+  const [values,     setValues]     = useState<Record<string, FieldValue>>({});
+  const [files,      setFiles]      = useState<Record<string, FileEntry>>({});
+  const [errors,     setErrors]     = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted,  setSubmitted]  = useState(false);
   const [apiError,   setApiError]   = useState("");
 
   // Bank state
-  const [banks,           setBanks]           = useState([]);
+  const [banks,           setBanks]           = useState<Bank[]>([]);
   const [bankCode,        setBankCode]        = useState("");
   const [bankName,        setBankName]        = useState("");
   const [accountNumber,   setAccountNumber]   = useState("");
   const [bankVerifying,   setBankVerifying]   = useState(false);
-  const [bankResult,      setBankResult]      = useState(null); // { account_name, name_match }
+  const [bankResult,      setBankResult]      = useState<BankResult | null>(null); // { account_name, name_match }
   const [bankError,       setBankError]       = useState("");
 
   // Declaration state
   const [declaredExternal, setDeclaredExternal] = useState("");
-  const [declarationRows,  setDeclarationRows]  = useState([
+  const [declarationRows,  setDeclarationRows]  = useState<DeclarationRow[]>([
     { organisation: "", category: "", year: "" },
   ]);
 
@@ -224,8 +283,8 @@ export default function DynamicApplyPage() {
     async function load() {
       try {
       const [schemeRes, fieldsRes, banksRes, bankDetailRes] = await Promise.all([
-        getScheme(schemeId),
-        getSchemeFields(schemeId),
+        getScheme(schemeId as string),
+        getSchemeFields(schemeId as string),
         getBanks(),
         getBankDetail().catch(() => ({ data: null })),
       ]);
@@ -244,7 +303,7 @@ export default function DynamicApplyPage() {
       setScheme(schemeRes.data);
       setFields(Array.isArray(fieldsRes.data) ? fieldsRes.data : []);
       const rawBanks = Array.isArray(banksRes.data?.banks) ? banksRes.data.banks : [];
-      setBanks(Array.from(new Map(rawBanks.map((b) => [b.code, b])).values()));
+      setBanks(Array.from(new Map(rawBanks.map((b: Bank) => [b.code, b] as const)).values()));
       } catch {
         if (!cancelled) setFetchError("Failed to load application form. Please go back and try again.");
       } finally {
@@ -256,8 +315,9 @@ export default function DynamicApplyPage() {
   }, [schemeId]);
 
   // ── HANDLERS ─────────────────────────────────────────────────────────────
-  function handleChange(e) {
-    const { name, value, type, checked } = e.target;
+  function handleChange(e: FieldChangeEvent) {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setValues((v) => ({ ...v, [name]: type === "checkbox" ? checked : value }));
     setErrors((er) => ({ ...er, [name]: "" }));
     setApiError("");
@@ -265,19 +325,19 @@ export default function DynamicApplyPage() {
 
   // File is only staged locally now — the actual upload happens as part of the
   // multipart submit request, not as a separate step.
-  function handleFileChange(fieldName, file) {
+  function handleFileChange(fieldName: string, file?: File) {
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) { alert("File must not exceed 5MB."); return; }
     setFiles((f) => ({ ...f, [fieldName]: { file, uploading: false, url: null } }));
     setErrors((er) => ({ ...er, [fieldName]: "" }));
   }
 
-  function handleFileRemove(fieldName) {
+  function handleFileRemove(fieldName: string) {
     setFiles((f) => { const next = { ...f }; delete next[fieldName]; return next; });
   }
 
   // ── BANK HANDLERS ─────────────────────────────────────────────────────────
-  function handleBankSelect(e) {
+  function handleBankSelect(e: ChangeEvent<HTMLSelectElement>) {
     const code = e.target.value;
     const selected = banks.find((b) => b.code === code);
     setBankCode(code);
@@ -287,7 +347,7 @@ export default function DynamicApplyPage() {
     setErrors((er) => ({ ...er, bank: "" }));
   }
 
-  function handleAccountNumberChange(e) {
+  function handleAccountNumberChange(e: ChangeEvent<HTMLInputElement>) {
     setAccountNumber(e.target.value);
     setBankResult(null);
     setBankError("");
@@ -308,7 +368,8 @@ export default function DynamicApplyPage() {
     try {
       const res = await verifyBank({ account_number: accountNumber, bank_code: bankCode });
       setBankResult(res.data);
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setBankError(
         err?.response?.data?.error || "Could not verify account. Please check the details and try again."
       );
@@ -318,7 +379,7 @@ export default function DynamicApplyPage() {
   }
 
   // ── DECLARATION ROWS ──────────────────────────────────────────────────────
-  function handleDeclarationRowChange(index, field, value) {
+  function handleDeclarationRowChange(index: number, field: keyof DeclarationRow, value: string) {
     setDeclarationRows((rows) =>
       rows.map((row, i) => i === index ? { ...row, [field]: value } : row)
     );
@@ -328,13 +389,13 @@ export default function DynamicApplyPage() {
     setDeclarationRows((rows) => [...rows, { organisation: "", category: "", year: "" }]);
   }
 
-  function removeDeclarationRow(index) {
+  function removeDeclarationRow(index: number) {
     setDeclarationRows((rows) => rows.filter((_, i) => i !== index));
   }
 
   // ── VALIDATION ────────────────────────────────────────────────────────────
   function validate() {
-    const e = {};
+    const e: Record<string, string> = {};
 
     for (const field of fields) {
       if (!field.is_required) continue;
@@ -370,7 +431,7 @@ export default function DynamicApplyPage() {
   }
 
   // ── SUBMIT ────────────────────────────────────────────────────────────────
-  async function handleSubmit(e) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -379,7 +440,7 @@ export default function DynamicApplyPage() {
     setApiError("");
 
     try {
-      const programme_answers = {};
+      const programme_answers: Record<string, FieldValue> = {};
       for (const field of fields) {
         if (field.field_type !== "file") {
           programme_answers[field.field_name] = values[field.field_name] ?? "";
@@ -421,7 +482,8 @@ export default function DynamicApplyPage() {
 
       setSubmitted(true);
 
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setApiError(
         err?.response?.data?.error ||
         err?.response?.data?.message ||
@@ -508,7 +570,7 @@ export default function DynamicApplyPage() {
         </div>
         <div>
           <div className={styles.formCat} style={{ color: cat.color, background: cat.bg, borderColor: cat.border }}>
-            {scheme.award_type?.charAt(0).toUpperCase() + scheme.award_type?.slice(1)}
+            {catKey.charAt(0).toUpperCase() + catKey.slice(1)}
           </div>
           <h1 className={styles.formTitle}>{scheme.name}</h1>
           <p className={styles.formSub}>Complete all fields accurately. Submission is final.</p>
@@ -541,7 +603,7 @@ export default function DynamicApplyPage() {
             </div>
 
             {(() => {
-              const rows = [];
+              const rows: React.ReactNode[] = [];
               const sFields = section.fields;
               let i = 0;
               while (i < sFields.length) {

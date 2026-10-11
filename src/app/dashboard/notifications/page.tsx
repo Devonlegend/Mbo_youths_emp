@@ -7,6 +7,7 @@ import {
   UserCircle, Megaphone, AlertCircle, Loader2, GraduationCap, Clock,
 } from "lucide-react";
 import styles from "./page.module.css";
+import type { AppNotification } from "@/types/notification";
 import {
   getNotifications,
   markNotificationRead,
@@ -38,9 +39,9 @@ const TYPE_ICONS = {
 
 const FILTERS = ["All", "Unread"];
 
-function formatTime(isoString) {
+function formatTime(isoString?: string) {
   if (!isoString) return "—";
-  const diff = new Date() - new Date(isoString);
+  const diff = new Date().getTime() - new Date(isoString).getTime();
   const mins  = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days  = Math.floor(diff / 86400000);
@@ -55,9 +56,9 @@ function formatTime(isoString) {
 }
 
 export default function NotificationsPage() {
-  const [notifs,       setNotifs]       = useState([]);
+  const [notifs,       setNotifs]       = useState<AppNotification[]>([]);
   const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
+  const [error,        setError]        = useState<string | null>(null);
   const [activeFilter, setFilter]       = useState("All");
   const [search,       setSearch]       = useState("");
 
@@ -82,7 +83,7 @@ export default function NotificationsPage() {
   }
 
   // ── ACTIONS ────────────────────────────────────────────────────────
-  async function markRead(id) {
+  async function markRead(id: string) {
     setNotifs((n) => n.map((item) => item.id === id ? { ...item, read: true } : item));
     try {
       await markNotificationRead(id);
@@ -96,7 +97,7 @@ export default function NotificationsPage() {
     } catch {}
   }
 
-  async function dismiss(id) {
+  async function dismiss(id: string) {
     setNotifs((n) => n.filter((item) => item.id !== id));
     try {
       await dismissNotification(id);

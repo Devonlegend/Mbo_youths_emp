@@ -1,19 +1,32 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ChangeEvent, type SyntheticEvent } from "react";
 import {
   IdCard, ShieldCheck, Save, Loader2,
   Lock, ChevronRight, User, Mail, Phone,
   MapPin, Calendar, Users, Pencil, X, AlertCircle,
-  Banknote, Building2, Hash, CreditCard, CheckCircle2,
+  Banknote, Building2, Hash, CreditCard, CheckCircle2, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { getMe, getStudentProfile, updateStudentProfile, getBanks, verifyBank } from "@/services";
 import { getBankDetail, updateBankDetail } from "@/services/students";
+import { isAxiosError } from "axios";
+import type { Bank, ResolveBankResponse } from "@/types/verification";
+
+function getApiError(err: unknown): { error?: string; message?: string } {
+  return isAxiosError<{ error?: string; message?: string }>(err) ? err.response?.data ?? {} : {};
+}
 
 
-function ReadField({ icon: Icon, label, value, dimmed }) {
+interface ReadFieldProps {
+  icon?: LucideIcon;
+  label: string;
+  value?: string | null;
+  dimmed?: boolean;
+}
+
+function ReadField({ icon: Icon, label, value, dimmed }: ReadFieldProps) {
   return (
     <div className={styles.field} style={dimmed ? { opacity: 0.4 } : {}}>
       <label className={styles.label}>
@@ -30,7 +43,7 @@ export default function ProfilePage() {
   const [saved,    setSaved]    = useState(false);
   const [editing,  setEditing]  = useState(false);
   const [apiError, setApiError] = useState("");
-  const [photo,    setPhoto]    = useState(null);
+  const [photo,    setPhoto]    = useState<string | null>(null);
 
   // Bank — saved display state
   const [bank, setBank] = useState({
@@ -39,11 +52,11 @@ export default function ProfilePage() {
 
   // Bank — edit mode state
   const [bankEditing,     setBankEditing]     = useState(false);
-  const [banks,           setBanks]           = useState([]);   // from API
+  const [banks,           setBanks]           = useState<Bank[]>([]);   // from API
   const [bankCode,        setBankCode]        = useState("");
   const [accountDraft,    setAccountDraft]    = useState("");
   const [bankVerifying,   setBankVerifying]   = useState(false);
-  const [bankVerified,    setBankVerified]    = useState(null); // result from Paystack
+  const [bankVerified,    setBankVerified]    = useState<ResolveBankResponse | null>(null);
   const [bankSaved,       setBankSaved]       = useState(false);
   const [bankError,       setBankError]       = useState("");
 
@@ -102,7 +115,7 @@ export default function ProfilePage() {
   try {
     const res = await getBanks();
     const rawBanks = Array.isArray(res.data?.banks) ? res.data.banks : [];
-    setBanks(Array.from(new Map(rawBanks.map((b) => [b.code, b])).values()));
+    setBanks(Array.from(new Map(rawBanks.map((b): [string, Bank] => [b.code, b])).values()));
   } catch {}
 }
 
@@ -112,7 +125,7 @@ export default function ProfilePage() {
   }, []);
 
   // ── PROFILE HANDLERS ──────────────────────────────────────────────────────
-  function handleDraftField(e) {
+  function handleDraftField(e: ChangeEvent<HTMLInputElement>) {
     setDraft((d) => ({ ...d, [e.target.name]: e.target.value }));
     setSaved(false);
     setApiError("");
@@ -131,7 +144,7 @@ export default function ProfilePage() {
     setApiError("");
   }
 
-  async function handleSave(e) {
+  async function handleSave(e?: SyntheticEvent) {
     e?.preventDefault();
     setSaving(true);
     setApiError("");
@@ -142,8 +155,8 @@ export default function ProfilePage() {
       setEditing(false);
     } catch (err) {
       setApiError(
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
+        getApiError(err).error ||
+        getApiError(err).message ||
         "Failed to save changes. Please try again."
       );
     } finally {
@@ -188,7 +201,7 @@ export default function ProfilePage() {
       setBankVerified(res.data);
     } catch (err) {
       setBankError(
-        err?.response?.data?.error ||
+        getApiError(err).error ||
         "Could not verify account. Please check the details and try again."
       );
     } finally {
@@ -197,6 +210,7 @@ export default function ProfilePage() {
   }
 
   async function handleBankSave() {
+    if (!bankVerified) return;
     // Paystack's resolve response only gives us bank_id, not a bank name —
     // so we look up the display name from the banks list using bankCode.
     const selectedBank = banks.find((b) => b.code === bankCode);
@@ -204,13 +218,13 @@ export default function ProfilePage() {
     try {
       await updateBankDetail({
         bank_name:      selectedBank?.name          || "",
-        bank_code:      bankVerified.bank_code      || bankCode,
+        bank_code:      bankCode,
         account_number: bankVerified.account_number || accountDraft,
         account_name:   bankVerified.account_name   || "",
       });
       setBank({
         bank_name:      selectedBank?.name          || "",
-        bank_code:      bankVerified.bank_code      || bankCode,
+        bank_code:      bankCode,
         account_number: bankVerified.account_number || accountDraft,
         account_name:   bankVerified.account_name   || "",
       });
@@ -222,7 +236,7 @@ export default function ProfilePage() {
     } 
     catch (err) {
       setBankError(
-        err?.response?.data?.error || "Failed to save bank details. Please try again."
+        getApiError(err).error || "Failed to save bank details. Please try again."
       );
     }
   }
@@ -244,8 +258,10 @@ export default function ProfilePage() {
                 alt="Passport"
                 className={styles.avatarImg}
                 onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
+                  const img = e.currentTarget;
+                  img.style.display = 'none';
+                  const fallback = img.nextElementSibling as HTMLElement | null;
+                  if (fallback) fallback.style.display = 'flex';
                 }}
               />
             ) : null}

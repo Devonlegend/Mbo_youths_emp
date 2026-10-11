@@ -3,27 +3,24 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Camera, RotateCcw, CheckCircle2, AlertCircle, X, ZoomIn } from "lucide-react";
 import styles from "./Passportcapture.module.css";
 
-/**
- * PassportCapture — drop-in passport selfie component.
- *
- * Props:
- *   value       : File | null  — current captured image file
- *   onChange    : (file: File | null) => void
- *   error       : string       — external validation error to show
- *
- * Usage in register page:
- *   <PassportCapture value={passport} onChange={setPassport} error={errors.passport} />
- */
-export default function PassportCapture({ value, onChange, error }) {
-  const [mode, setMode] = useState("idle"); // idle | camera | preview | error
-  const [stream, setStream] = useState(null);
+type CaptureMode = "idle" | "camera" | "preview" | "error";
+
+interface PassportCaptureProps {
+  value: File | null;
+  onChange: (file: File | null) => void;
+  error?: string;
+}
+
+export default function PassportCapture({ value, onChange, error }: PassportCaptureProps) {
+  const [mode, setMode] = useState<CaptureMode>("idle");
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const [camError, setCamError] = useState("");
   const [capturing, setCapturing] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [enlarged, setEnlarged] = useState(false);
 
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Open camera
   async function openCamera() {
@@ -81,6 +78,10 @@ export default function PassportCapture({ value, onChange, error }) {
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      setCapturing(false);
+      return;
+    }
 
     // Mirror the canvas to match the mirrored preview
     ctx.save();
@@ -90,6 +91,10 @@ export default function PassportCapture({ value, onChange, error }) {
     ctx.restore();
 
     canvas.toBlob((blob) => {
+      if (!blob) {
+        setCapturing(false);
+        return;
+      }
       const file = new File([blob], "passport.jpg", { type: "image/jpeg" });
       const url = URL.createObjectURL(blob);
       setPreviewUrl(url);

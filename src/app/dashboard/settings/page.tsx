@@ -1,5 +1,8 @@
 "use client";
-import { useState, useRef } from "react";
+import {
+  useState, useRef,
+  type ChangeEvent, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode,
+} from "react";
 import {
   Eye, EyeOff, Save, Loader2, ShieldCheck,
   Bell, Globe, UserX, ChevronDown, ChevronUp,
@@ -7,7 +10,15 @@ import {
 } from "lucide-react";
 import styles from "./page.module.css";
 
-function Section({ icon, title, sub, children, defaultOpen = false }) {
+interface SectionProps {
+  icon: ReactNode;
+  title: string;
+  sub: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}
+
+function Section({ icon, title, sub, children, defaultOpen = false }: SectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={styles.card}>
@@ -27,7 +38,7 @@ function Section({ icon, title, sub, children, defaultOpen = false }) {
   );
 }
 
-function CardEmptyState({ message }) {
+function CardEmptyState({ message }: { message: string }) {
   return (
     <div style={{
       display: "flex", flexDirection: "column", alignItems: "center",
@@ -46,7 +57,7 @@ function CardEmptyState({ message }) {
   );
 }
 
-function PasswordStrength({ password }) {
+function PasswordStrength({ password }: { password: string }) {
   const checks = [
     { label: "At least 8 characters", pass: password.length >= 8 },
     { label: "Contains a number", pass: /\d/.test(password) },
@@ -83,7 +94,15 @@ function PasswordStrength({ password }) {
   );
 }
 
-function ToggleRow({ icon, label, sub, checked, onChange }) {
+interface ToggleRowProps {
+  icon?: ReactNode;
+  label: string;
+  sub?: string;
+  checked: boolean;
+  onChange: () => void;
+}
+
+function ToggleRow({ icon, label, sub, checked, onChange }: ToggleRowProps) {
   return (
     <label className={styles.toggleRow}>
       <div className={styles.toggleLeft}>
@@ -101,25 +120,25 @@ function ToggleRow({ icon, label, sub, checked, onChange }) {
 }
 
 /* ── OTP INPUT ── */
-function OtpInput({ value, onChange }) {
-  const inputs = useRef([]);
+function OtpInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
-  function handleKey(e, i) {
-    if (e.key === "Backspace" && !e.target.value && i > 0) {
-      inputs.current[i - 1].focus();
+  function handleKey(e: KeyboardEvent<HTMLInputElement>, i: number) {
+    if (e.key === "Backspace" && !e.currentTarget.value && i > 0) {
+      inputs.current[i - 1]?.focus();
     }
   }
 
-  function handleChange(e, i) {
+  function handleChange(e: ChangeEvent<HTMLInputElement>, i: number) {
     const val = e.target.value.replace(/\D/g, "").slice(-1);
     const next = value.split("");
     next[i] = val;
     const joined = next.join("");
     onChange(joined);
-    if (val && i < 5) inputs.current[i + 1].focus();
+    if (val && i < 5) inputs.current[i + 1]?.focus();
   }
 
-  function handlePaste(e) {
+  function handlePaste(e: ClipboardEvent<HTMLInputElement>) {
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     if (pasted) {
       onChange(pasted.padEnd(6, ""));
@@ -134,7 +153,7 @@ function OtpInput({ value, onChange }) {
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <input
           key={i}
-          ref={(el) => (inputs.current[i] = el)}
+          ref={(el) => { inputs.current[i] = el; }}
           className={styles.otpBox}
           type="text"
           inputMode="numeric"
@@ -166,12 +185,12 @@ function PasswordCard() {
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
 
-  function handlePwd(e) {
+  function handlePwd(e: ChangeEvent<HTMLInputElement>) {
     setPasswords((p) => ({ ...p, [e.target.name]: e.target.value }));
     setPwdError("");
   }
 
-  function handleSubmitPwd(e) {
+  function handleSubmitPwd(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!isEditing) { setIsEditing(true); return; }
     if (passwords.newPass.length < 8) { setPwdError("Password must be at least 8 characters."); return; }
@@ -392,8 +411,8 @@ export default function SettingsPage() {
   /* ── Deactivate modal ── */
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
-  function toggleNotif(key)   { setNotifs((n)  => ({ ...n, [key]: !n[key] })); }
-  function togglePrivacy(key) { setPrivacy((p) => ({ ...p, [key]: !p[key] })); }
+  function toggleNotif(key: keyof typeof notifs)   { setNotifs((n)  => ({ ...n, [key]: !n[key] })); }
+  function togglePrivacy(key: keyof typeof privacy) { setPrivacy((p) => ({ ...p, [key]: !p[key] })); }
 
   return (
     <div className={styles.page}>

@@ -6,6 +6,7 @@ import { Bell, Menu, Settings, LogOut, ChevronDown,
          CheckCircle2, XCircle, ShieldCheck } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import styles from "./Topbar.module.css";
+import type { AppNotification } from "@/types/notification";
 import { logout } from "@/services";
 import {
   getNotifications,
@@ -36,9 +37,9 @@ const TYPE_ICONS = {
   welcome:     Sparkles,
 };
 
-function formatTime(isoString) {
+function formatTime(isoString?: string) {
   if (!isoString) return "";
-  const diff  = new Date() - new Date(isoString);
+  const diff  = new Date().getTime() - new Date(isoString).getTime();
   const mins  = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days  = Math.floor(diff / 86400000);
@@ -49,16 +50,29 @@ function formatTime(isoString) {
   return `${days}d ago`;
 }
 
-export default function Topbar({ user, activeCycle, onMenuOpen }) {
+interface TopbarUser {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  passport_photo?: string | null;
+}
+
+interface TopbarProps {
+  user?: TopbarUser | null;
+  activeCycle?: { name?: string } | null;
+  onMenuOpen: () => void;
+}
+
+export default function Topbar({ user, activeCycle, onMenuOpen }: TopbarProps) {
   const router = useRouter();
 
   const [dropOpen,  setDropOpen]  = useState(false);
   const [bellOpen,  setBellOpen]  = useState(false);
-  const [notifs,    setNotifs]    = useState([]);
+  const [notifs,    setNotifs]    = useState<AppNotification[]>([]);
   const [loading,   setLoading]   = useState(false);
 
-  const dropRef = useRef(null);
-  const bellRef = useRef(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLDivElement>(null);
 
   const unread = notifs.filter((n) => !n.read).length;
 
@@ -68,9 +82,9 @@ export default function Topbar({ user, activeCycle, onMenuOpen }) {
 
   // Close dropdowns on outside click
   useEffect(() => {
-    function handleClick(e) {
-      if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false);
-      if (bellRef.current && !bellRef.current.contains(e.target)) setBellOpen(false);
+    function handleClick(e: MouseEvent) {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setDropOpen(false);
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -94,7 +108,7 @@ export default function Topbar({ user, activeCycle, onMenuOpen }) {
     try { await markAllNotificationsRead(); } catch {}
   }
 
-  async function handleBellItemClick(notif) {
+  async function handleBellItemClick(notif: AppNotification) {
     if (!notif.read) {
       setNotifs((n) => n.map((item) => item.id === notif.id ? { ...item, read: true } : item));
       try { await markNotificationRead(notif.id); } catch {}
@@ -214,7 +228,7 @@ export default function Topbar({ user, activeCycle, onMenuOpen }) {
                       <div className={styles.bellItemBody}>
                         <span className={styles.bellItemTitle}>{n.title}</span>
                         <span className={styles.bellItemMsg}>{n.message}</span>
-                        <span className={styles.bellItemTime}>{formatTime(n.created_at)}</span>
+                        <span className={styles.bellItemTime}>{formatTime(n.time)}</span>
                       </div>
                     </div>
                   );
@@ -244,8 +258,10 @@ export default function Topbar({ user, activeCycle, onMenuOpen }) {
                   alt=""
                   className={styles.avatarImg}
                   onError={(e) => {
-                    e.target.style.display = "none";
-                    e.target.nextSibling.style.display = "flex";
+                    const img = e.currentTarget;
+                    img.style.display = "none";
+                    const fallback = img.nextElementSibling as HTMLElement | null;
+                    if (fallback) fallback.style.display = "flex";
                   }}
                 />
               ) : null}

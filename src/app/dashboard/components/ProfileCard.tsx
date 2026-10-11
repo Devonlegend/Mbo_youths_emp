@@ -1,7 +1,20 @@
 import { MapPin, CalendarDays, ArrowRight } from "lucide-react";
 import styles from "./ProfileCard.module.css";
 
-export default function ProfileCard({ user, onEdit }) {
+interface ProfileCardUser {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  passport_photo?: string | null;
+}
+
+interface ProfileCardProps {
+  user?: ProfileCardUser | null;
+  onEdit?: () => void;
+}
+
+export default function ProfileCard({ user, onEdit }: ProfileCardProps) {
   const initials =
     (user?.first_name?.[0]?.toUpperCase() || "") +
     (user?.last_name?.[0]?.toUpperCase() || "");
@@ -22,8 +35,10 @@ export default function ProfileCard({ user, onEdit }) {
               alt={fullName}
               className={styles.avatarImg}
               onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
+                const img = e.currentTarget;
+                img.style.display = 'none';
+                const fallback = img.nextElementSibling as HTMLElement | null;
+                if (fallback) fallback.style.display = 'flex';
               }}
             />
             <div className={styles.avatarInitials} style={{ display: 'none' }}>

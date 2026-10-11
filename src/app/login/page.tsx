@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ChangeEvent, type FormEvent, type ClipboardEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import {
   Eye, EyeOff, Mail, ArrowRight,
@@ -9,23 +9,31 @@ import styles from "./page.module.css";
 import { login, otpSend, otpVerify, otpResend, getMe } from "@/services/auth";
 import { useRouter } from "next/navigation";
 
+type Step = "login" | "otp";
+
+interface ApiError {
+  response?: {
+    data?: { error?: string; detail?: string; retry_after_seconds?: number };
+  };
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
-  const [step, setStep] = useState("login");
+  const [step, setStep] = useState<Step>("login");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState("");
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
-  const countdownRef = useRef(null);
-  const inputs = useRef([]);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [apiError, setApiError] = useState("");
   const [form, setForm] = useState({ email: "", password: "" });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [rememberMe, setRememberMe] = useState(false);
 
 
@@ -77,14 +85,14 @@ export default function LoginPage() {
   );
 }
 
-  function handleChange(e) {
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
     setErrors({ ...errors, [e.target.name]: "" });
     setApiError("");
   }
 
   function validate() {
-    const e = {};
+    const e: Record<string, string> = {};
     if (!form.email.trim()) e.email = "Required";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email";
     if (!form.password) e.password = "Required";
@@ -107,7 +115,7 @@ export default function LoginPage() {
     }, 1000);
   }
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -129,7 +137,8 @@ export default function LoginPage() {
       startCountdown();
     } 
     
-    catch (err) {
+    catch (error) {
+      const err = error as ApiError;
       setApiError(
         err?.response?.data?.error ||
         err?.response?.data?.detail ||
@@ -140,7 +149,7 @@ export default function LoginPage() {
     }
   }
 
-  function handleOtpChange(index, value) {
+  function handleOtpChange(index: number, value: string) {
     if (!/^\d*$/.test(value)) return;
     const newOtp = [...otp];
     newOtp[index] = value.slice(-1);
@@ -149,11 +158,11 @@ export default function LoginPage() {
     if (value && index < 5) inputs.current[index + 1]?.focus();
   }
 
-  function handleOtpKeyDown(index, e) {
+  function handleOtpKeyDown(index: number, e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Backspace" && !otp[index] && index > 0) inputs.current[index - 1]?.focus();
   }
 
-  function handlePaste(e) {
+  function handlePaste(e: ClipboardEvent<HTMLInputElement>) {
     e.preventDefault();
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     const newOtp = [...otp];
@@ -171,8 +180,9 @@ export default function LoginPage() {
   try {
     await otpResend({ email: form.email });
     startCountdown();
-  } catch (err) {
-    const retryAfter = err?.response?.data?.retry_after_seconds;
+  } catch (error) {
+      const err = error as ApiError;
+    const retryAfter = (err as ApiError)?.response?.data?.retry_after_seconds;
     if (retryAfter) {
       setCountdown(retryAfter);
       setCanResend(false);
@@ -189,14 +199,14 @@ export default function LoginPage() {
       }, 1000);
     }
     setOtpError(
-      err?.response?.data?.error ||
+      (err as ApiError)?.response?.data?.error ||
       "Failed to resend code. Please try again."
     );
   }
 }
 
 
-  async function handleOtpSubmit(e) {
+  async function handleOtpSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const code = otp.join("");
     if (code.length < 6) { setOtpError("Please enter the complete 6-digit code."); return; }
@@ -216,8 +226,8 @@ export default function LoginPage() {
       }
     } catch (err) {
       setOtpError(
-        err?.response?.data?.error ||
-        err?.response?.data?.detail ||
+        (err as ApiError)?.response?.data?.error ||
+        (err as ApiError)?.response?.data?.detail ||
         "Invalid or expired code. Please try again."
       );
     } finally {
@@ -270,7 +280,7 @@ export default function LoginPage() {
                 {otp.map((digit, i) => (
                   <input
                     key={i}
-                    ref={(el) => (inputs.current[i] = el)}
+                    ref={(el) => { inputs.current[i] = el; }}
                     type="text"
                     inputMode="numeric"
                     maxLength={1}
