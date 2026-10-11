@@ -3,17 +3,31 @@ import { useState, useEffect } from "react";
 import {
   ScrollText, Search, AlertCircle, Filter,
   ClipboardList, Users, BookOpen, Shield,
-  Settings, RefreshCw, CalendarRange, Building2,
+  Settings, RefreshCw, CalendarRange, Building2, type LucideIcon,
 } from "lucide-react";
 import { useRoleGuard } from "@/hooks/useRoleGuard";
 import styles from "./page.module.css";
 import { getAuditLogs } from "@/services";
 import Pagination from "../components/pagination/Pagination";
 
+interface AuditLog {
+  id: string | number;
+  action?: string;
+  admin_name?: string;
+  entity_type?: string;
+  timestamp?: string | null;
+}
+
+interface PageInfo {
+  count: number;
+  next: string | null;
+  previous: string | null;
+}
+
 const PAGE_SIZE = 100; // matches AuditLogPagination.page_size
 
 // ── ENTITY TYPE CONFIG ────────────────────────────────────────────────────────
-const entityConfig = {
+const entityConfig: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
   Application:    { icon: ClipboardList, color: "#3b82f6", bg: "#eff6ff" },
   Student:        { icon: Users,         color: "#15803d", bg: "#f0fdf4" },
   Scheme:         { icon: BookOpen,      color: "#7e22ce", bg: "#faf5ff" },
@@ -22,7 +36,7 @@ const entityConfig = {
   System:         { icon: Settings,      color: "#64748b", bg: "#f8fafc" },
 };
 
-function formatDateTime(dateStr) {
+function formatDateTime(dateStr?: string | null) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleString("en-GB", {
     day: "numeric", month: "short", year: "numeric",
@@ -30,9 +44,9 @@ function formatDateTime(dateStr) {
   });
 }
 
-function formatTimeAgo(dateStr) {
+function formatTimeAgo(dateStr?: string | null) {
   if (!dateStr) return "";
-  const diff = new Date() - new Date(dateStr);
+  const diff = Date.now() - new Date(dateStr).getTime();
   const mins  = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days  = Math.floor(diff / 86400000);
@@ -61,16 +75,16 @@ const ENTITY_FILTERS = ["All", "Application", "Student", "Scheme", "Cycle", "Sch
 export default function AuditLogPage() {
   const { checking } = useRoleGuard(["admin", "superadmin"]);
 
-  const [logs,         setLogs]         = useState([]);
+  const [logs,         setLogs]         = useState<AuditLog[]>([]);
   const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
+  const [error,        setError]        = useState<string | null>(null);
   const [search,       setSearch]       = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [filterOpen,   setFilterOpen]   = useState(false);
 
   // ── PAGINATION STATE ───────────────────────────────────────────────────────
   const [page,     setPage]     = useState(1);
-  const [pageInfo, setPageInfo] = useState({ count: 0, next: null, previous: null });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ count: 0, next: null, previous: null });
 
   // ── FETCH ─────────────────────────────────────────────────────────────────
   async function loadLogs(targetPage = 1) {
@@ -229,7 +243,7 @@ export default function AuditLogPage() {
 
         {/* TABLE ROWS */}
         {!loading && !error && filtered.map((log) => {
-          const entConfig = entityConfig[log.entity_type] || entityConfig.System;
+          const entConfig = entityConfig[log.entity_type ?? ""] || entityConfig.System;
           const Icon      = entConfig.icon;
           const adminInitials = (log.admin_name || "SY")
             .split(" ")

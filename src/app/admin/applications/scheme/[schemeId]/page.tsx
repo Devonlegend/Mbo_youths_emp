@@ -8,12 +8,20 @@ import {
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApplications, getScheme } from "@/services";
+import type { Scheme } from "@/types/scheme";
+import type { ApplicationListItem } from "@/types/application";
+
+interface PageInfo {
+  count: number;
+  next: string | null;
+  previous: string | null;
+}
 import Pagination from "../../../components/pagination/Pagination";
 
 const PAGE_SIZE = 50;
 
 // ── STATUS MAPPING ────────────────────────────────────────────────────────────
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   submitted:         { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
   eligibility_check: { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
   document_review:   { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
@@ -26,13 +34,13 @@ const statusConfig = {
 };
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; bg: string }> = {
   scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)"  },
   empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)"  },
   grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)" },
 };
 
-function formatDate(dateStr) {
+function formatDate(dateStr?: string | null) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "numeric", month: "short", year: "numeric",
@@ -62,24 +70,24 @@ const TABS = [
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function SchemeApplicationsPage() {
   const router       = useRouter();
-  const params        = useParams();
+  const params        = useParams<{ schemeId: string }>();
   const searchParams  = useSearchParams();
   const schemeId       = params.schemeId;
 
   const initialTab = searchParams.get("tab") || "all";
 
-  const [scheme,       setScheme]       = useState(null);
+  const [scheme,       setScheme]       = useState<Scheme | null>(null);
   const [schemeLoading, setSchemeLoading] = useState(true);
 
-  const [applications, setApplications] = useState([]);
+  const [applications, setApplications] = useState<ApplicationListItem[]>([]);
   const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
+  const [error,        setError]        = useState<string | null>(null);
   const [activeTab,    setActiveTab]    = useState(initialTab);
   const [search,       setSearch]       = useState("");
 
   // ── PAGINATION STATE ───────────────────────────────────────────────────────
   const [page,     setPage]     = useState(1);
-  const [pageInfo, setPageInfo] = useState({ count: 0, next: null, previous: null });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ count: 0, next: null, previous: null });
 
   // ── FETCH SCHEME (for header title/category) ────────────────────────────
   useEffect(() => {
@@ -99,7 +107,7 @@ export default function SchemeApplicationsPage() {
   }, [schemeId]);
 
   // ── FETCH APPLICATIONS (scoped to this scheme) ────────────────────────────
-  async function loadApplications(targetPage) {
+  async function loadApplications(targetPage: number) {
     setLoading(true);
     setError(null);
     try {

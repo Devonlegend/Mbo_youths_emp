@@ -10,11 +10,18 @@ import { useRoleGuard } from "@/hooks/useRoleGuard";
 
 import styles from "./page.module.css";
 import api from "@/services/axiosInstance";
+import type { Cycle } from "@/types/scheme";
+
+type CycleRow = Cycle & { created_at?: string };
+
+interface ApiError {
+  response?: { data?: { name?: string[]; error?: string } };
+}
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
-function formatYear(y) { return y ?? "—"; }
+function formatYear(y?: number | null) { return y ?? "—"; }
 
-function CycleBadge({ isActive }) {
+function CycleBadge({ isActive }: { isActive: boolean }) {
   return isActive ? (
     <span className={styles.badgeActive}>
       <span className={styles.badgeDot} /> Active
@@ -25,7 +32,13 @@ function CycleBadge({ isActive }) {
 }
 
 // ── CONFIRM MODAL ─────────────────────────────────────────────────────────────
-function ActivateModal({ cycle, onConfirm, onCancel, loading, error }) {
+function ActivateModal({ cycle, onConfirm, onCancel, loading, error }: {
+  cycle: CycleRow;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+  error: string | null;
+}) {
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modal}>
@@ -63,18 +76,18 @@ export default function AdminCyclesPage() {
   const { checking } = useRoleGuard(["admin", "superadmin"]);
 
 
-  const [cycles,      setCycles]      = useState([]);
+  const [cycles,      setCycles]      = useState<CycleRow[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState(null);
-  const [activating,  setActivating]  = useState(null);   // cycle being activated
-  const [confirmFor,  setConfirmFor]  = useState(null);   // cycle pending confirm
+  const [error,       setError]       = useState<string | null>(null);
+  const [activating,  setActivating]  = useState<string | null>(null);   // cycle being activated
+  const [confirmFor,  setConfirmFor]  = useState<CycleRow | null>(null);   // cycle pending confirm
   const [showCreate,  setShowCreate]  = useState(false);
   const [creating,    setCreating]    = useState(false);
   const [createError, setCreateError] = useState("");
   const [createSuccess, setCreateSuccess] = useState(false);
 
   const [form, setForm] = useState({ name: "", start_year: "", end_year: "" });
-  const [formErrors, setFormErrors] = useState({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const activeCycle = cycles.find((c) => c.is_active) || null;
 
@@ -114,7 +127,7 @@ export default function AdminCyclesPage() {
 
   // ── CREATE ────────────────────────────────────────────────────────────────
 function validateForm() {
-  const e = {};
+  const e: Record<string, string> = {};
   const yearPattern = /^\d{4}\/\d{4}$/;
 
   if (!form.name.trim()) {
@@ -148,7 +161,8 @@ function validateForm() {
       setForm({ name: "", start_year: "", end_year: "" });
       setFormErrors({});
       setTimeout(() => { setShowCreate(false); setCreateSuccess(false); }, 1500);
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setCreateError(
         err?.response?.data?.name?.[0] ||
         err?.response?.data?.error ||
@@ -159,7 +173,7 @@ function validateForm() {
     }
   }
 
-  function setField(key, value) {
+  function setField(key: string, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
     setFormErrors((e) => ({ ...e, [key]: "" }));
     setCreateError("");

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   ClipboardList, Users, BookOpen, BadgeCheck,
   ShieldAlert, Clock, CheckCircle2, XCircle,
-  AlertCircle, ArrowRight, LayoutDashboard, Calendar, TrendingUp,
+  AlertCircle, ArrowRight, LayoutDashboard, Calendar, TrendingUp, type LucideIcon,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -13,8 +13,44 @@ import {
 import styles from "./page.module.css";
 import { getApplications, getSchemes, getMe } from "@/services";
 
+interface Stats {
+  total: number;
+  pending: number;
+  flagged: number;
+  approved: number;
+  rejected: number;
+  openSchemes: number;
+}
+
+interface ChartItem {
+  label: string;
+  value: number;
+  fill: string;
+}
+
+interface ActivityApp {
+  id: string | number;
+  status: string;
+  submission_date?: string | null;
+  student?: { full_name?: string };
+  scheme?: { name?: string };
+}
+
+interface AdminUser {
+  role?: string;
+}
+
+interface StatCardProps {
+  icon: LucideIcon;
+  label: string;
+  value: number;
+  iconBg: string;
+  iconColor: string;
+  loading: boolean;
+}
+
 // ── STAT CARD ─────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, iconBg, iconColor, loading }) {
+function StatCard({ icon: Icon, label, value, iconBg, iconColor, loading }: StatCardProps) {
   return (
     <div className={styles.statCard}>
       <div className={styles.statTop}>
@@ -34,7 +70,7 @@ function StatCard({ icon: Icon, label, value, iconBg, iconColor, loading }) {
 }
 
 // ── CUSTOM TOOLTIP ────────────────────────────────────────────────────────────
-function CustomTooltip({ active, payload, label }) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className={styles.tooltip}>
@@ -45,7 +81,7 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 // ── STATUS MAP ────────────────────────────────────────────────────────────────
-const STATUS_UI = {
+const STATUS_UI: Record<string, { label: string; color: string }> = {
   submitted:         { label: "Pending",  color: "#f59e0b" },
   eligibility_check: { label: "Pending",  color: "#f59e0b" },
   document_review:   { label: "Pending",  color: "#f59e0b" },
@@ -57,13 +93,13 @@ const STATUS_UI = {
   draft:             { label: "Pending",  color: "#f59e0b" },
 };
 
-function mapActivityStatus(status) {
+function mapActivityStatus(status: string) {
   return STATUS_UI[status] || { label: "Pending", color: "#f59e0b" };
 }
 
-function formatTimeAgo(dateStr) {
+function formatTimeAgo(dateStr?: string | null) {
   if (!dateStr) return "";
-  const days = Math.floor((new Date() - new Date(dateStr)) / (1000 * 60 * 60 * 24));
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   if (days < 7)  return `${days} days ago`;
@@ -74,11 +110,11 @@ function formatTimeAgo(dateStr) {
 export default function AdminOverviewPage() {
   const router = useRouter();
 
-  const [stats,     setStats]     = useState(null);
-  const [chartData, setChartData] = useState([]);
-  const [activity,  setActivity]  = useState([]);
+  const [stats,     setStats]     = useState<Stats | null>(null);
+  const [chartData, setChartData] = useState<ChartItem[]>([]);
+  const [activity,  setActivity]  = useState<ActivityApp[]>([]);
   const [loading,   setLoading]   = useState(true);
-  const [user,      setUser]      = useState(null);
+  const [user,      setUser]      = useState<AdminUser | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,7 +166,7 @@ export default function AdminOverviewPage() {
 
         // ── Recent activity — last 5 ──────────────────────────────────────
         const sorted = [...apps]
-          .sort((a, b) => new Date(b.submission_date) - new Date(a.submission_date))
+          .sort((a, b) => new Date(b.submission_date ?? 0).getTime() - new Date(a.submission_date ?? 0).getTime())
           .slice(0, 5);
         setActivity(sorted);
 
@@ -255,7 +291,7 @@ export default function AdminOverviewPage() {
               { label: "Manage schemes",              href: "/admin/schemes",                  icon: BookOpen,      color: "#4ade80", bg: "rgba(21,128,61,0.1)",   roles: ["admin", "superadmin"] },
               { label: "Beneficiary register",        href: "/admin/beneficiaries",            icon: BadgeCheck,    color: "#4ade80", bg: "rgba(21,128,61,0.1)",   roles: ["admin", "superadmin", "verifier"] },
               { label: "Disqualification register",   href: "/admin/disqualifications",        icon: ShieldAlert,   color: "#ef4444", bg: "rgba(239,68,68,0.1)",   roles: ["admin", "superadmin", "verifier"] },
-            ].filter((q) => q.roles.includes(user?.role)).map((q) => {
+              ].filter((q) => q.roles.includes(user?.role ?? "")).map((q) => {
               const Icon = q.icon;
               return (
                 <button

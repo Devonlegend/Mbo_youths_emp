@@ -50,9 +50,9 @@ const faqs = [
 ];
 
 export default function FAQ() {
-  const [open, setOpen] = useState(null);
+  const [open, setOpen] = useState<number | null>(null);
 
-  function toggle(i) {
+  function toggle(i: number) {
     setOpen(open === i ? null : i);
   }
 

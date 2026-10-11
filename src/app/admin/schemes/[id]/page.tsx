@@ -5,34 +5,51 @@ import {
   ArrowLeft, BookOpen, GraduationCap, Briefcase,
   Wrench, Banknote, AlertCircle, CheckCircle2,
   Loader2, XCircle, Edit2, Save, X,
-  Users, Calendar, DollarSign, Shield, CalendarRange, Building2,
+  Users, Calendar, DollarSign, Shield, CalendarRange, Building2, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 
 import { useRoleGuard } from "@/hooks/useRoleGuard";
 
 import { getScheme, publishScheme, closeScheme, updateScheme, reopenScheme } from "@/services";
+import type { Scheme, StackingPolicy } from "@/types/scheme";
+
+type EditForm = Omit<Scheme, "total_slots" | "stacking_policy"> & {
+  total_slots: number | string;
+  stacking_policy: string;
+  min_cgpa: number | string;
+  allowed_levels: string;
+  min_age: number | string;
+  max_age: number | string;
+  allowed_trades: string;
+  ward_restriction: string;
+  max_prior_awards: number | string;
+};
+
+interface ApiError {
+  response?: { data?: { error?: string; message?: string } };
+}
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
   scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
   empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
 };
 
-function formatDate(dateStr) {
+function formatDate(dateStr?: string | null) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "numeric", month: "long", year: "numeric",
   });
 }
 
-function formatCurrency(amount) {
+function formatCurrency(amount?: string | number | null) {
   if (!amount) return "—";
   return `₦${Number(amount).toLocaleString()}`;
 }
 
-function eligibilityFieldsFromScheme(s) {
+function eligibilityFieldsFromScheme(s: Scheme | null) {
   const c = s?.eligibility_criteria || {};
   return {
     min_cgpa:          c.min_cgpa ?? "",
@@ -46,7 +63,7 @@ function eligibilityFieldsFromScheme(s) {
 }
 
 // ── INFO ROW ──────────────────────────────────────────────────────────────────
-function InfoRow({ icon: Icon, label, value, color }) {
+function InfoRow({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value?: string | number | null; color?: string }) {
   return (
     <div className={styles.infoRow}>
       <div className={styles.infoIcon}>
@@ -65,14 +82,14 @@ function InfoRow({ icon: Icon, label, value, color }) {
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function SchemeDetailPage() {
   const router = useRouter();
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const { checking } = useRoleGuard(["admin", "superadmin"]);
 
-  const [scheme,       setScheme]       = useState(null);
+  const [scheme,       setScheme]       = useState<Scheme | null>(null);
   const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
+  const [error,        setError]        = useState<string | null>(null);
   const [editing,      setEditing]      = useState(false);
-  const [form,         setForm]         = useState({});
+  const [form,         setForm]         = useState<EditForm>({} as EditForm);
   const [saving,       setSaving]       = useState(false);
   const [saveError,    setSaveError]    = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -100,6 +117,7 @@ export default function SchemeDetailPage() {
 
   // ── EDIT ──────────────────────────────────────────────────────────────────
   function startEdit() {
+    if (!scheme) return;
     setForm({ ...scheme, ...eligibilityFieldsFromScheme(scheme) });
     setEditing(true);
     setSaveError("");
@@ -119,10 +137,10 @@ export default function SchemeDetailPage() {
         description:            form.description,
         academic_year:          form.academic_year,
         award_amount:           parseFloat(form.award_amount),
-        total_slots:            parseInt(form.total_slots),
+        total_slots:            parseInt(String(form.total_slots)),
         application_open_date:  form.application_open_date,
         application_close_date: form.application_close_date,
-        stacking_policy:        form.stacking_policy,
+        stacking_policy:        form.stacking_policy as StackingPolicy,
 
         // Eligibility criteria — flat keys, backend assembles them same as create
         min_cgpa:               form.min_cgpa,
@@ -136,7 +154,8 @@ export default function SchemeDetailPage() {
       setScheme(res.data);
       setForm({ ...res.data, ...eligibilityFieldsFromScheme(res.data) });
       setEditing(false);
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setSaveError(
         err?.response?.data?.error ||
         err?.response?.data?.message ||
@@ -154,10 +173,10 @@ export default function SchemeDetailPage() {
     setActionSuccess("");
     try {
       await publishScheme(params.id);
-      setScheme((s) => ({ ...s, is_published: true }));
+      setScheme((s) => (s ? { ...s, is_published: true } : s));
       setActionSuccess("Scheme published successfully.");
     } catch (err) {
-      setActionError(err?.response?.data?.error || "Failed to publish scheme.");
+      setActionError((err as ApiError)?.response?.data?.error || "Failed to publish scheme.");
     } finally {
       setActionLoading(false);
     }
@@ -170,10 +189,10 @@ export default function SchemeDetailPage() {
     setActionSuccess("");
     try {
       await reopenScheme(params.id);
-      setScheme((s) => ({ ...s, is_active: true }));
+      setScheme((s) => (s ? { ...s, is_active: true } : s));
       setActionSuccess("Scheme reopened successfully.");
     } catch (err) {
-      setActionError(err?.response?.data?.error || "Failed to reopen scheme.");
+      setActionError((err as ApiError)?.response?.data?.error || "Failed to close scheme.");
     } finally {
       setActionLoading(false);
     }
@@ -186,10 +205,10 @@ export default function SchemeDetailPage() {
     setActionSuccess("");
     try {
       await closeScheme(params.id);
-      setScheme((s) => ({ ...s, is_active: false }));
+      setScheme((s) => (s ? { ...s, is_active: false } : s));
       setActionSuccess("Scheme closed successfully.");
     } catch (err) {
-      setActionError(err?.response?.data?.error || "Failed to close scheme.");
+      setActionError((err as ApiError)?.response?.data?.error || "Failed to close scheme.");
     } finally {
       setActionLoading(false);
     }
@@ -504,7 +523,7 @@ export default function SchemeDetailPage() {
                 {scheme.eligibility_criteria?.min_cgpa != null && (
                   <InfoRow icon={Shield} label="Minimum CGPA" value={scheme.eligibility_criteria.min_cgpa} />
                 )}
-                {scheme.eligibility_criteria?.allowed_levels?.length > 0 && (
+                {!!scheme.eligibility_criteria?.allowed_levels?.length && (
                   <InfoRow icon={Shield} label="Allowed Levels" value={scheme.eligibility_criteria.allowed_levels.join(", ")} />
                 )}
                 {(scheme.eligibility_criteria?.min_age != null || scheme.eligibility_criteria?.max_age != null) && (
@@ -514,10 +533,10 @@ export default function SchemeDetailPage() {
                     value={`${scheme.eligibility_criteria?.min_age ?? "—"} – ${scheme.eligibility_criteria?.max_age ?? "—"}`}
                   />
                 )}
-                {scheme.eligibility_criteria?.allowed_trades?.length > 0 && (
+                {!!scheme.eligibility_criteria?.allowed_trades?.length && (
                   <InfoRow icon={Shield} label="Allowed Trades" value={scheme.eligibility_criteria.allowed_trades.join(", ")} />
                 )}
-                {scheme.eligibility_criteria?.ward_restriction?.length > 0 && (
+                {!!scheme.eligibility_criteria?.ward_restriction?.length && (
                   <InfoRow icon={Shield} label="Ward Restriction" value={scheme.eligibility_criteria.ward_restriction.join(", ")} />
                 )}
                 {scheme.eligibility_criteria?.max_prior_awards != null && (

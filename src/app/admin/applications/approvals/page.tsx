@@ -7,8 +7,18 @@ import {
 import styles from "./page.module.css";
 import { getSchemesOverview, publishSchemeApprovals } from "@/services";
 
+interface SchemeRow {
+  scheme: { id: string; name: string; award_type: string };
+  unpublished: number;
+}
+
+interface ToastState {
+  type: "success" | "error";
+  message: string;
+}
+
 // ── CATEGORY CONFIG — matches Applications page ─────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; bg: string }> = {
   scholarship: { label: "Scholarship", color: "#15803d", bg: "rgba(74,222,128,0.12)" },
   empowerment: { label: "Empowerment", color: "#b45309", bg: "rgba(251,191,36,0.12)" },
   grant:       { label: "Grant",       color: "#7c3aed", bg: "rgba(167,139,250,0.12)" },
@@ -34,14 +44,14 @@ function SkeletonCard() {
 export default function ApprovalsPage() {
   const router = useRouter();
 
-  const [overview, setOverview] = useState([]);
+  const [overview, setOverview] = useState<SchemeRow[]>([]);
   const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(null);
+  const [error, setError]       = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState("all");
 
-  const [confirmId, setConfirmId] = useState(null);   // scheme currently in "are you sure" state
-  const [sendingId, setSendingId] = useState(null);   // scheme currently being published
-  const [toast, setToast]         = useState(null);   // { type: 'success'|'error', message }
+  const [confirmId, setConfirmId] = useState<SchemeRow["scheme"]["id"] | null>(null);   // scheme currently in "are you sure" state
+  const [sendingId, setSendingId] = useState<SchemeRow["scheme"]["id"] | null>(null);   // scheme currently being published
+  const [toast, setToast]         = useState<ToastState | null>(null);   // { type: 'success'|'error', message }
 
   async function loadOverview() {
     setLoading(true);
@@ -69,14 +79,14 @@ export default function ApprovalsPage() {
 
   // ── Stats ───────────────────────────────────────────────────────────────
   const totalPending = pending.reduce((sum, row) => sum + row.unpublished, 0);
-  const byType = { scholarship: 0, empowerment: 0, grant: 0 };
+  const byType: Record<string, number> = { scholarship: 0, empowerment: 0, grant: 0 };
   pending.forEach((row) => {
     if (byType[row.scheme.award_type] !== undefined) {
       byType[row.scheme.award_type] += row.unpublished;
     }
   });
 
-  function askConfirm(schemeId) {
+  function askConfirm(schemeId: SchemeRow["scheme"]["id"]) {
     setConfirmId(schemeId);
   }
 
@@ -84,7 +94,7 @@ export default function ApprovalsPage() {
     setConfirmId(null);
   }
 
-  async function handlePublish(schemeId, schemeName) {
+  async function handlePublish(schemeId: SchemeRow["scheme"]["id"], schemeName: string) {
     setSendingId(schemeId);
     setConfirmId(null);
     setToast(null);

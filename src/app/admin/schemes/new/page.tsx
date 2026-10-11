@@ -5,16 +5,41 @@ import {
   ArrowLeft, BookOpen, GraduationCap, Briefcase,
   Wrench, Banknote, AlertCircle, CheckCircle2,
   Loader2, Plus, Trash2, GripVertical, ChevronDown,
-  ChevronUp, Settings2, CalendarRange, Building2,
+  ChevronUp, Settings2, CalendarRange, Building2, type LucideIcon,
 } from "lucide-react";
 
 import { useRoleGuard } from "@/hooks/useRoleGuard";
 
 import styles from "./page.module.css";
 import { createScheme, getCycles, getProviders } from "@/services";
+import type { AwardType, StackingPolicy, Cycle, SchemeProvider } from "@/types/scheme";
+
+interface FormState {
+  name: string;
+  award_type: AwardType;
+  description: string;
+  academic_year: string;
+  award_amount: string;
+  total_slots: string;
+  application_open_date: string;
+  application_close_date: string;
+  stacking_policy: StackingPolicy;
+  provider_id: string;
+  min_cgpa: string;
+  allowed_levels: string;
+  min_age: string;
+  max_age: string;
+  allowed_trades: string;
+  ward_restriction: string;
+  max_prior_awards: string;
+}
+
+interface ApiError {
+  response?: { data?: { error?: string; message?: string } };
+}
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
   scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
   empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
@@ -193,7 +218,7 @@ export default function NewSchemePage() {
   const { checking } = useRoleGuard(["admin", "superadmin"]);
 
     // ── ACTIVE CYCLE ──────────────────────────────────────────────────────────
-  const [activeCycle,     setActiveCycle]     = useState(null);
+  const [activeCycle,     setActiveCycle]     = useState<Cycle | null>(null);
   const [cycleLoading,    setCycleLoading]    = useState(true);
  
   useEffect(() => {
@@ -201,7 +226,7 @@ export default function NewSchemePage() {
       try {
         const res = await getCycles();
         const list = Array.isArray(res.data) ? res.data : (res.data?.results ?? []);
-        const active = list.find((c) => c.is_active) || null;
+        const active = list.find((c: Cycle) => c.is_active) || null;
         setActiveCycle(active);
       } catch {
         // fail silently — warning will show
@@ -213,7 +238,7 @@ export default function NewSchemePage() {
   }, []);
 
   // ── PROVIDERS ────────────────────────────────────────────────────────────
-  const [providers,       setProviders]       = useState([]);
+  const [providers,       setProviders]       = useState<SchemeProvider[]>([]);
   const [providersLoading, setProvidersLoading] = useState(true);
 
   useEffect(() => {
@@ -233,7 +258,7 @@ export default function NewSchemePage() {
  
   // ── FORM STATE ────────────────────────────────────────────────────────────
 
-const [form, setForm] = useState({
+const [form, setForm] = useState<FormState>({
     name:                   "",
     award_type:             "scholarship",
     description:            "",
@@ -257,7 +282,7 @@ const [form, setForm] = useState({
   });
 
   // const [fields,   setFields]   = useState(defaultFields.scholarship.map((f, i) => ({ ...f, order: i })));
-  const [errors,   setErrors]   = useState({});
+  const [errors,   setErrors]   = useState<Record<string, string>>({});
   const [loading,  setLoading]  = useState(false);
   const [apiError, setApiError] = useState("");
   const [success,  setSuccess]  = useState(false);
@@ -265,7 +290,7 @@ const [form, setForm] = useState({
   const category = categoryConfig[form.award_type] || categoryConfig.scholarship;
   const CatIcon  = category.icon;
 
-  function set(key, value) {
+  function set(key: string, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((e) => ({ ...e, [key]: "" }));
     setApiError("");
@@ -300,7 +325,7 @@ const [form, setForm] = useState({
 
   // ── VALIDATION ────────────────────────────────────────────────────────────
 function validate() {
-    const e = {};
+    const e: Record<string, string> = {};
     if (!form.name.trim())               e.name = "Scheme name is required.";
     if (!form.provider_id)               e.provider_id = "Provider is required.";
     if (!form.description.trim())        e.description = "Description is required.";
@@ -328,7 +353,6 @@ function validate() {
         ...form,
         award_amount:    parseFloat(form.award_amount),
         total_slots:     parseInt(form.total_slots),
-        remaining_slots: parseInt(form.total_slots),
         is_published:    false,
         is_active:       true,
         cycle_id:        activeCycle?.id ?? null,
@@ -348,7 +372,8 @@ function validate() {
 
       setSuccess(true);
       setTimeout(() => router.push("/admin/schemes"), 1200);
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
   console.log("Scheme error:", err?.response?.data);
   setApiError(
     err?.response?.data?.error ||

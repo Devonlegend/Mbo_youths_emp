@@ -1,15 +1,22 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminTopbar from "./components/AdminTopbar";
 import { getMe } from "@/services";
 import styles from "./admin.module.css";
 
-export default function AdminLayout({ children }) {
+interface AdminUser {
+  firstname?: string;
+  lastname?: string;
+  role?: string;
+  email?: string;
+}
+
+export default function AdminLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user,        setUser]        = useState(null);
-  const [loading,     setLoading]     = useState(true);
+  const [user, setUser] = useState<AdminUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   // ── Load admin user on mount ───────────────────────────────────────────────
@@ -32,7 +39,8 @@ export default function AdminLayout({ children }) {
 
         setUser(u);
         if (!cancelled) setLoading(false);
-      } catch (err) {
+      } catch (error) {
+        const err = error as { response?: { status?: number } };
         if (cancelled) return;
         const status = err?.response?.status;
         if (status === 401 || status === 403) {
@@ -45,9 +53,11 @@ export default function AdminLayout({ children }) {
       }
     }
     loadUser();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
-  
+
   // Close sidebar when screen goes desktop width
   useEffect(() => {
     function onResize() {
@@ -69,7 +79,6 @@ export default function AdminLayout({ children }) {
   // ── Shell ──────────────────────────────────────────────────────────────────
   return (
     <div className={styles.shell}>
-
       <AdminSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -78,15 +87,9 @@ export default function AdminLayout({ children }) {
 
       {/* Main area — shifts right to account for collapsed sidebar */}
       <div className={styles.mainWrap}>
-        <AdminTopbar
-          user={user}
-          onMenuOpen={() => setSidebarOpen(true)}
-        />
-        <main className={styles.content}>
-          {children}
-        </main>
+        <AdminTopbar user={user} onMenuOpen={() => setSidebarOpen(true)} />
+        <main className={styles.content}>{children}</main>
       </div>
-
     </div>
   );
 }

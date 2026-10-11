@@ -1,7 +1,8 @@
 "use client";
+import type { ReactNode } from "react";
 import { ThemeProvider } from "next-themes";
 
-export default function AdminThemeProvider({ children }) {
+export default function AdminThemeProvider({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider
       attribute="data-theme"

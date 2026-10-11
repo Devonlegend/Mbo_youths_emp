@@ -7,6 +7,13 @@ import {
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getStudents, getStudentStats } from "@/services";
+import type { Student, StudentStats } from "@/types/student";
+
+interface PageInfo {
+  count: number;
+  next: string | null;
+  previous: string | null;
+}
 import Pagination from "../components/pagination/Pagination";
 
 const PAGE_SIZE = 50; // matches API_PAGE_SIZE in backend settings.py
@@ -28,22 +35,22 @@ function SkeletonRow() {
 export default function AdminStudentsPage() {
   const router = useRouter();
 
-  const [students,    setStudents]    = useState([]);
+  const [students,    setStudents]    = useState<Student[]>([]);
   const [loading,      setLoading]    = useState(true);
-  const [error,        setError]      = useState(null);
+  const [error,        setError]      = useState<string | null>(null);
   const [search,       setSearch]     = useState("");
   const [filterVerified, setFilterVerified] = useState("all"); // "all" | "verified" | "unverified"
   const [filterOpen,   setFilterOpen] = useState(false);
 
   // ── PAGINATION STATE ────────────────────────────────────────────────────
   const [page,     setPage]     = useState(1);
-  const [pageInfo, setPageInfo] = useState({ count: 0, next: null, previous: null });
+  const [pageInfo, setPageInfo] = useState<PageInfo>({ count: 0, next: null, previous: null });
 
   // ── REAL TOTALS — from /students/stats/, NOT from the loaded page ──────
-  const [stats, setStats] = useState({ total_students: 0, verified: 0, unverified: 0 });
+  const [stats, setStats] = useState<StudentStats>({ total_students: 0, verified: 0, unverified: 0, with_active_award: 0, by_ward: {} });
 
   // ── FETCH ONE PAGE OF STUDENTS ───────────────────────────────────────────
-  async function loadStudents(targetPage) {
+  async function loadStudents(targetPage: number) {
     setLoading(true);
     setError(null);
     try {
@@ -226,10 +233,10 @@ export default function AdminStudentsPage() {
                   <span className={styles.studentName}>
                     {student.firstname} {student.lastname}
                   </span>
-                  <span className={styles.studentMeta}>
+                  {/* <span className={styles.studentMeta}>
                     {student.level ? `${student.level} Level` : ""}
                     {student.cgpa  ? ` · CGPA ${student.cgpa}` : ""}
-                  </span>
+                  </span> */}
                 </div>
               </div>
 

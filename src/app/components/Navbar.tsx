@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, LogIn, ArrowRight } from "lucide-react";
@@ -7,7 +7,7 @@ import styles from "./Navbar.module.css";
 
 const NAV_LINKS = ["About", "Programmes", "How It Works", "Eligibility", "Contact"];
 
-function getHref(link) {
+function getHref(link: string) {
   return "#" + link.toLowerCase().split(" ").join("-");
 }
 
@@ -15,7 +15,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
-  const navRef = useRef(null);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -27,8 +27,8 @@ export default function Navbar() {
   useEffect(() => {
     if (!menuOpen) return;
 
-    function handleOutside(e) {
-      if (navRef.current && !navRef.current.contains(e.target)) {
+    function handleOutside(e: MouseEvent | TouchEvent) {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
     }
@@ -44,14 +44,14 @@ export default function Navbar() {
   // Close the drawer on Escape
   useEffect(() => {
     if (!menuOpen) return;
-    function handleKey(e) {
+    function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") setMenuOpen(false);
     }
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [menuOpen]);
 
-  function handleLogoClick(e) {
+  function handleLogoClick(e: ReactMouseEvent<HTMLAnchorElement>) {
     if (pathname === "/") {
       e.preventDefault();
       const hero = document.getElementById("hero");

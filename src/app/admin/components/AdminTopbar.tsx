@@ -1,19 +1,26 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, Settings, LogOut, ChevronDown, Search, Sun, Moon, Monitor} from "lucide-react";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { useTheme } from "next-themes";
 import styles from "./Topbar.module.css";
 import { logout } from "@/services";
 
-export default function AdminTopbar({ user, onMenuOpen }) {
+interface AdminUser {
+  firstname?: string;
+  lastname?: string;
+  role?: string;
+  email?: string;
+}
+
+export default function AdminTopbar({ user, onMenuOpen }: { user: AdminUser | null; onMenuOpen: () => void }) {
   const currentPath = usePathname();
   const router = useRouter();
 
   const [dropOpen, setDropOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const dropRef = useRef(null);
-  const searchRef = useRef(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const initials =
     (user?.firstname?.[0]?.toUpperCase() || "") +
@@ -29,29 +36,29 @@ export default function AdminTopbar({ user, onMenuOpen }) {
   useEffect(() => setMounted(true), []);
 
   const themes = ["system", "light", "dark"];
-  const themeIcons = {
+  const themeIcons: Record<string, ReactNode> = {
     system: <Monitor size={15} strokeWidth={1.8} />,
     light:  <Sun     size={15} strokeWidth={1.8} />,
     dark:   <Moon    size={15} strokeWidth={1.8} />,
   };
 
   function cycleTheme() {
-    const current = themes.indexOf(theme);
+    const current = themes.indexOf(theme ?? "system");
     const next = themes[(current + 1) % themes.length];
     setTheme(next);
   }
 
-  function capitalize(str) {
+  function capitalize(str?: string) {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
   useEffect(() => {
-    function handleClick(e) {
-      if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false);
-      if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false);
+    function handleClick(e: MouseEvent) {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setDropOpen(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
     }
-    function handleKeyDown(e) {
+    function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setDropOpen(false);
         setSearchOpen(false);
@@ -117,7 +124,7 @@ export default function AdminTopbar({ user, onMenuOpen }) {
             aria-label={`Switch theme (current: ${theme})`}
             title={`Theme: ${theme}`}
           >
-            {themeIcons[theme] || themeIcons.system}
+            {themeIcons[theme ?? "system"] || themeIcons.system}
           </button>
         )}
 

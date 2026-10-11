@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent, type ReactNode } from "react";
 import {
   User, Mail, Phone, Lock, Eye, EyeOff,
   Save, Loader2, ShieldCheck, AlertCircle,
@@ -8,13 +8,18 @@ import {
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getMe } from "@/services/auth";
+import type { AuthUser } from "@/types/user";
+
+interface ApiError {
+  response?: { data?: { error?: string; message?: string } };
+}
 // Admin user management (getAdminUsers, createAdminUser, updateUserRole,
 // deactivateUser, reactivateUser) is commented out below — these endpoints
 // were removed from the backend; admin-user management now lives in Django Admin.
 import { getSchemes, getStudents, getApplications } from "@/services";
 
 // ── PASSWORD STRENGTH ─────────────────────────────────────────────────────────
-function PasswordStrength({ password }) {
+function PasswordStrength({ password }: { password: string }) {
   const checks = [
     { label: "At least 8 characters",      pass: password.length >= 8 },
     { label: "Contains a number",           pass: /\d/.test(password) },
@@ -41,7 +46,7 @@ function PasswordStrength({ password }) {
 }
 
 // ── SECTION WRAPPER ───────────────────────────────────────────────────────────
-function Section({ title, sub, children }) {
+function Section({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) {
   return (
     <div className={styles.section}>
       <div className={styles.sectionHead}>
@@ -53,19 +58,19 @@ function Section({ title, sub, children }) {
   );
 }
 
-function capitalize(str) {
+function capitalize(str?: string) {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
 // ── ROLE BADGE ────────────────────────────────────────────────────────────────
-function RoleBadge({ role }) {
-  const config = {
+function RoleBadge({ role }: { role?: string }) {
+  const config: Record<string, { label: string; color: string; bg: string; border: string }> = {
     superadmin: { label: "Super Admin", color: "#7e22ce", bg: "#faf5ff", border: "#e9d5ff" },
     admin:      { label: "Admin",       color: "#15803d", bg: "#f0fdf4", border: "#bbf7d0" },
     verifier:   { label: "Verifier",    color: "#1d4ed8", bg: "#eff6ff", border: "#bfdbfe" },
   };
-  const c = config[role] || config.admin;
+  const c = config[role ?? ""] || config.admin;
   return (
     <span className={styles.roleBadge} style={{ color: c.color, background: c.bg, borderColor: c.border }}>
       {c.label}
@@ -119,7 +124,7 @@ function ConfirmModal({ type, user, onConfirm, onCancel, loading }) {
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function AdminSettingsPage() {
-  const [user,         setUser]         = useState(null);
+  const [user,         setUser]         = useState<AuthUser | null>(null);
   const [loadingUser,  setLoadingUser]  = useState(true);
 
   // Profile state
@@ -219,7 +224,7 @@ export default function AdminSettingsPage() {
   */
 
   // ── CHANGE PASSWORD ───────────────────────────────────────────────────────
-  async function handleChangePassword(e) {
+  async function handleChangePassword(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (passwords.newPass.length < 8) { setPwdError("Password must be at least 8 characters."); return; }
     if (passwords.newPass !== passwords.confirm) { setPwdError("Passwords do not match."); return; }
@@ -233,7 +238,8 @@ export default function AdminSettingsPage() {
       await new Promise((r) => setTimeout(r, 1000)); // placeholder
       setPwdSuccess(true);
       setPasswords({ current: "", newPass: "", confirm: "" });
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setPwdError(
         err?.response?.data?.error ||
         err?.response?.data?.message ||
@@ -381,7 +387,7 @@ export default function AdminSettingsPage() {
           <div className={styles.profileInfo}>
             <p className={styles.profileName}>{capitalize(user?.firstname)} {capitalize(user?.lastname)}</p>
             <p className={styles.profileEmail}>{user?.email}</p>
-            <p className={styles.profileLastLogin}>
+            {/* <p className={styles.profileLastLogin}>
               Last login: {user?.last_login
                 ? new Date(user.last_login).toLocaleDateString("en-GB", {
                     day: "numeric", month: "short", year: "numeric",
@@ -389,7 +395,7 @@ export default function AdminSettingsPage() {
                   })
                 : "—"
               }
-            </p>
+            </p> */}
             <RoleBadge role={user?.role} />
           </div>
         </div>

@@ -1,9 +1,16 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ElementType, type ReactNode } from "react";
 import styles from "./Reveal.module.css";
 
-export default function Reveal({ children, delay = 0, as = "div", className = "" }) {
-  const ref = useRef(null);
+interface RevealProps {
+  children?: ReactNode;
+  delay?: number;
+  as?: ElementType;
+  className?: string;
+}
+
+export default function Reveal({ children, delay = 0, as = "div", className = "" }: RevealProps) {
+  const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
   const Tag = as;
 

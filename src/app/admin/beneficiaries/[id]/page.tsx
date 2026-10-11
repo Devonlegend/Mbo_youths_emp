@@ -3,27 +3,29 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   BadgeCheck, Search, ArrowLeft, ArrowRight, AlertCircle,
-  GraduationCap, Briefcase, Banknote, Download, Loader2,
+  GraduationCap, Briefcase, Banknote, Download, Loader2, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApprovedList, downloadApprovedListCsv } from "@/services";
 import { getScheme } from "@/services";
+import type { Scheme } from "@/types/scheme";
+import type { ApprovedApplication } from "@/types/application";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
   scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
   empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
 };
 
-function formatDate(dateStr) {
+function formatDate(dateStr?: string | null) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "numeric", month: "short", year: "numeric",
   });
 }
 
-function getInitials(fullName) {
+function getInitials(fullName?: string) {
   if (!fullName) return "—";
   const parts = fullName.trim().split(/\s+/);
   const first = parts[0]?.[0] || "";
@@ -31,7 +33,7 @@ function getInitials(fullName) {
   return (first + last).toUpperCase();
 }
 
-function filenameFromDisposition(header, fallback) {
+function filenameFromDisposition(header: string | undefined, fallback: string) {
   if (!header) return fallback;
   const match = header.match(/filename="?([^"]+)"?/);
   return match ? match[1] : fallback;
@@ -53,16 +55,16 @@ function SkeletonRow() {
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function SchemeBeneficiariesPage() {
   const router = useRouter();
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const schemeId = params.id;
 
-  const [scheme,        setScheme]        = useState(null);
+  const [scheme,        setScheme]        = useState<Scheme | null>(null);
   const [schemeLoading, setSchemeLoading]  = useState(true);
 
-  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [beneficiaries, setBeneficiaries] = useState<ApprovedApplication[]>([]);
   const [count,         setCount]         = useState(0);
   const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState(null);
+  const [error,         setError]         = useState<string | null>(null);
   const [search,        setSearch]        = useState("");
   const [exporting,     setExporting]     = useState(false);
 
@@ -126,7 +128,7 @@ export default function SchemeBeneficiariesPage() {
       const a    = document.createElement("a");
       a.href     = url;
       a.download = filenameFromDisposition(
-        res.headers?.["content-disposition"],
+        res.headers?.["content-disposition"] as string | undefined,
         `approved-list-${scheme?.name || schemeId}-${new Date().toISOString().slice(0, 10)}.csv`
       );
       a.click();

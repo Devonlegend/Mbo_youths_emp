@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect, Fragment } from "react";
+import { useState, useRef, useEffect, Fragment, type ChangeEvent, type FormEvent, type ClipboardEvent, type KeyboardEvent, type TouchEvent } from "react";
 import Link from "next/link";
 import {
   Eye, EyeOff, User, Mail, Phone, CreditCard,
@@ -9,6 +9,28 @@ import {
 import styles from "./page.module.css";
 import PassportCapture from "@/components/PassportCapture";
 import { register, otpSend, otpVerify, otpResend } from "@/services/auth";
+
+type RegisterStep = "register" | "verify" | "success";
+
+interface FormState {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  nin: string;
+  dob: string;
+  gender: string;
+  lga: string;
+  ward: string;
+  password: string;
+  confirm: string;
+}
+
+interface ApiError {
+  response?: {
+    data?: { error?: string; message?: string; detail?: string; retry_after_seconds?: number };
+  };
+}
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const DRAFT_KEY = "rmhcdt_register_draft";
@@ -21,7 +43,7 @@ const STEPS = [
 ];
 
 /* ─── Password Strength — logic unchanged, styling via CSS vars ─────────── */
-function PasswordStrength({ password }) {
+function PasswordStrength({ password }: { password: string }) {
   const checks = [
     { label: "At least 8 characters", pass: password.length >= 8 },
     { label: "Contains a number", pass: /\d/.test(password) },
@@ -64,7 +86,7 @@ function Spinner() {
 }
 
 /* ─── Stepper ─────────────────────────────────────────────────────────────── */
-function Stepper({ currentStep }) {
+function Stepper({ currentStep }: { currentStep: number }) {
   return (
     <div className={styles.stepper}>
       {STEPS.map((s, i) => (
@@ -94,7 +116,7 @@ function Stepper({ currentStep }) {
 
 /* ─── Main component ─────────────────────────────────────────────────────── */
 export default function RegisterPage() {
-  const [step, setStep] = useState("register"); // register | verify | success
+  const [step, setStep] = useState<RegisterStep>("register"); // register | verify | success
   const [currentStep, setCurrentStep] = useState(1); // 1-4 wizard step within "register"
   const [restoreNotice, setRestoreNotice] = useState(false);
 
@@ -103,22 +125,22 @@ export default function RegisterPage() {
   const [otpError, setOtpError] = useState("");
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
-  const countdownRef = useRef(null);
-  const inputs = useRef([]);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [certificate, setCertificate] = useState(null);
-  const [passport, setPassport] = useState(null);
-  const [ninSlip, setNinSlip] = useState(null);
+  const [certificate, setCertificate] = useState<File | null>(null);
+  const [passport, setPassport] = useState<File | null>(null);
+  const [ninSlip, setNinSlip] = useState<File | null>(null);
   const [certError, setCertError] = useState("");
   const [ninSlipError, setNinSlipError] = useState("");
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     firstName: "", lastName: "", email: "", phone: "",
     nin: "", dob: "", gender: "", lga: "", ward: "",
     password: "", confirm: "",
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
@@ -150,13 +172,13 @@ export default function RegisterPage() {
     } catch {}
   }, [form, currentStep]);
 
-  function handleChange(e) {
+  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
     setErrors({ ...errors, [e.target.name]: "" });
   }
 
-  function handleCertificateChange(e) {
-    const file = e.target.files[0];
+function handleCertificateChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
     setCertError("");
     if (!file) return;
     const allowed = ["application/pdf", "image/jpeg", "image/png"];
@@ -176,8 +198,8 @@ export default function RegisterPage() {
 
   function removeCertificate() { setCertificate(null); setCertError(""); }
 
-  function handleNinSlipChange(e) {
-    const file = e.target.files[0];
+  function handleNinSlipChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
     setNinSlipError("");
     if (!file) return;
     const allowed = ["application/pdf", "image/jpeg", "image/png"];
@@ -197,10 +219,10 @@ export default function RegisterPage() {
 
   function removeNinSlip() { setNinSlip(null); setNinSlipError(""); }
 
-  function formatFileSize(bytes) { return (bytes / 1024).toFixed(1) + " KB"; }
+  function formatFileSize(bytes: number) { return (bytes / 1024).toFixed(1) + " KB"; }
 
-  function dismissKeyboard(e) {
-    if (e.target === e.currentTarget) document.activeElement?.blur();
+  function dismissKeyboard(e: TouchEvent<HTMLDivElement>) {
+    if (e.target === e.currentTarget) (document.activeElement as HTMLElement | null)?.blur();
   }
 
   function startCountdown() {
@@ -220,8 +242,8 @@ export default function RegisterPage() {
   }
 
   /* ── Per-step validation ─────────────────────────────────────────────────── */
-  function validateStep(s) {
-    const e = {};
+  function validateStep(s: number) {
+    const e: Record<string, string> = {};
     if (s === 1) {
       if (!form.firstName.trim()) e.firstName = "Required";
       if (!form.lastName.trim()) e.lastName = "Required";
@@ -274,7 +296,7 @@ export default function RegisterPage() {
   }
 
   /* API logic — untouched aside from clearing the draft on success */
-  async function handleSubmit(e) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const errs = validateStep(4);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -307,7 +329,8 @@ export default function RegisterPage() {
 
       setStep("verify");
       startCountdown();
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setApiError(
         err?.response?.data?.error ||
         err?.response?.data?.message ||
@@ -318,7 +341,7 @@ export default function RegisterPage() {
     }
   }
 
-  function handleOtpChange(index, value) {
+  function handleOtpChange(index: number, value: string) {
     if (!/^\d*$/.test(value)) return;
     const newOtp = [...otp];
     newOtp[index] = value.slice(-1);
@@ -327,11 +350,11 @@ export default function RegisterPage() {
     if (value && index < 5) inputs.current[index + 1]?.focus();
   }
 
-  function handleOtpKeyDown(index, e) {
+  function handleOtpKeyDown(index: number, e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Backspace" && !otp[index] && index > 0) inputs.current[index - 1]?.focus();
   }
 
-  function handlePaste(e) {
+  function handlePaste(e: ClipboardEvent<HTMLInputElement>) {
     e.preventDefault();
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
     const newOtp = [...otp];
@@ -340,7 +363,7 @@ export default function RegisterPage() {
     inputs.current[Math.min(pasted.length, 5)]?.focus();
   }
 
-  async function handleOtpSubmit(e) {
+  async function handleOtpSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const code = otp.join("");
     if (code.length < 6) { setOtpError("Please enter the complete 6-digit code."); return; }
@@ -351,7 +374,8 @@ export default function RegisterPage() {
     try {
       await otpVerify({ email: form.email, code });
       setStep("success");
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setOtpError(
         err?.response?.data?.error ||
         err?.response?.data?.detail ||
@@ -371,7 +395,8 @@ export default function RegisterPage() {
     try {
       await otpResend({ email: form.email });
       startCountdown();
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       const retryAfter = err?.response?.data?.retry_after_seconds;
       if (retryAfter) {
         setCountdown(retryAfter);
@@ -475,7 +500,7 @@ export default function RegisterPage() {
                 {otp.map((digit, i) => (
                   <input
                     key={i}
-                    ref={(el) => (inputs.current[i] = el)}
+                    ref={(el) => { inputs.current[i] = el; }}
                     type="text"
                     inputMode="numeric"
                     maxLength={1}

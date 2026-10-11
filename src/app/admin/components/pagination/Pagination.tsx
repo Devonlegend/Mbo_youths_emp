@@ -13,6 +13,16 @@ import styles from "./Pagination.module.css";
  *  - loading      boolean — disables buttons while a page is being fetched
  *  - onPageChange (newPage) => void
  */
+interface PaginationProps {
+  page: number;
+  pageSize: number;
+  totalCount?: number;
+  hasNext?: boolean;
+  hasPrevious?: boolean;
+  loading?: boolean;
+  onPageChange: (newPage: number) => void;
+}
+
 export default function Pagination({
   page,
   pageSize,
@@ -21,7 +31,7 @@ export default function Pagination({
   hasPrevious,
   loading,
   onPageChange,
-}) {
+}: PaginationProps) {
   if (!totalCount || totalCount <= pageSize) return null; // nothing to paginate
 
   const totalPages = Math.ceil(totalCount / pageSize);

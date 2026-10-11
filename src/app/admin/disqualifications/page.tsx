@@ -3,13 +3,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ShieldAlert, Search, AlertCircle, XCircle,
-  GraduationCap, Briefcase, Banknote, ArrowRight,
+  GraduationCap, Briefcase, Banknote, ArrowRight, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getSchemes, getApplicationsByScheme } from "@/services";
+import type { Scheme } from "@/types/scheme";
+
+type SchemeWithCount = Scheme & { disqualified_count: number };
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
   scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
   empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
@@ -31,9 +34,9 @@ function SkeletonCard() {
 export default function DisqualificationOverviewPage() {
   const router = useRouter();
 
-  const [schemes, setSchemes] = useState([]);
+  const [schemes, setSchemes] = useState<SchemeWithCount[]>([]);
   const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(null);
+  const [error,    setError]    = useState<string | null>(null);
   const [search,   setSearch]   = useState("");
 
   async function loadSchemes() {
@@ -45,7 +48,7 @@ export default function DisqualificationOverviewPage() {
 
       // Pull each scheme's rejected-application count in parallel.
       const withCounts = await Promise.all(
-        list.map(async (s) => {
+        list.map(async (s: Scheme) => {
           try {
             const rejRes = await getApplicationsByScheme(s.id, "rejected");
             const apps = Array.isArray(rejRes.data?.applications) ? rejRes.data.applications : [];

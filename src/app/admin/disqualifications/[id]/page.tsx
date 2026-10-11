@@ -3,26 +3,28 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   ShieldAlert, Search, ArrowLeft, ArrowRight, AlertCircle,
-  GraduationCap, Briefcase, Banknote, Download,
+  GraduationCap, Briefcase, Banknote, Download, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApplicationsByScheme, getScheme } from "@/services";
+import type { Scheme } from "@/types/scheme";
+import type { Application } from "@/types/application";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
   scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
   empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
 };
 
-function formatDate(dateStr) {
+function formatDate(dateStr?: string | null) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "numeric", month: "short", year: "numeric",
   });
 }
 
-function getInitials(fullName) {
+function getInitials(fullName?: string) {
   if (!fullName) return "—";
   const parts = fullName.trim().split(/\s+/);
   const first = parts[0]?.[0] || "";
@@ -45,15 +47,15 @@ function SkeletonRow() {
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function SchemeDisqualificationsPage() {
   const router = useRouter();
-  const params = useParams();
+  const params = useParams<{ id: string }>();
   const schemeId = params.id;
 
-  const [scheme,        setScheme]        = useState(null);
+  const [scheme,        setScheme]        = useState<Scheme | null>(null);
   const [schemeLoading, setSchemeLoading]  = useState(true);
 
-  const [records, setRecords] = useState([]);
+  const [records, setRecords] = useState<Application[]>([]);
   const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(null);
+  const [error,    setError]    = useState<string | null>(null);
   const [search,   setSearch]   = useState("");
 
   // ── FETCH SCHEME (header title/category) ────────────────────────────────

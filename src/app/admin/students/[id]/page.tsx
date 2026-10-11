@@ -7,13 +7,15 @@ import {
   ClipboardList, CheckCircle2, Clock, XCircle,
   AlertCircle, ArrowRight, Loader2, GraduationCap,
   Briefcase, Wrench, Banknote, Fingerprint, 
-  FileText, Image as ImageIcon, Check, X, AlertTriangle,
+  FileText, Image as ImageIcon, Check, X, AlertTriangle, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getStudentById, getApplications, verifyStudent } from "@/services";
+import type { Student, VerifyDecision } from "@/types/student";
+import type { ApplicationListItem } from "@/types/application";
 
 // ── STATUS CONFIG ─────────────────────────────────────────────────────────────
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   submitted:         { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
   eligibility_check: { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
   document_review:   { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
@@ -26,20 +28,20 @@ const statusConfig = {
 };
 
 // ── CATEGORY ICON ─────────────────────────────────────────────────────────────
-const categoryIcons = {
+const categoryIcons: Record<string, LucideIcon> = {
   scholarship: GraduationCap,
   // vocational:  Wrench,
   empowerment: Briefcase,
   grant:       Banknote,
 };
 
-function getFileUrl(path) {
-  if (!path) return null;
+function getFileUrl(path?: string | null) {
+  if (!path) return undefined;
   if (path.startsWith("http")) return path;
   return `${process.env.NEXT_PUBLIC_API_URL}${path}`;
 }
 
-function formatDate(dateStr) {
+function formatDate(dateStr?: string | null) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "numeric", month: "short", year: "numeric",
@@ -47,7 +49,7 @@ function formatDate(dateStr) {
 }
 
 // ── INFO ROW ──────────────────────────────────────────────────────────────────
-function InfoRow({ icon: Icon, label, value }) {
+function InfoRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value?: string | null }) {
   return (
     <div className={styles.infoRow}>
       <div className={styles.infoIcon}>
@@ -64,17 +66,17 @@ function InfoRow({ icon: Icon, label, value }) {
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function StudentDetailPage() {
   const router = useRouter();
-  const params = useParams();
+  const params = useParams<{ id: string }>();
 
-  const [student,       setStudent]       = useState(null);
-  const [applications,  setApplications]  = useState([]);
+  const [student,       setStudent]       = useState<Student | null>(null);
+  const [applications,  setApplications]  = useState<ApplicationListItem[]>([]);
   const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState(null);
+  const [error,         setError]         = useState<string | null>(null);
   const [verifying,     setVerifying]     = useState(false);
   const [verifyError,   setVerifyError]   = useState("");
   const [note,          setNote]          = useState("");
   const [noteError,     setNoteError]     = useState("");
-  const [confirmModal,  setConfirmModal]  = useState(null); 
+  const [confirmModal,  setConfirmModal]  = useState<VerifyDecision | null>(null); 
   // "approved" | "rejected" | null
 
   // ── FETCH ─────────────────────────────────────────────────────────────────
@@ -117,7 +119,7 @@ export default function StudentDetailPage() {
   }, [params.id]);
 
   // ── VERIFY / REJECT ──────────────────────────────────────────────────────
-  function openConfirm(decision) {
+  function openConfirm(decision: VerifyDecision) {
     if (decision === "rejected" && note.trim().length < 5) {
       setNoteError("Please provide a reason (at least 5 characters).");
       return;
@@ -126,19 +128,19 @@ export default function StudentDetailPage() {
     setConfirmModal(decision);
   }
 
-  async function handleDecision(decision) {
+  async function handleDecision(decision: VerifyDecision) {
     setVerifying(true);
     setVerifyError("");
     try {
       const res = await verifyStudent(params.id, { decision, notes: note.trim() });
-      setStudent((s) => ({
+      setStudent((s) => s && ({
         ...s,
         is_verified: res.data.is_verified,
         verification_rejection_reason: res.data.verification_rejection_reason,
       }));
       setNote("");
     } catch (err) {
-      setVerifyError(err?.response?.data?.error || "Action failed. Please try again.");
+      setVerifyError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Action failed. Please try again.");
     } finally {
       setVerifying(false);
     }
@@ -294,11 +296,11 @@ export default function StudentDetailPage() {
               <InfoRow icon={ShieldCheck} label="Verification Status" value={
                 student.is_verified ? "Verified" : "Not Verified"
               } />
-              {!student.is_verified && student.verification_rejection_reason && (
+              {/* {!student.is_verified && student.verification_rejection_reason && (
                 <InfoRow icon={AlertCircle} label="Last Rejection Reason" value={
                   student.verification_rejection_reason
                 } />
-              )}
+              )} */}
             </div>
           </div>
 
@@ -391,7 +393,7 @@ export default function StudentDetailPage() {
               <div className={styles.appList}>
                 {applications.map((app) => {
                   const status   = statusConfig[app.status] || statusConfig.submitted;
-                  const catKey   = (app.scheme_category || "scholarship").toLowerCase();
+                  const catKey   = (app.scheme?.award_type || "scholarship").toLowerCase();
                   const Icon     = categoryIcons[catKey] || GraduationCap;
 
                   return (

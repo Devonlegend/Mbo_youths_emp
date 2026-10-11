@@ -5,13 +5,54 @@ import {
   ArrowLeft, CheckCircle2, XCircle, AlertCircle,
   ShieldAlert, FileText, User, MapPin,
   GraduationCap, Briefcase, Banknote,
-  ShieldCheck, AlertTriangle, Loader2,
+  ShieldCheck, AlertTriangle, Loader2, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import { getApplication, reviewApplication, getSchemeFields } from "@/services";
+import type { Application } from "@/types/application";
+
+type Decision = "approved" | "rejected";
+
+interface FieldItem {
+  label: string;
+  value: string | number;
+}
+
+interface FieldSection {
+  section: string;
+  items: FieldItem[];
+}
+
+interface SchemeFieldDef {
+  field_name: string;
+  field_label: string;
+  field_type: string;
+  is_required?: boolean;
+}
+
+interface DeclarationDetail {
+  organisation: string;
+  category: string;
+  year: string | number;
+}
+
+interface ApplicationDetail {
+  id: string | number;
+  status: string;
+  submission_date?: string | null;
+  scheme?: { id?: string; name?: string; award_type?: string };
+  student?: { full_name?: string; ward?: string; nimc_verified?: boolean };
+  eligibility_passed?: boolean;
+  details?: Record<string, any>;
+  documents?: Record<string, string>;
+  reviewer_notes?: string;
+  rejection_reason?: string;
+  self_declaration_received_support?: boolean;
+  self_declaration_details?: DeclarationDetail[];
+}
 
 // ── STATUS MAPPING ────────────────────────────────────────────────────────────
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   submitted:         { label: "Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
   eligibility_check: { label: "Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
   document_review:   { label: "Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
@@ -28,7 +69,7 @@ const statusConfig = {
 // this status since the Shortlist button below is disabled.
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
   scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
   empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
@@ -37,7 +78,7 @@ const categoryConfig = {
 // ── STEPPER ───────────────────────────────────────────────────────────────────
 const STEPS = ["Submitted", "Verified", "Review", "Decision"];
 
-const stepFromStatus = {
+const stepFromStatus: Record<string, number> = {
   submitted:         1,
   eligibility_check: 1,
   document_review:   2,
@@ -49,7 +90,7 @@ const stepFromStatus = {
   draft:             1,
 };
 
-function Stepper({ step, uiStatus }) {
+function Stepper({ step, uiStatus }: { step: number; uiStatus: string }) {
   const stepIcons = [CheckCircle2, ShieldCheck, FileText, CheckCircle2];
 
   return (
@@ -88,7 +129,7 @@ function Stepper({ step, uiStatus }) {
 }
 
 // ── BUILD FORM FIELDS from details ────────────────────────────────────────────
-function buildFields(schemeCategory, details, app) {
+function buildFields(schemeCategory: string, details: Record<string, any>, app?: Application | null): FieldSection[] {
   if (!details || Object.keys(details).length === 0) return [];
 
   const fd = details;
@@ -175,11 +216,11 @@ function buildFields(schemeCategory, details, app) {
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default function AdminApplicationDetailPage() {
   const router = useRouter();
-  const params = useParams();
+  const params = useParams<{ id: string }>();
 
-  const [app,         setApp]         = useState(null);
+  const [app,         setApp]         = useState<Application | null>(null);
   const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState(null);
+  const [error,       setError]       = useState<string | null>(null);
 
   // Decision panel state
   const [note,        setNote]        = useState("");
@@ -187,11 +228,11 @@ export default function AdminApplicationDetailPage() {
   const [submitting,  setSubmitting]  = useState(false);
   const [actionError, setActionError] = useState("");
   const [decided,     setDecided]     = useState(false);
-  const [confirmModal,setConfirmModal]= useState(null); // "approved" | "rejected" | null
+  const [confirmModal,setConfirmModal]= useState<Decision | null>(null); // "approved" | "rejected" | null
   // "shortlisted" removed from the possible values above — the Shortlist
   // button that used to set this is commented out below.
 
-  const [schemeFields, setSchemeFields] = useState([]);
+  const [schemeFields, setSchemeFields] = useState<SchemeFieldDef[]>([]);
 
   // ── FETCH APPLICATION ────────────────────────────────────────────────────
   useEffect(() => {
@@ -222,7 +263,7 @@ export default function AdminApplicationDetailPage() {
   }, [params.id]);
 
   // ── DECISION ACTION ──────────────────────────────────────────────────────
-  async function handleDecision(decision) {
+  async function handleDecision(decision: Decision) {
     if (note.trim().length < 10) {
       setNoteError("Decision note must be at least 10 characters.");
       return;
@@ -240,7 +281,8 @@ export default function AdminApplicationDetailPage() {
       setDecided(true);
       const res = await getApplication(params.id);
       setApp(res.data);
-    } catch (err) {
+    } catch (error) {
+      const err = error as { response?: { data?: { error?: string; message?: string } } };
       setActionError(
         err?.response?.data?.error ||
         err?.response?.data?.message ||
@@ -422,7 +464,7 @@ export default function AdminApplicationDetailPage() {
                         <div
                           key={ii}
                           className={`${styles.fieldItem} ${
-                            (item.value?.length || 0) > 60 ? styles.fieldItemFull : ""
+                            String(item.value ?? "").length > 60 ? styles.fieldItemFull : ""
                           }`}
                         >
                           <span className={styles.fieldLabel}>{item.label}</span>
@@ -647,7 +689,7 @@ export default function AdminApplicationDetailPage() {
                 Cancel
               </button>
               <button
-                onClick={() => { const d = confirmModal; setConfirmModal(null); handleDecision(d); }}
+                onClick={() => { if (!confirmModal) return; const d = confirmModal; setConfirmModal(null); handleDecision(d); }}
                 style={{
                   flex: 1, padding: "10px 0", borderRadius: 8, border: "none",
                   background: confirmModal === "approved" ? "#15803d" : "#ef4444",

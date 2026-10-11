@@ -4,13 +4,27 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, ClipboardList, Users, BookOpen,
   BadgeCheck, ShieldAlert, ScrollText, Settings,
-  LogOut, X, CalendarRange, Building2,
+  LogOut, X, CalendarRange, Building2, type LucideIcon,
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
 import { logout } from "@/services";
 
+interface AdminUser {
+  firstname?: string;
+  lastname?: string;
+  role?: string;
+  email?: string;
+}
+
+interface NavEntry {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  roles: string[];
+}
+
 // ── NAV STRUCTURE ─────────────────────────────────────────────────────────────
-const navMain = [
+const navMain: NavEntry[] = [
   { label: "Overview",      href: "/admin",              icon: LayoutDashboard, roles: ["admin", "superadmin", "verifier"] },
   { label: "Applications",  href: "/admin/applications", icon: ClipboardList,   roles: ["admin", "superadmin", "verifier"] },
   { label: "Students",      href: "/admin/students",     icon: Users,           roles: ["admin", "superadmin", "verifier"] },
@@ -19,14 +33,14 @@ const navMain = [
   { label: "Providers", href: "/admin/providers", icon: Building2, roles: ["admin", "superadmin"] },
 ];
 
-const navRecords = [
+const navRecords: NavEntry[] = [
   { label: "Beneficiaries",     href: "/admin/beneficiaries",     icon: BadgeCheck,  roles: ["admin", "superadmin", "verifier"] },
   { label: "Disqualifications", href: "/admin/disqualifications", icon: ShieldAlert, roles: ["admin", "superadmin", "verifier"] },
   { label: "Audit Log",         href: "/admin/audit-log",         icon: ScrollText,  roles: ["superadmin"] },
 ];
 
 // ── NAV ITEM ──────────────────────────────────────────────────────────────────
-function NavItem({ item, active, onClick }) {
+function NavItem({ item, active, onClick }: { item: NavEntry; active: boolean; onClick: () => void }) {
   const Icon = item.icon;
   return (
     <Link
@@ -44,7 +58,7 @@ function NavItem({ item, active, onClick }) {
 }
 
 // ── SIDEBAR ───────────────────────────────────────────────────────────────────
-export default function AdminSidebar({ isOpen, onClose, user }) {
+export default function AdminSidebar({ isOpen, onClose, user }: { isOpen: boolean; onClose: () => void; user: AdminUser | null }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -57,12 +71,12 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
     }
   }
 
-  function isActive(href) {
+  function isActive(href: string) {
     if (href === "/admin") return pathname === "/admin";
     return pathname.startsWith(href);
   }
 
-  function capitalize(str) {
+  function capitalize(str?: string) {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
@@ -115,7 +129,7 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
               {/* Comment out becoz of space to avoid scrolling */}
             {/* <span className={styles.sectionLabel}>Main</span> */}
 
-            {navMain.filter(item => item.roles.includes(user?.role)).map((item) => (
+            {navMain.filter(item => item.roles.includes(user?.role ?? "")).map((item) => (
               <NavItem key={item.href} item={item} active={isActive(item.href)} onClick={onClose} />
             ))}
 
@@ -124,7 +138,7 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
               {/* Comment out becoz of space to avoid scrolling */}
             {/* <span className={styles.sectionLabel}>Records</span> */}
 
-            {navRecords.filter(item => item.roles.includes(user?.role)).map((item) => (
+            {navRecords.filter(item => item.roles.includes(user?.role ?? "")).map((item) => (
               <NavItem key={item.href} item={item} active={isActive(item.href)} onClick={onClose} />
             ))}
 

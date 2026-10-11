@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { Sora, DM_Sans } from "next/font/google";
 import "./globals.css";
@@ -15,7 +17,7 @@ const dmSans = DM_Sans({
   variable: "--font-dm",
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Mbo Youth Empowerment",
   description: "Mbo Youth Empowerment Portal",
   other: {
@@ -23,7 +25,7 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   ReactDOM.preconnect("https://res.cloudinary.com");
   ReactDOM.preload(
     "https://res.cloudinary.com/dwn6p3qmd/image/upload/f_auto,q_auto,w_80,h_80,c_fill,g_face,r_max/v1784673040/mboyouths_ssedqs.png",

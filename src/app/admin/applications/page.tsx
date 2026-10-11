@@ -2,14 +2,26 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  BadgeCheck, Search, AlertCircle, Users,
-  GraduationCap, Briefcase, Banknote, ArrowRight,
+  ClipboardList, Search, AlertCircle, Users,
+  GraduationCap, Briefcase, Banknote, ArrowRight, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
-import { getSchemes, getApprovedList } from "@/services";
+import { getSchemesOverview } from "@/services";
+
+interface SchemeRow {
+  scheme: {
+    id: string | number;
+    name: string;
+    award_type?: string;
+    remaining_slots?: number | null;
+    total_slots?: number | null;
+  };
+  pending_review: number;
+  unpublished: number;
+}
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
   scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
   empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
@@ -28,35 +40,20 @@ function SkeletonCard() {
 }
 
 // ── PAGE ──────────────────────────────────────────────────────────────────────
-export default function BeneficiaryRegisterOverviewPage() {
+export default function AdminApplicationsOverviewPage() {
   const router = useRouter();
 
-  const [schemes, setSchemes] = useState([]);
+  const [overview, setOverview] = useState<SchemeRow[]>([]);
   const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(null);
+  const [error,    setError]   = useState<string | null>(null);
   const [search,   setSearch]   = useState("");
 
-  async function loadSchemes() {
+  async function loadOverview() {
     setLoading(true);
     setError(null);
     try {
-      const res = await getSchemes();
-      const list = Array.isArray(res.data) ? res.data : (res.data?.results || []);
-
-      // Pull each scheme's approved-beneficiary count in parallel. We only
-      // need `count` from the response, not the full applications array.
-      const withCounts = await Promise.all(
-        list.map(async (s) => {
-          try {
-            const countRes = await getApprovedList(s.id);
-            return { ...s, beneficiary_count: countRes.data?.count ?? 0 };
-          } catch {
-            return { ...s, beneficiary_count: 0 };
-          }
-        })
-      );
-
-      setSchemes(withCounts);
+      const res = await getSchemesOverview();
+      setOverview(Array.isArray(res.data) ? res.data : []);
     } catch {
       setError("Failed to load schemes. Please try again.");
     } finally {
@@ -64,23 +61,18 @@ export default function BeneficiaryRegisterOverviewPage() {
     }
   }
 
-  useEffect(() => { loadSchemes(); }, []);
+  useEffect(() => { loadOverview(); }, []);
 
   // ── FILTER ────────────────────────────────────────────────────────────────
-  const filtered = schemes.filter((s) =>
+  const filtered = overview.filter((row) =>
     search.trim() === "" ? true :
-    (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
-    (s.award_type || "").toLowerCase().includes(search.toLowerCase())
+    (row.scheme?.name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (row.scheme?.award_type || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  // ── STATS ─────────────────────────────────────────────────────────────────
-  const schemesWithBeneficiaries = schemes.filter((s) => (s.beneficiary_count || 0) > 0).length;
-  const totalBeneficiaries = schemes.reduce((sum, s) => sum + (s.beneficiary_count || 0), 0);
-  const totalSlots = schemes.reduce((sum, s) => sum + (s.total_slots || 0), 0);
-  const filledSlots = schemes.reduce(
-    (sum, s) => sum + ((s.total_slots || 0) - (s.remaining_slots ?? s.total_slots ?? 0)),
-    0
-  );
+  const totalSchemes  = overview.length;
+  const totalPending   = overview.reduce((sum, r) => sum + (r.pending_review || 0), 0);
+  const totalUnpublished = overview.reduce((sum, r) => sum + (r.unpublished || 0), 0);
 
   return (
     <div className={styles.page}>
@@ -89,11 +81,11 @@ export default function BeneficiaryRegisterOverviewPage() {
       <div className={styles.header}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--color-primary-light)", border: "1.5px solid var(--color-primary-border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <BadgeCheck size={20} color="var(--color-primary)" strokeWidth={1.8} />
+            <ClipboardList size={20} color="var(--color-primary)" strokeWidth={1.8} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0px" }}>
-            <h1 className={styles.title}>Beneficiary Register</h1>
-            <p className={styles.sub}>Select a scheme to view its confirmed beneficiaries.</p>
+            <h1 className={styles.title}>Applications</h1>
+            <p className={styles.sub}>Select a scheme to review its applications.</p>
           </div>
         </div>
 
@@ -113,9 +105,9 @@ export default function BeneficiaryRegisterOverviewPage() {
       {/* SUMMARY STRIP */}
       <div className={styles.summaryStrip}>
         {[
-          { label: "Schemes",            value: schemesWithBeneficiaries,               color: "var(--color-text)" },
-          { label: "Beneficiaries",      value: totalBeneficiaries,                     color: "#15803d" },
-          { label: "Slots Filled",       value: `${filledSlots} / ${totalSlots}`,       color: "#3b82f6" },
+          { label: "Schemes",           value: totalSchemes,     color: "var(--color-text)" },
+          { label: "Pending Review",    value: totalPending,     color: "#f59e0b" },
+          { label: "Awaiting Notify",   value: totalUnpublished, color: "#3b82f6" },
         ].map((s) => (
           <div key={s.label} className={styles.summaryItem}>
             <span className={styles.summaryValue} style={{ color: s.color }}>
@@ -131,7 +123,7 @@ export default function BeneficiaryRegisterOverviewPage() {
         <div className={styles.errorState}>
           <AlertCircle size={22} color="#f87171" strokeWidth={1.5} />
           <p style={{ color: "#ef4444" }}>{error}</p>
-          <button className={styles.retryBtn} onClick={loadSchemes}>Try again</button>
+          <button className={styles.retryBtn} onClick={loadOverview}>Try again</button>
         </div>
       )}
 
@@ -145,10 +137,10 @@ export default function BeneficiaryRegisterOverviewPage() {
       {/* EMPTY */}
       {!loading && !error && filtered.length === 0 && (
         <div className={styles.emptyState}>
-          <BadgeCheck size={28} color="#cbd5e1" strokeWidth={1.5} />
-          <p className={styles.emptyTitle}>No schemes found</p>
+          <ClipboardList size={28} color="#cbd5e1" strokeWidth={1.5} />
+          <p className={styles.emptyTitle}>No schemes with applications</p>
           <p className={styles.emptySub}>
-            {search ? "Try a different search." : "Create a scheme to start tracking beneficiaries."}
+            {search ? "Try a different search." : "No one has applied to any scheme yet."}
           </p>
         </div>
       )}
@@ -156,26 +148,30 @@ export default function BeneficiaryRegisterOverviewPage() {
       {/* SCHEME CARDS GRID */}
       {!loading && !error && filtered.length > 0 && (
         <div className={styles.grid}>
-          {filtered.map((s) => {
-            const catKey   = (s.award_type || "scholarship").toLowerCase();
-            const category = categoryConfig[catKey] || categoryConfig.scholarship;
-            const Icon     = category.icon;
+          {filtered.map((row) => {
+            const catKey    = (row.scheme?.award_type || "scholarship").toLowerCase();
+            const category  = categoryConfig[catKey] || categoryConfig.scholarship;
+            const Icon      = category.icon;
+            const hasPending = row.pending_review > 0;
 
             return (
-              <div key={s.id} className={styles.schemeCard}>
+              <div key={row.scheme.id} className={styles.schemeCard}>
+                {/* Card top */}
                 <div className={styles.schemeCardTop}>
                   <div className={styles.schemeIconWrap} style={{ background: category.bg }}>
                     <Icon size={18} color={category.color} strokeWidth={1.8} />
                   </div>
-                  {s.beneficiary_count > 0 && (
-                    <span className={styles.beneficiaryPill}>
-                      {s.beneficiary_count} confirmed
+                  {hasPending && (
+                    <span className={styles.pendingPill}>
+                      {row.pending_review} pending
                     </span>
                   )}
                 </div>
 
-                <h3 className={styles.schemeName}>{s.name}</h3>
+                {/* Scheme name */}
+                <h3 className={styles.schemeName}>{row.scheme.name}</h3>
 
+                {/* Category chip */}
                 <span
                   className={styles.categoryChip}
                   style={{ color: category.color, background: category.bg }}
@@ -183,19 +179,27 @@ export default function BeneficiaryRegisterOverviewPage() {
                   {category.label}
                 </span>
 
+                {/* Meta info */}
                 <div className={styles.schemeMeta}>
                   <div className={styles.metaItem}>
                     <Users size={12} strokeWidth={2} />
-                    <span>{s.remaining_slots ?? "—"} / {s.total_slots ?? "—"} slots left</span>
+                    <span>{row.scheme.remaining_slots ?? "—"} / {row.scheme.total_slots ?? "—"} slots left</span>
                   </div>
+                  {row.unpublished > 0 && (
+                    <div className={styles.metaItem}>
+                      <ClipboardList size={12} strokeWidth={2} />
+                      <span>{row.unpublished} awaiting notification</span>
+                    </div>
+                  )}
                 </div>
 
+                {/* View button */}
                 <div className={styles.schemeActions}>
                   <button
                     className={styles.viewBtn}
-                    onClick={() => router.push(`/admin/beneficiaries/${s.id}`)}
+                    onClick={() => router.push(`/admin/applications/scheme/${row.scheme.id}`)}
                   >
-                    View Beneficiaries <ArrowRight size={13} strokeWidth={2} />
+                    View Applications <ArrowRight size={13} strokeWidth={2} />
                   </button>
                 </div>
               </div>

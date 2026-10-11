@@ -4,22 +4,24 @@ import { useRouter } from "next/navigation";
 import {
   BookOpen, Plus, Search, AlertCircle, Users,
   GraduationCap, Briefcase, Wrench, Banknote,
-  Calendar, ArrowRight,
+  Calendar, ArrowRight, type LucideIcon,
 } from "lucide-react";
 
 import { useRoleGuard } from "@/hooks/useRoleGuard";
 
 import styles from "./page.module.css";
 import { getSchemes, getMe } from "@/services";
+import type { Scheme } from "@/types/scheme";
+import type { AuthUser } from "@/types/user";
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
-const categoryConfig = {
+const categoryConfig: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
   scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
   empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
   grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
 };
 
-function formatDate(dateStr) {
+function formatDate(dateStr?: string | null) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "numeric", month: "short", year: "numeric",
@@ -42,11 +44,11 @@ function SkeletonCard() {
 export default function AdminSchemesPage() {
   const router = useRouter();
   const { checking } = useRoleGuard(["admin", "superadmin"]);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
-  const [schemes,  setSchemes]  = useState([]);
+  const [schemes,  setSchemes]  = useState<Scheme[]>([]);
   const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(null);
+  const [error,    setError]    = useState<string | null>(null);
   const [search,   setSearch]   = useState("");
 
   // ── FETCH ─────────────────────────────────────────────────────────────────

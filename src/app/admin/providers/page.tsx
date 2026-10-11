@@ -7,8 +7,15 @@ import {
 import styles from "./page.module.css";
 import { getProviders, createProvider, deleteProvider } from "@/services";
 import { useRoleGuard } from "@/hooks/useRoleGuard";
+import type { SchemeProvider, ProviderType } from "@/types/scheme";
 
-const providerTypeConfig = {
+type ProviderRow = SchemeProvider & { created_at?: string };
+
+interface ApiError {
+  response?: { data?: { name?: string[]; error?: string } };
+}
+
+const providerTypeConfig: Record<string, { label: string; color: string; bg: string }> = {
   lga:       { label: "LGA Council",        color: "#4ade80", bg: "rgba(74,222,128,0.1)"  },
   state:     { label: "State Government",   color: "#60a5fa", bg: "rgba(96,165,250,0.1)"  },
   corporate: { label: "Corporate / CSR",     color: "#a78bfa", bg: "rgba(167,139,250,0.1)" },
@@ -17,7 +24,13 @@ const providerTypeConfig = {
 };
 
 // ── DELETE CONFIRM MODAL ──────────────────────────────────────────────────────
-function DeleteModal({ provider, onConfirm, onCancel, loading, error }) {
+function DeleteModal({ provider, onConfirm, onCancel, loading, error }: {
+  provider: ProviderRow;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+  error: string;
+}) {
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modal}>
@@ -53,22 +66,22 @@ function DeleteModal({ provider, onConfirm, onCancel, loading, error }) {
 export default function AdminProvidersPage() {
   const { checking } = useRoleGuard(["admin", "superadmin"]);
 
-  const [providers,    setProviders]    = useState([]);
+  const [providers,    setProviders]    = useState<ProviderRow[]>([]);
   const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState(null);
+  const [error,        setError]        = useState<string | null>(null);
   const [showCreate,   setShowCreate]   = useState(false);
   const [creating,     setCreating]     = useState(false);
   const [createError,  setCreateError]  = useState("");
   const [createSuccess, setCreateSuccess] = useState(false);
 
-  const [deleteFor,    setDeleteFor]    = useState(null);   
+  const [deleteFor,    setDeleteFor]    = useState<ProviderRow | null>(null);   
   
   // provider pending delete confirm
   const [deleting,     setDeleting]     = useState(false);
   const [deleteError,  setDeleteError]  = useState("");
 
-  const [form, setForm] = useState({ name: "", provider_type: "lga" });
-  const [formErrors, setFormErrors] = useState({});
+  const [form, setForm] = useState<{ name: string; provider_type: ProviderType }>({ name: "", provider_type: "lga" });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // ── FETCH ────────────────────────────────────────────────────────────────
   async function loadProviders() {
@@ -89,7 +102,7 @@ export default function AdminProvidersPage() {
 
   // ── CREATE ────────────────────────────────────────────────────────────────
   function validateForm() {
-    const e = {};
+    const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Name is required.";
     return e;
   }
@@ -110,7 +123,8 @@ export default function AdminProvidersPage() {
       setForm({ name: "", provider_type: "lga" });
       setFormErrors({});
       setTimeout(() => { setShowCreate(false); setCreateSuccess(false); }, 1500);
-    } catch (err) {
+    } catch (error) {
+      const err = error as ApiError;
       setCreateError(
         err?.response?.data?.name?.[0] ||
         err?.response?.data?.error ||
@@ -121,7 +135,7 @@ export default function AdminProvidersPage() {
     }
   }
 
-  function setField(key, value) {
+  function setField(key: string, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
     setFormErrors((e) => ({ ...e, [key]: "" }));
     setCreateError("");
