@@ -232,3 +232,6 @@ testone/
 .cursor/
 .impeccable/
 certificates/
+
+next-env.d.ts
+*.tsbuildinfo

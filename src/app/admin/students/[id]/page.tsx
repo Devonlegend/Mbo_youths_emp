@@ -1,0 +1,472 @@
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import {
+  ArrowLeft, User, Mail, Phone, MapPin,
+  Calendar, Shield, ShieldCheck, ShieldAlert,
+  ClipboardList, CheckCircle2, Clock, XCircle,
+  AlertCircle, ArrowRight, Loader2, GraduationCap,
+  Briefcase, Wrench, Banknote, Fingerprint, 
+  FileText, Image as ImageIcon, Check, X, AlertTriangle, type LucideIcon,
+} from "lucide-react";
+import styles from "./page.module.css";
+import { getStudentById, getApplications, verifyStudent } from "@/services";
+import type { Student, VerifyDecision } from "@/types/student";
+import type { ApplicationListItem } from "@/types/application";
+
+// ── STATUS CONFIG ─────────────────────────────────────────────────────────────
+const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+  submitted:         { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  eligibility_check: { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  document_review:   { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  shortlisted:       { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  draft:             { label: "Pending",  color: "#f59e0b", bg: "rgba(245,158,11,0.1)"  },
+  double_dip_flag:   { label: "Flagged",  color: "#ef4444", bg: "rgba(239,68,68,0.1)"   },
+  approved:          { label: "Approved", color: "#4ade80", bg: "rgba(74,222,128,0.1)"  },
+  rejected:          { label: "Rejected", color: "#64748b", bg: "rgba(100,116,139,0.1)" },
+  withdrawn:         { label: "Rejected", color: "#64748b", bg: "rgba(100,116,139,0.1)" },
+};
+
+// ── CATEGORY ICON ─────────────────────────────────────────────────────────────
+const categoryIcons: Record<string, LucideIcon> = {
+  scholarship: GraduationCap,
+  // vocational:  Wrench,
+  empowerment: Briefcase,
+  grant:       Banknote,
+};
+
+function getFileUrl(path?: string | null) {
+  if (!path) return undefined;
+  if (path.startsWith("http")) return path;
+  return `${process.env.NEXT_PUBLIC_API_URL}${path}`;
+}
+
+function formatDate(dateStr?: string | null) {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    day: "numeric", month: "short", year: "numeric",
+  });
+}
+
+// ── INFO ROW ──────────────────────────────────────────────────────────────────
+function InfoRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value?: string | null }) {
+  return (
+    <div className={styles.infoRow}>
+      <div className={styles.infoIcon}>
+        <Icon size={14} strokeWidth={1.8} />
+      </div>
+      <div className={styles.infoContent}>
+        <span className={styles.infoLabel}>{label}</span>
+        <span className={styles.infoValue}>{value || "—"}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── PAGE ──────────────────────────────────────────────────────────────────────
+export default function StudentDetailPage() {
+  const router = useRouter();
+  const params = useParams<{ id: string }>();
+
+  const [student,       setStudent]       = useState<Student | null>(null);
+  const [applications,  setApplications]  = useState<ApplicationListItem[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState<string | null>(null);
+  const [verifying,     setVerifying]     = useState(false);
+  const [verifyError,   setVerifyError]   = useState("");
+  const [note,          setNote]          = useState("");
+  const [noteError,     setNoteError]     = useState("");
+  const [confirmModal,  setConfirmModal]  = useState<VerifyDecision | null>(null); 
+  // "approved" | "rejected" | null
+
+  // ── FETCH ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        // Fetch student and all applications in parallel
+        const [studentRes, appsRes] = await Promise.allSettled([
+          getStudentById(params.id),
+          getApplications(),
+        ]);
+
+        if (cancelled) return;
+
+        if (studentRes.status === "fulfilled") {
+          setStudent(studentRes.value.data);
+        } else {
+          setError("Failed to load student profile.");
+          return;
+        }
+
+        // Filter applications belonging to this student
+        if (appsRes.status === "fulfilled") {
+          const allApps = Array.isArray(appsRes.value.data?.results) ? appsRes.value.data.results : [];
+          const studentApps = allApps.filter((a) =>
+            String(a.student?.id) === String(params.id)
+          );
+          setApplications(studentApps);
+        }
+
+      } catch {
+        if (!cancelled) setError("Failed to load student.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [params.id]);
+
+  // ── VERIFY / REJECT ──────────────────────────────────────────────────────
+  function openConfirm(decision: VerifyDecision) {
+    if (decision === "rejected" && note.trim().length < 5) {
+      setNoteError("Please provide a reason (at least 5 characters).");
+      return;
+    }
+    setNoteError("");
+    setConfirmModal(decision);
+  }
+
+  async function handleDecision(decision: VerifyDecision) {
+    setVerifying(true);
+    setVerifyError("");
+    try {
+      const res = await verifyStudent(params.id, { decision, notes: note.trim() });
+      setStudent((s) => s && ({
+        ...s,
+        is_verified: res.data.is_verified,
+        verification_rejection_reason: res.data.verification_rejection_reason,
+      }));
+      setNote("");
+    } catch (err) {
+      setVerifyError((err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Action failed. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  // ── LOADING ───────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className={styles.centerState}>
+        <div className={styles.spinner} />
+      </div>
+    );
+  }
+
+  // ── ERROR ─────────────────────────────────────────────────────────────────
+  if (error || !student) {
+    return (
+      <div className={styles.centerState}>
+        <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
+        <p style={{ color: "#ef4444", fontWeight: 600 }}>{error || "Student not found."}</p>
+        <button className={styles.backBtn} onClick={() => router.push("/admin/students")}>
+          <ArrowLeft size={16} strokeWidth={2} />
+        </button>
+      </div>
+    );
+  }
+
+  const initials =
+    (student.firstname?.[0] || "").toUpperCase() +
+    (student.lastname?.[0]  || "").toUpperCase();
+
+  const fullName = `${student.firstname} ${student.lastname}`;
+
+  return (
+    <div className={styles.page}>
+
+      {/* BACK */}
+      <button className={styles.backBtn} onClick={() => router.push("/admin/students")}>
+        <ArrowLeft size={16} strokeWidth={2} />
+        Back
+      </button>
+
+      {/* PAGE HEADER */}
+      <div className={styles.pageHeader}>
+        <div className={styles.headerLeft}>
+          <div className={styles.bigAvatar}>{initials}</div>
+          <div>
+            <h1 className={styles.title}>{fullName}</h1>
+            <p className={styles.sub}>{student.email || "—"}</p>
+          </div>
+        </div>
+
+        {/* Verification status badge only — decision panel moved below */}
+        <div className={styles.verifyWrap}>
+          <span className={`${styles.verifyBtn} ${student.is_verified ? styles.verifyBtnVerified : styles.verifyBtnUnverified}`}>
+            {student.is_verified ? (
+              <ShieldCheck size={14} strokeWidth={2} />
+            ) : (
+              <ShieldAlert size={14} strokeWidth={2} />
+            )}
+            {student.is_verified ? "Verified" : "Not Verified"}
+          </span>
+        </div>
+        </div>
+
+      {/* BODY */}
+      <div className={styles.body}>
+
+        {/* LEFT — profile details */}
+        <div className={styles.leftCol}>
+
+          {/* Personal Info Card */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Personal Information</h2>
+            <div className={styles.infoGrid}>
+              <InfoRow icon={User}     label="Full Name"    value={fullName} />
+              <InfoRow icon={Mail}     label="Email"        value={student.email} />
+              <InfoRow icon={Phone}    label="Phone"        value={student.phone_number} />
+              <InfoRow icon={MapPin}   label="LGA"          value={student.lga} />
+              <InfoRow icon={MapPin}   label="Ward"         value={student.ward} />
+              <InfoRow icon={Calendar} label="Gender"       value={
+                student.gender
+                  ? student.gender.charAt(0).toUpperCase() + student.gender.slice(1)
+                  : "—"
+              } />
+              <InfoRow icon={Fingerprint} label="NIN" value="****-****-****" />
+            </div>
+          </div>
+
+          {/* Documents Card */}
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Documents</h2>
+              <div className={styles.infoGrid}>
+
+                <div className={styles.infoRow}>
+                  <div className={styles.infoIcon}>
+                    <FileText size={14} strokeWidth={1.8} />
+                  </div>
+                  <div className={styles.infoContent}>
+                    <span className={styles.infoLabel}>Certificate</span>
+                    {student.certificate ? (
+                      <a href={getFileUrl(student.certificate)} target="_blank" rel="noopener noreferrer" className={styles.docLink}>
+                        View Certificate
+                      </a>
+                    ) : (
+                      <span className={styles.infoValue}>—</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className={styles.infoRow}>
+                  <div className={styles.infoIcon}>
+                    <ImageIcon size={14} strokeWidth={1.8} />
+                  </div>
+                  <div className={styles.infoContent}>
+                    <span className={styles.infoLabel}>Passport Photo</span>
+                    {student.passport ? (
+                      <a href={getFileUrl(student.passport)} target="_blank" rel="noopener noreferrer" className={styles.docLink}>
+                        View Passport
+                      </a>
+                    ) : (
+                      <span className={styles.infoValue}>—</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className={styles.infoRow}>
+                  <div className={styles.infoIcon}>
+                    <FileText size={14} strokeWidth={1.8} />
+                  </div>
+                  <div className={styles.infoContent}>
+                    <span className={styles.infoLabel}>NIN Slip</span>
+                    {student.nin_slip ? (
+                      <a href={getFileUrl(student.nin_slip)} target="_blank" rel="noopener noreferrer" className={styles.docLink}>
+                        View NIN Slip
+                      </a>
+                    ) : (
+                      <span className={styles.infoValue}>—</span>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          {/* Status Card */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Account Status</h2>
+            <div className={styles.infoGrid}>
+              <InfoRow icon={Shield} label="Active Award" value={
+                student.has_active_award ? student.active_award : "None"
+              } />
+              <InfoRow icon={ShieldCheck} label="Verification Status" value={
+                student.is_verified ? "Verified" : "Not Verified"
+              } />
+              {/* {!student.is_verified && student.verification_rejection_reason && (
+                <InfoRow icon={AlertCircle} label="Last Rejection Reason" value={
+                  student.verification_rejection_reason
+                } />
+              )} */}
+            </div>
+          </div>
+
+        </div>
+
+        {/* RIGHT — decision panel + application history */}
+        <div className={styles.rightCol}>
+
+          {!student.is_verified && (
+            <div className={`${styles.card} ${styles.decisionCard}`}>
+              <h2 className={styles.cardTitle}>Verification Decision</h2>
+              <p className={styles.cardSub}>
+                Review the student's documents and information before deciding.
+              </p>
+
+              {verifyError && (
+                <div className={styles.errorBanner}>
+                  <AlertCircle size={14} color="#dc2626" strokeWidth={2} />
+                  {verifyError}
+                </div>
+              )}
+
+              <div className={styles.noteWrap}>
+                <label className={styles.noteLabel}>
+                  Note
+                  <span className={styles.noteRequired}>Required if rejecting</span>
+                </label>
+                <textarea
+                  className={`${styles.noteInput} ${noteError ? styles.noteInputError : ""}`}
+                  rows={4}
+                  placeholder="Add a note required when rejecting, shown to the student..."
+                  value={note}
+                  onChange={(e) => { setNote(e.target.value); setNoteError(""); }}
+                />
+                {noteError && <span className={styles.noteErrorText}>{noteError}</span>}
+              </div>
+
+              <div className={styles.decisionActions}>
+                <button
+                  className={styles.approveBtn}
+                  onClick={() => openConfirm("approved")}
+                  disabled={verifying}
+                >
+                  {verifying
+                    ? <Loader2 size={15} strokeWidth={2} className={styles.spin} />
+                    : <Check size={15} strokeWidth={2} />
+                  }
+                  Approve
+                </button>
+                <button
+                  className={styles.rejectBtnFull}
+                  onClick={() => openConfirm("rejected")}
+                  disabled={verifying}
+                >
+                  {verifying
+                    ? <Loader2 size={15} strokeWidth={2} className={styles.spin} />
+                    : <X size={15} strokeWidth={2} />
+                  }
+                  Reject
+                </button>
+              </div>
+
+              <div className={styles.decisionWarning}>
+                <AlertTriangle size={12} color="#f59e0b" strokeWidth={2} />
+                <span>
+                  Approving unlocks programme applications for this student.
+                  Rejecting notifies them with your note and keeps their account unverified.
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.card}>
+            <div className={styles.cardHead}>
+              <div>
+                <h2 className={styles.cardTitle}>Application History</h2>
+                <p className={styles.cardSub}>
+                  {applications.length} application{applications.length !== 1 ? "s" : ""} this cycle
+                </p>
+              </div>
+              <ClipboardList size={16} color="#94a3b8" strokeWidth={1.8} />
+            </div>
+
+            {applications.length === 0 ? (
+              <div className={styles.emptyApps}>
+                <ClipboardList size={24} color="#cbd5e1" strokeWidth={1.5} />
+                <p>No applications submitted yet.</p>
+              </div>
+            ) : (
+              <div className={styles.appList}>
+                {applications.map((app) => {
+                  const status   = statusConfig[app.status] || statusConfig.submitted;
+                  const catKey   = (app.scheme?.award_type || "scholarship").toLowerCase();
+                  const Icon     = categoryIcons[catKey] || GraduationCap;
+
+                  return (
+                    <div key={app.id} className={styles.appItem}>
+                      <div className={styles.appItemLeft}>
+                        <div className={styles.appIcon}>
+                          <Icon size={14} strokeWidth={1.8} color="#64748b" />
+                        </div>
+                        <div className={styles.appInfo}>
+                          <span className={styles.appName}>
+                            {app.scheme?.name || "—"}
+                          </span>
+                          <span className={styles.appDate}>
+                            {formatDate(app.submission_date)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className={styles.appItemRight}>
+                        <span
+                          className={styles.statusBadge}
+                          style={{ color: status.color, background: status.bg }}
+                        >
+                          {status.label}
+                        </span>
+                        <button
+                          className={styles.appViewBtn}
+                          onClick={() => router.push(`/admin/applications/${app.id}`)}
+                        >
+                          <ArrowRight size={12} strokeWidth={2} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      {/* CONFIRM MODAL */}
+      {confirmModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <h3 className={styles.modalTitle}>
+              {confirmModal === "approved" ? "Approve this student?" : "Reject this student?"}
+            </h3>
+            <p className={styles.modalDesc}>
+              {confirmModal === "approved"
+                ? "They will be notified by email and can immediately apply for programmes."
+                : "They will be notified by email with your note and remain unverified."}
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                className={styles.modalCancel}
+                onClick={() => setConfirmModal(null)}
+                disabled={verifying}
+              >
+                Cancel
+              </button>
+              <button
+                className={confirmModal === "approved" ? styles.modalConfirmApprove : styles.modalConfirmReject}
+                onClick={() => { const d = confirmModal; setConfirmModal(null); handleDecision(d); }}
+                disabled={verifying}
+              >
+                {confirmModal === "approved" ? "Yes, Approve" : "Yes, Reject"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

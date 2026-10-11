@@ -1,0 +1,608 @@
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import {
+  ArrowLeft, BookOpen, GraduationCap, Briefcase,
+  Wrench, Banknote, AlertCircle, CheckCircle2,
+  Loader2, XCircle, Edit2, Save, X,
+  Users, Calendar, DollarSign, Shield, CalendarRange, Building2, type LucideIcon,
+} from "lucide-react";
+import styles from "./page.module.css";
+
+import { useRoleGuard } from "@/hooks/useRoleGuard";
+
+import { getScheme, publishScheme, closeScheme, updateScheme, reopenScheme } from "@/services";
+import type { Scheme, StackingPolicy } from "@/types/scheme";
+
+type EditForm = Omit<Scheme, "total_slots" | "stacking_policy"> & {
+  total_slots: number | string;
+  stacking_policy: string;
+  min_cgpa: number | string;
+  allowed_levels: string;
+  min_age: number | string;
+  max_age: number | string;
+  allowed_trades: string;
+  ward_restriction: string;
+  max_prior_awards: number | string;
+};
+
+interface ApiError {
+  response?: { data?: { error?: string; message?: string } };
+}
+
+// ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
+const categoryConfig: Record<string, { label: string; color: string; bg: string; icon: LucideIcon }> = {
+  scholarship: { label: "Scholarship", color: "#4ade80", bg: "rgba(74,222,128,0.1)",  icon: GraduationCap },
+  empowerment: { label: "Empowerment", color: "#fbbf24", bg: "rgba(251,191,36,0.1)",  icon: Briefcase     },
+  grant:       { label: "Grant",       color: "#a78bfa", bg: "rgba(167,139,250,0.1)", icon: Banknote      },
+};
+
+function formatDate(dateStr?: string | null) {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    day: "numeric", month: "long", year: "numeric",
+  });
+}
+
+function formatCurrency(amount?: string | number | null) {
+  if (!amount) return "—";
+  return `₦${Number(amount).toLocaleString()}`;
+}
+
+function eligibilityFieldsFromScheme(s: Scheme | null) {
+  const c = s?.eligibility_criteria || {};
+  return {
+    min_cgpa:          c.min_cgpa ?? "",
+    allowed_levels:    Array.isArray(c.allowed_levels)    ? c.allowed_levels.join(", ")    : "",
+    min_age:           c.min_age ?? "",
+    max_age:           c.max_age ?? "",
+    allowed_trades:    Array.isArray(c.allowed_trades)    ? c.allowed_trades.join(", ")    : "",
+    ward_restriction:  Array.isArray(c.ward_restriction)  ? c.ward_restriction.join(", ")  : "",
+    max_prior_awards:  c.max_prior_awards ?? "",
+  };
+}
+
+// ── INFO ROW ──────────────────────────────────────────────────────────────────
+function InfoRow({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value?: string | number | null; color?: string }) {
+  return (
+    <div className={styles.infoRow}>
+      <div className={styles.infoIcon}>
+        <Icon size={14} strokeWidth={1.8} />
+      </div>
+      <div className={styles.infoContent}>
+        <span className={styles.infoLabel}>{label}</span>
+        <span className={styles.infoValue} style={color ? { color } : {}}>
+          {value || "—"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── PAGE ──────────────────────────────────────────────────────────────────────
+export default function SchemeDetailPage() {
+  const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const { checking } = useRoleGuard(["admin", "superadmin"]);
+
+  const [scheme,       setScheme]       = useState<Scheme | null>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState<string | null>(null);
+  const [editing,      setEditing]      = useState(false);
+  const [form,         setForm]         = useState<EditForm>({} as EditForm);
+  const [saving,       setSaving]       = useState(false);
+  const [saveError,    setSaveError]    = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError,   setActionError]   = useState("");
+  const [actionSuccess, setActionSuccess] = useState("");
+
+  // ── FETCH ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await getScheme(params.id);
+        if (cancelled) return;
+        setScheme(res.data);
+        setForm({ ...res.data, ...eligibilityFieldsFromScheme(res.data) });
+      } catch {
+        if (!cancelled) setError("Failed to load scheme.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [params.id]);
+
+  // ── EDIT ──────────────────────────────────────────────────────────────────
+  function startEdit() {
+    if (!scheme) return;
+    setForm({ ...scheme, ...eligibilityFieldsFromScheme(scheme) });
+    setEditing(true);
+    setSaveError("");
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+    setSaveError("");
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError("");
+    try {
+      const res = await updateScheme(params.id, {
+        name:                   form.name,
+        description:            form.description,
+        academic_year:          form.academic_year,
+        award_amount:           parseFloat(form.award_amount),
+        total_slots:            parseInt(String(form.total_slots)),
+        application_open_date:  form.application_open_date,
+        application_close_date: form.application_close_date,
+        stacking_policy:        form.stacking_policy as StackingPolicy,
+
+        // Eligibility criteria — flat keys, backend assembles them same as create
+        min_cgpa:               form.min_cgpa,
+        allowed_levels:         form.allowed_levels,
+        min_age:                form.min_age,
+        max_age:                form.max_age,
+        allowed_trades:         form.allowed_trades,
+        ward_restriction:       form.ward_restriction,
+        max_prior_awards:       form.max_prior_awards,
+      });
+      setScheme(res.data);
+      setForm({ ...res.data, ...eligibilityFieldsFromScheme(res.data) });
+      setEditing(false);
+    } catch (error) {
+      const err = error as ApiError;
+      setSaveError(
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        "Failed to save changes."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ── PUBLISH ───────────────────────────────────────────────────────────────
+  async function handlePublish() {
+    setActionLoading(true);
+    setActionError("");
+    setActionSuccess("");
+    try {
+      await publishScheme(params.id);
+      setScheme((s) => (s ? { ...s, is_published: true } : s));
+      setActionSuccess("Scheme published successfully.");
+    } catch (err) {
+      setActionError((err as ApiError)?.response?.data?.error || "Failed to publish scheme.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // ── REOPEN ────────────────────────────────────────────────────────────────
+  async function handleReopen() {
+    setActionLoading(true);
+    setActionError("");
+    setActionSuccess("");
+    try {
+      await reopenScheme(params.id);
+      setScheme((s) => (s ? { ...s, is_active: true } : s));
+      setActionSuccess("Scheme reopened successfully.");
+    } catch (err) {
+      setActionError((err as ApiError)?.response?.data?.error || "Failed to close scheme.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // ── CLOSE ─────────────────────────────────────────────────────────────────
+  async function handleClose() {
+    setActionLoading(true);
+    setActionError("");
+    setActionSuccess("");
+    try {
+      await closeScheme(params.id);
+      setScheme((s) => (s ? { ...s, is_active: false } : s));
+      setActionSuccess("Scheme closed successfully.");
+    } catch (err) {
+      setActionError((err as ApiError)?.response?.data?.error || "Failed to close scheme.");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // ── LOADING ───────────────────────────────────────────────────────────────
+  if (checking) {
+    return (
+      <div className={styles.centerState}>
+        <div className={styles.spinner} />
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className={styles.centerState}>
+        <div className={styles.spinner} />
+      </div>
+    );
+  }
+
+  // ── ERROR ─────────────────────────────────────────────────────────────────
+  if (error || !scheme) {
+    return (
+      <div className={styles.centerState}>
+        <AlertCircle size={28} color="#f87171" strokeWidth={1.5} />
+        <p style={{ color: "#ef4444", fontWeight: 600 }}>{error || "Scheme not found."}</p>
+        <button className={styles.backBtn} onClick={() => router.push("/admin/schemes")}>
+          <ArrowLeft size={16} strokeWidth={2} />
+        </button>
+      </div>
+    );
+  }
+
+  const catKey   = (scheme.award_type || "scholarship").toLowerCase();
+  const category = categoryConfig[catKey] || categoryConfig.scholarship;
+  const Icon     = category.icon;
+  const isOpen   = scheme.is_active && scheme.is_published;
+  const isDraft  = !scheme.is_published;
+  const isClosed = !scheme.is_active;
+
+  return (
+    <div className={styles.page}>
+
+      {/* BACK */}
+      <button className={styles.backBtn} onClick={() => router.push("/admin/schemes")}>
+        <ArrowLeft size={16} strokeWidth={2} />
+        Back
+      </button>
+
+      {/* PAGE HEADER */}
+      <div className={styles.pageHeader}>
+        <div className={styles.headerLeft}>
+          <div className={styles.schemeIcon} style={{ background: category.bg, border: `1.5px solid ${category.color}30` }}>
+            <Icon size={22} color={category.color} strokeWidth={1.8} />
+          </div>
+          <div>
+            <h1 className={styles.title}>{scheme.name}</h1>
+            <p className={styles.sub}>{scheme.academic_year} · {category.label}</p>
+          </div>
+        </div>
+        <div className={styles.headerRight}>
+          <span className={`${styles.statusPill} ${isOpen ? styles.pillOpen : isDraft ? styles.pillDraft : styles.pillClosed}`}>
+            {isOpen ? "Open" : isDraft ? "Draft" : "Closed"}
+          </span>
+          {!editing && (
+          <button className={styles.editBtn} onClick={startEdit}>
+              <Edit2 size={13} strokeWidth={2} /> Edit
+            </button>
+          )}
+        </div>
+      </div>
+
+
+      {/* ACTION BANNERS */}
+      {actionSuccess && (
+        <div className={styles.successBanner}>
+          <CheckCircle2 size={14} color="#15803d" strokeWidth={2} />
+          {actionSuccess}
+        </div>
+      )}
+      {actionError && (
+        <div className={styles.errorBanner}>
+          <AlertCircle size={14} color="#dc2626" strokeWidth={2} />
+          {actionError}
+        </div>
+      )}
+
+      {/* SAVE ERROR */}
+      {saveError && (
+        <div className={styles.errorBanner}>
+          <AlertCircle size={14} color="#dc2626" strokeWidth={2} />
+          {saveError}
+        </div>
+      )}
+
+      {/* BODY */}
+      <div className={styles.body}>
+
+        {/* LEFT — scheme details */}
+        <div className={styles.leftCol}>
+
+          {/* Details card */}
+          <div className={styles.card}>
+            <div className={styles.cardHead}>
+              <h2 className={styles.cardTitle}>Scheme Details</h2>
+              {editing && (
+                <div className={styles.editActions}>
+                  <button className={styles.cancelEditBtn} onClick={cancelEdit} disabled={saving}>
+                    <X size={13} strokeWidth={2} /> Cancel
+                  </button>
+                  <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+                    {saving
+                      ? <><Loader2 size={13} strokeWidth={2} className={styles.spin} /> Saving...</>
+                      : <><Save size={13} strokeWidth={2} /> Save Changes</>
+                    }
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {editing ? (
+              <div className={styles.editForm}>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Cycle</label>
+                  <input
+                    className={styles.input}
+                    value={scheme.cycle?.name || "—"}
+                    disabled
+                    style={{ background: "#f1f5f9", color: "#64748b", cursor: "not-allowed" }}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Provider</label>
+                  <input
+                    className={styles.input}
+                    value={scheme.provider?.name || "—"}
+                    disabled
+                    style={{ background: "#f1f5f9", color: "#64748b", cursor: "not-allowed" }}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Scheme Name</label>
+                  <input className={styles.input} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Description</label>
+                  <textarea className={styles.textarea} rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+                </div>
+
+                <div className={styles.twoCol}>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Academic Year</label>
+                    <input className={styles.input} value={form.academic_year} onChange={(e) => setForm((f) => ({ ...f, academic_year: e.target.value }))} />
+                  </div>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Award Amount (₦)</label>
+                    <input type="number" className={styles.input} value={form.award_amount} onChange={(e) => setForm((f) => ({ ...f, award_amount: e.target.value }))} />
+                  </div>
+                </div>
+                <div className={styles.twoCol}>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Total Slots</label>
+                    <input type="number" className={styles.input} value={form.total_slots} onChange={(e) => setForm((f) => ({ ...f, total_slots: e.target.value }))} />
+                  </div>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Stacking Policy</label>
+                    <select className={styles.input} value={form.stacking_policy} onChange={(e) => setForm((f) => ({ ...f, stacking_policy: e.target.value }))}>
+                      <option value="exclusive">Exclusive</option>
+                      <option value="major_only">Major Only</option>
+                      <option value="open">Open</option>
+                    </select>
+                  </div>
+                </div>
+                <div className={styles.twoCol}>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Open Date</label>
+                    <input type="date" className={styles.input} value={form.application_open_date?.slice(0,10) || ""} onChange={(e) => setForm((f) => ({ ...f, application_open_date: e.target.value }))} />
+                  </div>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Close Date</label>
+                    <input type="date" className={styles.input} value={form.application_close_date?.slice(0,10) || ""} onChange={(e) => setForm((f) => ({ ...f, application_close_date: e.target.value }))} />
+                  </div>
+                </div>
+
+                {/* ── ELIGIBILITY CRITERIA ── */}
+                <div className={styles.field} style={{ marginTop: 4 }}>
+                  <label className={styles.fieldLabel}>Eligibility Criteria</label>
+                  <p className={styles.cardSub} style={{ margin: 0 }}>
+                    Optional. Leave blank for no restriction on that criterion.
+                  </p>
+                </div>
+
+                {catKey === "scholarship" && (
+                  <>
+                    <div className={styles.twoCol}>
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Minimum CGPA</label>
+                        <input
+                          type="number" step="0.01" className={styles.input}
+                          placeholder="e.g. 2.20"
+                          value={form.min_cgpa}
+                          onChange={(e) => setForm((f) => ({ ...f, min_cgpa: e.target.value }))}
+                        />
+                      </div>
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Max Prior Awards</label>
+                        <input
+                          type="number" className={styles.input}
+                          placeholder="e.g. 1"
+                          value={form.max_prior_awards}
+                          onChange={(e) => setForm((f) => ({ ...f, max_prior_awards: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Allowed Levels</label>
+                      <input
+                        className={styles.input}
+                        placeholder="e.g. 200, 300, 400"
+                        value={form.allowed_levels}
+                        onChange={(e) => setForm((f) => ({ ...f, allowed_levels: e.target.value }))}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Ward Restriction</label>
+                      <input
+                        className={styles.input}
+                        placeholder="e.g. effiat, ewang"
+                        value={form.ward_restriction}
+                        onChange={(e) => setForm((f) => ({ ...f, ward_restriction: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {(catKey === "empowerment" || catKey === "grant") && (
+                  <>
+                    <div className={styles.twoCol}>
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Minimum Age</label>
+                        <input
+                          type="number" className={styles.input}
+                          placeholder="e.g. 16"
+                          value={form.min_age}
+                          onChange={(e) => setForm((f) => ({ ...f, min_age: e.target.value }))}
+                        />
+                      </div>
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Maximum Age</label>
+                        <input
+                          type="number" className={styles.input}
+                          placeholder="e.g. 35"
+                          value={form.max_age}
+                          onChange={(e) => setForm((f) => ({ ...f, max_age: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
+                    {catKey === "empowerment" && (
+                      <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Allowed Trades</label>
+                        <input
+                          className={styles.input}
+                          placeholder="e.g. welding, tailoring, ICT"
+                          value={form.allowed_trades}
+                          onChange={(e) => setForm((f) => ({ ...f, allowed_trades: e.target.value }))}
+                        />
+                      </div>
+                    )}
+
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Ward Restriction</label>
+                      <input
+                        className={styles.input}
+                        placeholder="e.g. effiat, ewang"
+                        value={form.ward_restriction}
+                        onChange={(e) => setForm((f) => ({ ...f, ward_restriction: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Max Prior Awards</label>
+                      <input
+                        type="number" className={styles.input}
+                        placeholder="e.g. 1"
+                        value={form.max_prior_awards}
+                        onChange={(e) => setForm((f) => ({ ...f, max_prior_awards: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className={styles.infoGrid}>
+                <InfoRow icon={CalendarRange} label="Cycle" value={scheme.cycle?.name || "—"} />
+                <InfoRow icon={Building2}     label="Provider" value={scheme.provider?.name || "—"} />
+                <InfoRow icon={BookOpen}     label="Description"      value={scheme.description} />
+                <InfoRow icon={Calendar}     label="Academic Year"    value={scheme.academic_year} />
+                <InfoRow icon={DollarSign}   label="Award Amount"     value={formatCurrency(scheme.award_amount)} />
+                <InfoRow icon={Users}        label="Total Slots"      value={`${scheme.remaining_slots ?? scheme.total_slots ?? "—"} remaining of ${scheme.total_slots ?? "—"}`} />
+                <InfoRow icon={Calendar}     label="Opens"            value={formatDate(scheme.application_open_date)} />
+                <InfoRow icon={Calendar}     label="Closes"           value={formatDate(scheme.application_close_date)} />
+                <InfoRow icon={Shield}       label="Stacking Policy"  value={
+                  scheme.stacking_policy === "exclusive" ? "Exclusive" :
+                  scheme.stacking_policy === "major_only" ? "Major Only" :
+                  "Open"
+                } />
+
+                {/* ── ELIGIBILITY CRITERIA (read-only) ── */}
+                {scheme.eligibility_criteria?.min_cgpa != null && (
+                  <InfoRow icon={Shield} label="Minimum CGPA" value={scheme.eligibility_criteria.min_cgpa} />
+                )}
+                {!!scheme.eligibility_criteria?.allowed_levels?.length && (
+                  <InfoRow icon={Shield} label="Allowed Levels" value={scheme.eligibility_criteria.allowed_levels.join(", ")} />
+                )}
+                {(scheme.eligibility_criteria?.min_age != null || scheme.eligibility_criteria?.max_age != null) && (
+                  <InfoRow
+                    icon={Shield}
+                    label="Age Range"
+                    value={`${scheme.eligibility_criteria?.min_age ?? "—"} – ${scheme.eligibility_criteria?.max_age ?? "—"}`}
+                  />
+                )}
+                {!!scheme.eligibility_criteria?.allowed_trades?.length && (
+                  <InfoRow icon={Shield} label="Allowed Trades" value={scheme.eligibility_criteria.allowed_trades.join(", ")} />
+                )}
+                {!!scheme.eligibility_criteria?.ward_restriction?.length && (
+                  <InfoRow icon={Shield} label="Ward Restriction" value={scheme.eligibility_criteria.ward_restriction.join(", ")} />
+                )}
+                {scheme.eligibility_criteria?.max_prior_awards != null && (
+                  <InfoRow icon={Shield} label="Max Prior Awards" value={scheme.eligibility_criteria.max_prior_awards} />
+                )}
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* RIGHT — actions */}
+        <div className={styles.rightCol}>
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Scheme Actions</h2>
+            <p className={styles.cardSub}>Manage the status of this scheme.</p>
+
+            <div className={styles.statusDisplay}>
+              <span className={styles.statusLabel}>Current Status</span>
+              <span className={`${styles.statusPill} ${isOpen ? styles.pillOpen : isDraft ? styles.pillDraft : styles.pillClosed}`}>
+                {isOpen ? "Open" : isDraft ? "Draft" : "Closed"}
+              </span>
+            </div>
+
+            <div className={styles.actionBtns}>
+              {isDraft && (
+                <button className={styles.publishBtn} onClick={handlePublish} disabled={actionLoading}>
+                  {actionLoading
+                    ? <><Loader2 size={14} strokeWidth={2} className={styles.spin} /> Publishing...</>
+                    : <><CheckCircle2 size={14} strokeWidth={2} /> Publish Scheme</>
+                  }
+                </button>
+              )}
+              {isOpen && (
+                <button className={styles.closeSchemeBtn} onClick={handleClose} disabled={actionLoading}>
+                  {actionLoading
+                    ? <><Loader2 size={14} strokeWidth={2} className={styles.spin} /> Closing...</>
+                    : <><XCircle size={14} strokeWidth={2} /> Close Scheme</>
+                  }
+                </button>
+              )}
+              {isClosed && (
+                <button className={styles.reopenBtn} onClick={handleReopen} disabled={actionLoading}>
+                  {actionLoading
+                    ? <><Loader2 size={14} strokeWidth={2} className={styles.spin} /> Reopening...</>
+                    : <><CheckCircle2 size={14} strokeWidth={2} /> Reopen Scheme</>
+                  }
+                </button>
+              )}
+
+            <div className={styles.actionWarning}>
+              <AlertCircle size={12} color="#f59e0b" strokeWidth={2} />
+              <span>
+                {isDraft
+                  ? "Publishing makes this scheme visible to students and opens applications."
+                  : isOpen
+                  ? "Closing this scheme will stop accepting new applications immediately."
+                  : "Reopening this scheme will allow students to submit new applications."
+                }
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      </div>
+    </div>
+  );
+}
