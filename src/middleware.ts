@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 // ── PROTECTED ROUTES ────────────────────────────────────────────────────────
 // NOTE: /dashboard and /admin are intentionally NOT protected here.
@@ -7,10 +7,10 @@ import { NextResponse } from "next/server";
 // see DashboardLayout and admin layout, which call getMe() and redirect
 // unauthenticated users to /login.
 
-const PROTECTED = [];
-const PUBLIC    = ["/login", "/register", "/forgot-password", "/"];
+const PROTECTED: string[] = [];
+const PUBLIC: string[]    = ["/login", "/register", "/forgot-password", "/"];
 
-export function middleware(request) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtected = PROTECTED.some((route) => pathname.startsWith(route));

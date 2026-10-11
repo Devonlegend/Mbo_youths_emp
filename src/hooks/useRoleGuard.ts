@@ -2,11 +2,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMe } from "@/services/auth";
+import type { AuthUser } from "@/types/user";
 
-export function useRoleGuard(allowedRoles, redirectTo = "/admin") {
+export function useRoleGuard(
+  allowedRoles: readonly string[],
+  redirectTo: string = "/admin"
+) {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     let cancelled = false;

@@ -4,23 +4,22 @@ import { logout } from "@/services";
 
 const TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes, matches backend access token lifetime
 
-export function useInactivityLogout() {
+export function useInactivityLogout(): void {
   const router   = useRouter();
-  const timerRef = useRef(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     function resetTimer() {
-          if (timerRef.current) clearTimeout(timerRef.current);
-          timerRef.current = setTimeout(async () => {
-            try {
-              await logout();
-            } catch {}
-            finally {
-              router.push("/login");
-            }
-          }, TIMEOUT_MS);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(async () => {
+        try {
+          await logout();
+        } catch {}
+        finally {
+          router.push("/login");
         }
-
+      }, TIMEOUT_MS);
+    }
 
     const events = [
       "mousemove",
