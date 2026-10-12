@@ -61,6 +61,7 @@ class ScholarshipSchemeSerializer(serializers.ModelSerializer):
             'application_open_date', 'application_close_date', 'is_active', 'is_published',
             'created_at', 'updated_at'
         ]
+        read_only_fields = ['remaining_slots']
 
     def create(self, validated_data):
         # Assign provider — use the specified one or fall back to default

@@ -39,7 +39,7 @@ interface FormState {
 }
 
 interface ApiError {
-  response?: { data?: { error?: string; message?: string } };
+  response?: { data?: Record<string, unknown> };
 }
 
 // ── CATEGORY CONFIG ───────────────────────────────────────────────────────────
@@ -396,9 +396,17 @@ function toggleProgrammeType(value: ProgrammeType) {
     } catch (error) {
       const err = error as ApiError;
   console.log("Scheme error:", err?.response?.data);
+  const data = err?.response?.data;
+  const fieldErrors = data
+    ? Object.entries(data)
+        .filter(([k]) => k !== "error" && k !== "message")
+        .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(" ") : String(v)}`)
+        .join(" | ")
+    : "";
   setApiError(
-    err?.response?.data?.error ||
-    err?.response?.data?.message ||
+    (data?.error as string) ||
+    (data?.message as string) ||
+    fieldErrors ||
     "Failed to create scheme. Please try again."
   );
 } finally {
