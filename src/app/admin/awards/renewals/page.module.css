@@ -1,0 +1,618 @@
+/* ══════════════════════════════════════════════
+   ADMIN RENEWALS QUEUE — RMHCDT Admin Portal
+   Built from the Send Approvals page (back button, toast, tabs, confirm
+   buttons) and the Cycles page (table inside a card). Theme tokens keep
+   dark mode working.
+══════════════════════════════════════════════ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* ── BACK + HEADER ── */
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.backBtn:hover { background: var(--color-subtle); }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.headerIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--color-primary-light);
+  border: 1.5px solid var(--color-primary-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.03em;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: -2px 0 0;
+}
+
+/* ── LOADING SHELL (role check) ── */
+.centerState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 50vh;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── TOAST ── */
+.toastSuccess,
+.toastError {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.toastSuccess {
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  color: #15803d;
+}
+
+.toastError {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #dc2626;
+}
+
+.toastClose {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+}
+
+.toastClose:hover { opacity: 1; }
+
+/* ── MAIN CARD ── */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab:hover {
+  background: var(--color-subtle);
+  color: var(--color-text-secondary);
+}
+
+.tabActive {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.countText {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ── TABLE ── */
+/* 7 columns: Student | Scheme | Year | CGPA | Level+transcript | Opened | Action */
+.tableRow {
+  display: grid;
+  grid-template-columns: 1.7fr 1.6fr 0.8fr 1.5fr 1.4fr 0.9fr 110px;
+  gap: 12px;
+  padding: 0 20px;
+  align-items: center;
+  min-height: 52px;
+}
+
+.tableHeader {
+  min-height: 42px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.tableHeader span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* one wrapper per row so the review panel can sit directly under it */
+.rowWrap { border-bottom: 1px solid var(--color-border-subtle); }
+.rowWrap:last-of-type { border-bottom: none; }
+
+.tableRowData {
+  min-height: 64px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  transition: background 0.12s;
+}
+
+.tableRowData:hover { background: var(--color-subtle); }
+.tableRowOpen { background: var(--color-primary-light); }
+.tableRowOpen:hover { background: var(--color-primary-light); }
+
+/* ── CELLS ── */
+.cellStack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.studentName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.studentName:hover { color: var(--color-primary); text-decoration: underline; }
+
+.cellMain {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cellSub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* CGPA against the minimum: green = meets it, red = below it */
+.cgpaOk  { font-size: 13px; font-weight: 700; color: var(--color-primary); }
+.cgpaBad { font-size: 13px; font-weight: 700; color: var(--color-error); }
+
+.link {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: underline;
+  width: fit-content;
+}
+
+.tdAction {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reviewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.reviewBtn:hover {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+}
+
+.chevronUp { transform: rotate(180deg); }
+
+/* shown instead of "Review" when the student has not submitted yet */
+.waitPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--color-subtle);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+/* ── REVIEW PANEL (opens under a row) ── */
+.panel {
+  padding: 18px 20px 22px;
+  background: var(--color-subtle);
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panelGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.panelInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.infoLine {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.infoLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.infoValue {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1.45;
+}
+
+.warnText {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+.panelDecide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.noteLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.noteHint {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.noteInput {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-card);
+  outline: none;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  resize: vertical;
+  min-height: 80px;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+
+.noteInput:focus { border-color: var(--color-primary-border); }
+.noteInput:disabled { opacity: 0.7; }
+.noteInputError { border-color: var(--color-error); }
+
+.fieldError {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-error);
+}
+
+/* ── BANNERS ── */
+.warnBanner,
+.errorBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.warnBanner {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #b45309;
+}
+
+.errorBanner {
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  color: var(--color-error);
+}
+
+/* ── DECISION BUTTONS (step 1) ── */
+.actionRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.approveBtn,
+.rejectBtn,
+.withholdBtn {
+  flex: 1;
+  min-width: 110px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.approveBtn {
+  color: #ffffff;
+  background: #166534;
+  border: 1px solid #166534;
+}
+.approveBtn:hover { background: var(--color-primary-hover); }
+
+.rejectBtn {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.rejectBtn:hover { background: rgba(245, 158, 11, 0.2); }
+
+.withholdBtn {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.withholdBtn:hover { background: rgba(239, 68, 68, 0.15); }
+
+/* ── CONFIRM (step 2) ── */
+.confirmBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+}
+
+.confirmText {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.confirmRow { display: flex; gap: 8px; }
+
+.confirmBtn,
+.confirmBtnAmber,
+.confirmBtnRed {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.confirmBtn      { background: #166534; }
+.confirmBtnAmber { background: #b45309; }
+.confirmBtnRed   { background: #dc2626; }
+
+.confirmBtn:hover:not(:disabled),
+.confirmBtnAmber:hover:not(:disabled),
+.confirmBtnRed:hover:not(:disabled) { filter: brightness(0.92); }
+
+.confirmBtn:disabled,
+.confirmBtnAmber:disabled,
+.confirmBtnRed:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.cancelBtn {
+  width: 40px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #dc2626;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.cancelBtn:hover:not(:disabled) { background: rgba(239, 68, 68, 0.15); }
+.cancelBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.spin { animation: spin 0.7s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── SKELETON ── */
+.skeletonCell {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-subtle) 25%, var(--color-border) 50%, var(--color-subtle) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── EMPTY / ERROR ── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 20px;
+  text-align: center;
+}
+
+.emptyIconWrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1.5px solid rgba(74, 222, 128, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.emptyTitle { font-size: 14px; font-weight: 700; color: var(--color-text); margin: 0; }
+.emptySub   { font-size: 13px; color: var(--color-text-muted); margin: 0; max-width: 360px; }
+
+.retryBtn {
+  margin-top: 8px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: background 0.15s;
+}
+
+.retryBtn:hover { background: var(--color-subtle); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) {
+  /* hide the "Opened" column */
+  .tableRow { grid-template-columns: 1.7fr 1.6fr 0.8fr 1.5fr 1.4fr 110px; }
+  .tableRow > :nth-child(6) { display: none; }
+}
+
+@media (max-width: 900px) {
+  .panelGrid { grid-template-columns: 1fr; gap: 16px; }
+}
+
+@media (max-width: 768px) {
+  .title { font-size: 18px; }
+  .cardTop { padding: 14px; }
+  .panel { padding: 14px; }
+
+  /* keep Student, Year, CGPA and the action button */
+  .tableRow { grid-template-columns: 1.4fr 0.7fr 1.2fr 90px; padding: 0 14px; }
+  .tableRow > :nth-child(2),
+  .tableRow > :nth-child(5),
+  .tableRow > :nth-child(6) { display: none; }
+}
