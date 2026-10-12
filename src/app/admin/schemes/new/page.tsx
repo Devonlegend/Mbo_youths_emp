@@ -372,8 +372,8 @@ function toggleProgrammeType(value: ProgrammeType) {
       await createScheme({
         ...form,
         is_recurring:               form.award_type === "scholarship" && form.is_recurring,
-        min_renewal_cgpa:           form.award_type === "scholarship" && form.is_recurring ? form.min_renewal_cgpa : "",
-        applicable_programme_types: form.applicable_programme_types.join(","),
+        min_renewal_cgpa:           form.award_type === "scholarship" && form.is_recurring && form.min_renewal_cgpa ? form.min_renewal_cgpa : null, // null, not "": the backend field is a number and rejects ""
+        applicable_programme_types: form.applicable_programme_types, // sent as a list; the backend accepts a list or a comma-separated string
         award_amount:    parseFloat(form.award_amount),
         total_slots:     parseInt(form.total_slots),
         is_published:    false,

@@ -1,0 +1,521 @@
+/* ══════════════════════════════════════
+   SCHOLARSHIP DETAIL PAGE — RMHCDT Youth Portal
+   Same look as the application form (cards, inputs, upload area) and the
+   My Applications page (status chips, notes). Hard-coded light colours,
+   Sora headings and DM Sans body, like the other /dashboard pages.
+══════════════════════════════════════ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px;
+  width: 100%;
+}
+
+/* ── BACK BUTTON ── */
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.18s;
+  width: fit-content;
+}
+
+.backBtn:hover { color: #15803d; }
+
+/* ── HEADER ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 22px 26px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+
+.headerIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.headerBody { flex: 1; min-width: 0; }
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.catTag {
+  display: inline-flex;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.title {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  margin: 0 0 4px;
+  line-height: 1.2;
+}
+
+.sub {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* AWARD STATUS CHIP */
+.statusTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: 100px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.st_active     { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.st_suspended  { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+.st_graduated  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.st_terminated { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+
+/* ── NOTES (banners). Colour shows how much attention they need ── */
+.note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.55;
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+.note_action  { background: #fffbeb; color: #92400e; border-color: #fde68a; } /* student has something to do / be careful */
+.note_waiting { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; } /* waiting on staff */
+.note_done    { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; } /* all good */
+.note_danger  { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; } /* suspended / error */
+.note_muted   { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+
+.inlineLink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #15803d;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── CARD ── */
+.card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px 26px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cardTitle {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.cardSub {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  color: #64748b;
+  margin: -8px 0 0;
+  line-height: 1.5;
+}
+
+.appealReason {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  white-space: pre-wrap;
+}
+
+/* ── FORM (renewal and appeal) ── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #374151;
+  letter-spacing: 0.01em;
+}
+
+.req { color: #ef4444; margin-left: 2px; }
+
+.input {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  color: #0f172a;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: all 0.18s;
+  appearance: auto;
+}
+
+.input:focus {
+  border-color: #15803d;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.08);
+}
+
+.input::placeholder { color: #cbd5e1; }
+.inputError { border-color: #ef4444 !important; }
+
+.textarea {
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  color: #0f172a;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 110px;
+  transition: all 0.18s;
+}
+
+.textarea:focus {
+  border-color: #15803d;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.08);
+}
+
+.textarea::placeholder { color: #cbd5e1; }
+
+.error {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.hint {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+/* ── FILE UPLOAD (same as the application form) ── */
+.uploadArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+  border: 1.5px dashed #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: center;
+}
+
+.uploadArea:hover {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.uploadError { border-color: #ef4444 !important; }
+
+.uploadTitle {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.uploadHint {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.filePreview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1.5px solid #bbf7d0;
+  border-radius: 10px;
+  background: #f0fdf4;
+}
+
+.fileInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fileName {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileSize { font-size: 11px; color: #64748b; }
+
+.fileRemove {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+/* ── SUBMIT BUTTON ── */
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 28px;
+  border-radius: 10px;
+  border: none;
+  background: #15803d;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(21, 128, 61, 0.25);
+  transition: all 0.2s ease;
+  letter-spacing: -0.01em;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: #166534;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(21, 128, 61, 0.35);
+}
+
+.submitBtn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+.spin { animation: spin 0.7s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── TIMELINE (one row per payment year) ── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tlItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 0.5px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+/* the current year stands out a little */
+.tlCurrent {
+  border-color: #bbf7d0;
+  background: #f8fffb;
+}
+
+.tlIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.tlBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tlHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tlTitle {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.tlStatus {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 100px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.tlMeta {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.tlLine {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.tlLink {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #15803d;
+  text-decoration: underline;
+  width: fit-content;
+}
+
+.tlNote {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 0.5px solid #fde68a;
+  border-radius: 8px;
+  padding: 8px 10px;
+  line-height: 1.5;
+}
+
+/* year status colours (used on both the icon and the small pill) */
+.ist_due       { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.ist_review    { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.ist_approved  { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.ist_paid      { background: #0f172a; color: #ffffff; border-color: #0f172a; }
+.ist_withheld  { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+.ist_cancelled { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+
+/* ── EMPTY / ERROR STATE ── */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 60px 20px;
+  color: #94a3b8;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 14px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .page { padding: 16px 14px; gap: 14px; }
+  .header { flex-direction: column; gap: 12px; padding: 16px 18px; }
+  .card { padding: 18px 16px; }
+  .grid2 { grid-template-columns: 1fr; }
+  .tlItem { padding: 12px; }
+}

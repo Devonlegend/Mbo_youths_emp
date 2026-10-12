@@ -167,8 +167,8 @@ export default function SchemeDetailPage() {
         // Recurring award settings (scholarships only)
         ...(form.award_type === "scholarship" && {
           is_recurring:               form.is_recurring,
-          min_renewal_cgpa:           form.min_renewal_cgpa,
-          applicable_programme_types: form.applicable_programme_types.join(","),
+          min_renewal_cgpa:           form.min_renewal_cgpa || null, // null clears it; "" would be rejected as an invalid number
+          applicable_programme_types: form.applicable_programme_types, // sent as a list
         }),
       });
       setScheme(res.data);
