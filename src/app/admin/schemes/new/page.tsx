@@ -376,6 +376,7 @@ function toggleProgrammeType(value: ProgrammeType) {
         applicable_programme_types: form.applicable_programme_types, // sent as a list; the backend accepts a list or a comma-separated string
         award_amount:    parseFloat(form.award_amount),
         total_slots:     parseInt(form.total_slots),
+        remaining_slots: parseInt(form.total_slots),
         is_published:    false,
         is_active:       true,
         cycle_id:        activeCycle?.id ?? null,

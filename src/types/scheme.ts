@@ -75,6 +75,7 @@ export interface SchemeWriteRequest {
   academic_year: string;
   award_amount: number | string;
   total_slots: number | string;
+  remaining_slots?: number | string;
   stacking_policy?: StackingPolicy;
   application_open_date: ISODate;
   application_close_date: ISODate;
