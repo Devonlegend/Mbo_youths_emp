@@ -1,6 +1,7 @@
 import api from "./axiosInstance";
 import type { Paginated, UUID } from "@/types/common";
 import type {
+  AcademicProfileUpdate,
   BankDetail,
   BankDetailUpdate,
   Student,
@@ -17,6 +18,10 @@ export const getStudentProfile = () =>
 // No PATCH handler exists for /students/me/ on the backend (expected 405).
 export const updateStudentProfile = (body: JsonBody) =>
   api.patch<unknown>("/students/me/", body);
+
+// Saves faculty, programme type, programme duration and entry level.
+export const updateAcademicProfile = (body: AcademicProfileUpdate) =>
+  api.patch<Student>("/students/me/", body);
 
 export const getStudentStats = () =>
   api.get<StudentStats>("/students/stats/");

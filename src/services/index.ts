@@ -4,3 +4,4 @@ export * from "./schemes";
 export * from "./applications";
 export * from "./verification";
 export * from "./notifications";
+export * from "./awards";

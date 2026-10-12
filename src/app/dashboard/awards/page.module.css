@@ -1,0 +1,341 @@
+/* ══════════════════════════════════════
+   MY SCHOLARSHIP PAGE — RMHCDT Youth Portal
+   Same look as the Programmes and My Applications pages:
+   Sora headings, DM Sans body, hard-coded light colours.
+══════════════════════════════════════ */
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+/* ── HEADER ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.headerIcon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.sub {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #64748b;
+  margin: -2px 0 0;
+}
+
+.countPill {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(21, 128, 61, 0.07);
+  border: 1px solid rgba(21, 128, 61, 0.18);
+  color: #15803d;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 6px 13px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── GRID (2 columns: each card carries more text than a programme card) ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* ── CARD ── */
+.card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.09);
+}
+
+.cardTop {
+  padding: 20px 22px 16px;
+  background: #f0fdf4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardIconWrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #15803d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* STATUS CHIP (Active / Suspended / Graduated / Terminated) */
+.statusTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: 100px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.st_active     { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.st_suspended  { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+.st_graduated  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.st_terminated { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+
+/* CARD BODY */
+.cardBody {
+  padding: 0 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.catTag {
+  display: inline-flex;
+  width: fit-content;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.cardTitle {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.cardProvider {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  color: #64748b;
+  margin: -4px 0 0;
+}
+
+/* ── PROGRESS ("Year 2 of 4" + bar) ── */
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.progressHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.progressLabel {
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.progressAmount {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.progressTrack {
+  height: 8px;
+  border-radius: 100px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 100px;
+  background: #15803d;
+  transition: width 0.4s ease;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+/* ── NEXT-STEP NOTE (colour shows how much attention it needs) ── */
+.note {
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.55;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  flex: 1;
+}
+
+.note_action  { background: #fffbeb; color: #92400e; border-color: #fde68a; } /* student has something to do */
+.note_waiting { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; } /* waiting on staff */
+.note_done    { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; } /* all good */
+.note_danger  { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; } /* suspended */
+.note_muted   { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+
+/* ── CARD BUTTONS ── */
+.cardBtn,
+.cardBtnPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  font-family: var(--font-sora), 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 11px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+  letter-spacing: -0.01em;
+}
+
+/* outline: nothing to do, just view */
+.cardBtn {
+  background: #ffffff;
+  color: #374151;
+  border: 1.5px solid #e2e8f0;
+}
+
+.cardBtn:hover {
+  color: #15803d;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+/* solid green: the student has something to do (renew / appeal) */
+.cardBtnPrimary {
+  background: #15803d;
+  color: #ffffff;
+  border: 1.5px solid #15803d;
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.2);
+}
+
+.cardBtnPrimary:hover {
+  background: #166534;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(21, 128, 61, 0.3);
+}
+
+/* ── EMPTY / ERROR STATE ── */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 60px 20px;
+  color: #94a3b8;
+  font-family: var(--font-dm), 'DM Sans', sans-serif;
+  font-size: 14px;
+}
+
+.retryBtn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+  color: #374151;
+}
+
+.browseBtn {
+  margin-top: 4px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #15803d;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .page { padding: 20px 16px; gap: 16px; }
+  .title { font-size: 20px; }
+  .card { border-radius: 16px; }
+  .cardTop { padding: 16px 18px 12px; }
+  .cardBody { padding: 0 18px 18px; }
+  .cardTitle { font-size: 14px; }
+}

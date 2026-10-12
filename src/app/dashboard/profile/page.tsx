@@ -5,19 +5,50 @@ import {
   IdCard, ShieldCheck, Save, Loader2,
   Lock, ChevronRight, User, Mail, Phone,
   MapPin, Calendar, Users, Pencil, X, AlertCircle,
-  Banknote, Building2, Hash, CreditCard, CheckCircle2, type LucideIcon,
+  Banknote, Building2, Hash, CreditCard, CheckCircle2, GraduationCap, Layers, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { getMe, getStudentProfile, updateStudentProfile, getBanks, verifyBank } from "@/services";
-import { getBankDetail, updateBankDetail } from "@/services/students";
+import { getBankDetail, updateBankDetail, updateAcademicProfile } from "@/services/students";
 import { isAxiosError } from "axios";
 import type { Bank, ResolveBankResponse } from "@/types/verification";
+import type { ProgrammeType } from "@/types/student";
+import { PROGRAMME_TYPE_OPTIONS, DURATION_OPTIONS, programmeTypeLabel } from "@/constants/programme";
 
 function getApiError(err: unknown): { error?: string; message?: string } {
   return isAxiosError<{ error?: string; message?: string }>(err) ? err.response?.data ?? {} : {};
 }
 
+
+interface AcademicState {
+  faculty: string;
+  programme_type: ProgrammeType | "";
+  programme_duration_years: string; // "" when not set
+  entry_level: string;              // "" when not set
+}
+
+const EMPTY_ACADEMIC: AcademicState = {
+  faculty: "", programme_type: "", programme_duration_years: "", entry_level: "",
+};
+
+function academicFromProfile(p: {
+  faculty: string;
+  programme_type: ProgrammeType | "";
+  programme_duration_years: number | null;
+  entry_level: number | null;
+}): AcademicState {
+  return {
+    faculty:                  p.faculty || "",
+    programme_type:           p.programme_type || "",
+    programme_duration_years: p.programme_duration_years != null ? String(p.programme_duration_years) : "",
+    entry_level:              p.entry_level != null ? String(p.entry_level) : "",
+  };
+}
+
+function yearsLabel(n: string): string {
+  return n ? `${n} ${n === "1" ? "year" : "years"}` : "";
+}
 
 interface ReadFieldProps {
   icon?: LucideIcon;
@@ -66,6 +97,14 @@ export default function ProfilePage() {
   });
   const [draft, setDraft] = useState({ ...form });
 
+  // Academic information
+  const [academic,        setAcademic]        = useState<AcademicState>(EMPTY_ACADEMIC);
+  const [academicDraft,   setAcademicDraft]   = useState<AcademicState>(EMPTY_ACADEMIC);
+  const [academicEditing, setAcademicEditing] = useState(false);
+  const [academicSaving,  setAcademicSaving]  = useState(false);
+  const [academicSaved,   setAcademicSaved]   = useState(false);
+  const [academicError,   setAcademicError]   = useState("");
+
   const initials =
     (form.first_name?.[0]?.toUpperCase() || "") +
     (form.last_name?.[0]?.toUpperCase()  || "");
@@ -89,6 +128,9 @@ export default function ProfilePage() {
         };
         setForm(loaded);
         setDraft(loaded);
+        const loadedAcademic = academicFromProfile(profile);
+        setAcademic(loadedAcademic);
+        setAcademicDraft(loadedAcademic);
         if (auth.passport) setPhoto(auth.passport);
       } catch {
         setApiError("Failed to load profile. Please refresh.");
@@ -242,6 +284,60 @@ export default function ProfilePage() {
   }
 
 
+  // ── ACADEMIC HANDLERS ─────────────────────────────────────────────────────
+  function handleAcademicEdit() {
+    setAcademicDraft({ ...academic });
+    setAcademicSaved(false);
+    setAcademicError("");
+    setAcademicEditing(true);
+  }
+
+  function handleAcademicCancel() {
+    setAcademicDraft({ ...academic });
+    setAcademicEditing(false);
+    setAcademicError("");
+  }
+
+  function handleAcademicType(value: string) {
+    // A new programme type makes the old duration and entry level invalid.
+    setAcademicDraft((d) => ({
+      ...d,
+      programme_type: value as ProgrammeType | "",
+      programme_duration_years: "",
+      entry_level: "",
+    }));
+    setAcademicError("");
+  }
+
+  async function handleAcademicSave() {
+    setAcademicSaving(true);
+    setAcademicError("");
+    try {
+      const res = await updateAcademicProfile({
+        faculty:                  academicDraft.faculty.trim(),
+        programme_type:           academicDraft.programme_type,
+        programme_duration_years: academicDraft.programme_duration_years ? Number(academicDraft.programme_duration_years) : null,
+        entry_level:
+          academicDraft.programme_type === "undergraduate" && academicDraft.entry_level
+            ? Number(academicDraft.entry_level)
+            : null,
+      });
+      const next = academicFromProfile(res.data);
+      setAcademic(next);
+      setAcademicDraft(next);
+      setAcademicSaved(true);
+      setAcademicEditing(false);
+    } catch (err) {
+      setAcademicError(
+        getApiError(err).error ||
+        getApiError(err).message ||
+        "Failed to save academic details. Please try again."
+      );
+    } finally {
+      setAcademicSaving(false);
+    }
+  }
+
   if (loading) return <LoadingSpinner fullPage />;
 
   return (
@@ -253,6 +349,7 @@ export default function ProfilePage() {
         <div className={styles.heroInner}>
           <div className={styles.avatarWrap}>
             {photo ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={photo}
                 alt="Passport"
@@ -372,6 +469,155 @@ export default function ProfilePage() {
           </div>
 
           <ReadField icon={IdCard} label="National ID (NIN)" value={form.nin_masked} dimmed={editing} />
+        </div>
+      </div>
+
+      {/* ── ACADEMIC INFORMATION ── */}
+      <div className={styles.card}>
+        <div className={styles.cardHead}>
+          <div className={styles.cardHeadIcon}>
+            <GraduationCap size={15} strokeWidth={2.2} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h2 className={styles.cardTitle}>Academic Information</h2>
+            <p className={styles.cardSub}>
+              Used to calculate how many years a multi-year scholarship pays for.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            {academicEditing && (
+              <button type="button" className={styles.btnCancel} onClick={handleAcademicCancel}>
+                <X size={13} strokeWidth={2} /> Cancel
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.btnEdit}
+              onClick={academicEditing ? handleAcademicSave : handleAcademicEdit}
+              disabled={academicSaving}
+            >
+              {academicSaving ? (
+                <><Loader2 size={13} strokeWidth={2} className={styles.spin} /> Saving...</>
+              ) : academicEditing ? (
+                <><Save size={13} strokeWidth={2} /> Save</>
+              ) : (
+                <><Pencil size={13} strokeWidth={2} /> Edit</>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {academicError && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "#fef2f2", border: "1px solid #fecaca",
+            borderRadius: 8, padding: "10px 14px",
+            fontSize: 13, color: "#dc2626", marginBottom: 4,
+          }}>
+            <AlertCircle size={14} strokeWidth={2} /> {academicError}
+          </div>
+        )}
+
+        {academicSaved && !academicEditing && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "#f0fdf4", border: "1px solid #bbf7d0",
+            borderRadius: 8, padding: "10px 14px",
+            fontSize: 13, color: "#15803d", marginBottom: 4,
+          }}>
+            <ShieldCheck size={14} strokeWidth={2} /> Academic details saved
+          </div>
+        )}
+
+        <div className={styles.form}>
+          {academicEditing ? (
+            <>
+              <div className={styles.field}>
+                <label className={styles.label}><Building2 size={12} strokeWidth={2} /> Faculty</label>
+                <input
+                  className={styles.input}
+                  value={academicDraft.faculty}
+                  onChange={(e) => setAcademicDraft((d) => ({ ...d, faculty: e.target.value }))}
+                  placeholder="e.g. Engineering, Medicine"
+                />
+              </div>
+
+              <div className={styles.row2}>
+                <div className={styles.field}>
+                  <label className={styles.label}><GraduationCap size={12} strokeWidth={2} /> Programme Type</label>
+                  <select
+                    className={styles.input}
+                    value={academicDraft.programme_type}
+                    onChange={(e) => handleAcademicType(e.target.value)}
+                  >
+                    <option value="">Select programme type</option>
+                    {PROGRAMME_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.label}><Calendar size={12} strokeWidth={2} /> Programme Duration</label>
+                  <select
+                    className={styles.input}
+                    value={academicDraft.programme_duration_years}
+                    disabled={!academicDraft.programme_type}
+                    onChange={(e) => setAcademicDraft((d) => ({ ...d, programme_duration_years: e.target.value }))}
+                  >
+                    <option value="">
+                      {academicDraft.programme_type ? "Select duration" : "Choose a programme type first"}
+                    </option>
+                    {academicDraft.programme_type &&
+                      DURATION_OPTIONS[academicDraft.programme_type].map((n) => (
+                        <option key={n} value={String(n)}>{yearsLabel(String(n))}</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              {academicDraft.programme_type === "undergraduate" && (
+                <div className={styles.field}>
+                  <label className={styles.label}><Layers size={12} strokeWidth={2} /> Entry Level</label>
+                  <select
+                    className={styles.input}
+                    value={academicDraft.entry_level}
+                    onChange={(e) => setAcademicDraft((d) => ({ ...d, entry_level: e.target.value }))}
+                  >
+                    <option value="">Select entry level</option>
+                    <option value="100">100 level (regular admission)</option>
+                    <option value="200">200 level (direct entry)</option>
+                  </select>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <ReadField icon={Building2} label="Faculty" value={academic.faculty} />
+              <div className={styles.row2}>
+                <ReadField
+                  icon={GraduationCap}
+                  label="Programme Type"
+                  value={academic.programme_type ? programmeTypeLabel(academic.programme_type) : ""}
+                />
+                <ReadField
+                  icon={Calendar}
+                  label="Programme Duration"
+                  value={yearsLabel(academic.programme_duration_years)}
+                />
+              </div>
+              {academic.programme_type === "undergraduate" && (
+                <ReadField
+                  icon={Layers}
+                  label="Entry Level"
+                  value={
+                    academic.entry_level === "200" ? "200 level (direct entry)"
+                    : academic.entry_level ? `${academic.entry_level} level`
+                    : ""
+                  }
+                />
+              )}
+            </>
+          )}
         </div>
       </div>
 

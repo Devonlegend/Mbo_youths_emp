@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, FileText, ClipboardList,
   Files, UserCircle, Bell, BookOpen,
-  HelpCircle, Settings, LogOut, X, type LucideIcon,
+  HelpCircle, Settings, LogOut, X, GraduationCap, type LucideIcon,
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
 import { useState, useEffect } from "react";
@@ -15,6 +15,8 @@ const navMain = [
   { label: "Dashboard",       href: "/dashboard",              icon: LayoutDashboard },
   { label: "Programmes",      href: "/dashboard/programmes",   icon: FileText },
   { label: "My Applications", href: "/dashboard/applications", icon: ClipboardList },
+  // Multi-year scholarships (renewals and appeals)
+  { label: "My Scholarship",  href: "/dashboard/awards",       icon: GraduationCap },
   // { label: "My Documents",    href: "/dashboard/documents",    icon: Files }
 ];
 

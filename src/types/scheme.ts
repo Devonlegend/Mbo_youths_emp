@@ -1,4 +1,5 @@
 import type { DecimalValue, ISODate, ISODateTime, UUID } from "./common";
+import type { ProgrammeType } from "./student";
 
 export type AwardType = "scholarship" | "empowerment" | "grant";
 
@@ -50,6 +51,9 @@ export interface Scheme {
   remaining_slots: number;
   stacking_policy: StackingPolicy;
   eligibility_criteria: EligibilityCriteria;
+  is_recurring: boolean;
+  min_renewal_cgpa: DecimalValue | null; // 5.0 scale
+  applicable_programme_types: ProgrammeType[];
   application_open_date: ISODate;
   application_close_date: ISODate;
   is_active: boolean;
@@ -85,6 +89,10 @@ export interface SchemeWriteRequest {
   allowed_trades?: string[] | string;
   ward_restriction?: string[] | string | null; // "" clears it on update
   max_prior_awards?: number | string;
+  // Recurring award settings (scholarships only)
+  is_recurring?: boolean;
+  min_renewal_cgpa?: number | string | null; // 5.0 scale; "" or null clears it on update
+  applicable_programme_types?: ProgrammeType[] | string; // array or comma-separated
 }
 
 export interface PublishSchemeResponse {

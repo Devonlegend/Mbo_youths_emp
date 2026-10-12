@@ -2,10 +2,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, BookOpen, GraduationCap, Briefcase,
-  Wrench, Banknote, AlertCircle, CheckCircle2,
-  Loader2, Plus, Trash2, GripVertical, ChevronDown,
-  ChevronUp, Settings2, CalendarRange, Building2, type LucideIcon,
+  ArrowLeft, GraduationCap, Briefcase,
+  Banknote, AlertCircle, CheckCircle2,
+  Loader2, Plus, CalendarRange, Building2, type LucideIcon,
 } from "lucide-react";
 
 import { useRoleGuard } from "@/hooks/useRoleGuard";
@@ -13,6 +12,8 @@ import { useRoleGuard } from "@/hooks/useRoleGuard";
 import styles from "./page.module.css";
 import { createScheme, getCycles, getProviders } from "@/services";
 import type { AwardType, StackingPolicy, Cycle, SchemeProvider } from "@/types/scheme";
+import type { ProgrammeType } from "@/types/student";
+import { PROGRAMME_TYPE_OPTIONS } from "@/constants/programme";
 
 interface FormState {
   name: string;
@@ -32,6 +33,9 @@ interface FormState {
   allowed_trades: string;
   ward_restriction: string;
   max_prior_awards: string;
+  is_recurring: boolean;
+  min_renewal_cgpa: string;
+  applicable_programme_types: ProgrammeType[];
 }
 
 interface ApiError {
@@ -259,6 +263,9 @@ export default function NewSchemePage() {
   // ── FORM STATE ────────────────────────────────────────────────────────────
 
 const [form, setForm] = useState<FormState>({
+    is_recurring:               false,
+    min_renewal_cgpa:           "",
+    applicable_programme_types: [],
     name:                   "",
     award_type:             "scholarship",
     description:            "",
@@ -324,7 +331,16 @@ const [form, setForm] = useState<FormState>({
   // }
 
   // ── VALIDATION ────────────────────────────────────────────────────────────
-function validate() {
+function toggleProgrammeType(value: ProgrammeType) {
+    setForm((f) => ({
+      ...f,
+      applicable_programme_types: f.applicable_programme_types.includes(value)
+        ? f.applicable_programme_types.filter((t) => t !== value)
+        : [...f.applicable_programme_types, value],
+    }));
+  }
+
+  function validate() {
     const e: Record<string, string> = {};
     if (!form.name.trim())               e.name = "Scheme name is required.";
     if (!form.provider_id)               e.provider_id = "Provider is required.";
@@ -336,6 +352,10 @@ function validate() {
     if (form.application_open_date && form.application_close_date &&
         form.application_close_date <= form.application_open_date)
       e.application_close_date = "Close date must be after open date.";
+    if (form.award_type === "scholarship" && form.is_recurring && form.min_renewal_cgpa) {
+      const v = Number(form.min_renewal_cgpa);
+      if (Number.isNaN(v) || v < 0 || v > 5) e.min_renewal_cgpa = "Enter a CGPA between 0 and 5.";
+    }
     return e;
   }
 
@@ -349,16 +369,17 @@ function validate() {
 
     try {
       // Step 1 — create the scheme
-      const res = await createScheme({
+      await createScheme({
         ...form,
+        is_recurring:               form.award_type === "scholarship" && form.is_recurring,
+        min_renewal_cgpa:           form.award_type === "scholarship" && form.is_recurring ? form.min_renewal_cgpa : "",
+        applicable_programme_types: form.applicable_programme_types.join(","),
         award_amount:    parseFloat(form.award_amount),
         total_slots:     parseInt(form.total_slots),
         is_published:    false,
         is_active:       true,
         cycle_id:        activeCycle?.id ?? null,
       });
-
-      const schemeId = res.data.id;
 
       // Step 2 — save the form fields
       // DISABLED: the apply form sources its fields from GET /schemes/{id}/fields/,
@@ -618,36 +639,67 @@ if (checking) {
               )}
             </div>
 
-          {/* Form Builder — DISABLED, see comment block near top of file for why */}
-          {/*
-          <div className={styles.card}>
-            <div className={styles.cardHeadRow}>
-              <div>
-                <h2 className={styles.cardTitle}>Application Form Fields</h2>
-                <p className={styles.cardSub}>These fields will appear on the student application form. Pre-filled based on category.</p>
-              </div>
-              <div className={styles.formBuilderIcon}>
-                <Settings2 size={16} color="#15803d" strokeWidth={1.8} />
-              </div>
-            </div>
+          {/* Recurring Award — scholarships only */}
+          {form.award_type === "scholarship" && (
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Recurring Award</h2>
+              <p className={styles.cardSub}>
+                A recurring scholarship pays every academic year until the student graduates,
+                as long as they renew each year with a passing CGPA.
+              </p>
 
-            <div className={styles.fieldsList}>
-              {fields.map((field, index) => (
-                <FieldRow
-                  key={index}
-                  field={field}
-                  index={index}
-                  onChange={handleFieldChange}
-                  onRemove={handleFieldRemove}
-                />
-              ))}
-            </div>
+              <div className={styles.field}>
+                <label className={styles.fieldLabel}>Award Term</label>
+                <select
+                  className={styles.input}
+                  value={form.is_recurring ? "recurring" : "one_time"}
+                  onChange={(e) => setForm((f) => ({ ...f, is_recurring: e.target.value === "recurring" }))}
+                >
+                  <option value="one_time">One-time — paid once</option>
+                  <option value="recurring">Recurring — paid every year</option>
+                </select>
+              </div>
 
-            <button type="button" className={styles.addFieldBtn} onClick={handleAddField}>
-              <Plus size={14} strokeWidth={2} /> Add Field
-            </button>
-          </div>
-          */}
+              {form.is_recurring && (
+                <>
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>
+                      Minimum Renewal CGPA {errors.min_renewal_cgpa && <span className={styles.fieldError}>{errors.min_renewal_cgpa}</span>}
+                    </label>
+                    <input
+                      type="number" step="0.01" min="0" max="5"
+                      className={`${styles.input} ${errors.min_renewal_cgpa ? styles.inputError : ""}`}
+                      placeholder={form.min_cgpa ? `Defaults to ${form.min_cgpa}` : "e.g. 3.00"}
+                      value={form.min_renewal_cgpa}
+                      onChange={(e) => set("min_renewal_cgpa", e.target.value)}
+                    />
+                    <p className={styles.cycleHint}>
+                      On a 5.0 scale. Checked every year. Defaults to the application minimum if left blank.
+                    </p>
+                  </div>
+
+                  <div className={styles.field}>
+                    <label className={styles.fieldLabel}>Programme Types</label>
+                    <div className={styles.checkGroup}>
+                      {PROGRAMME_TYPE_OPTIONS.map((opt) => (
+                        <label key={opt.value} className={styles.checkItem}>
+                          <input
+                            type="checkbox"
+                            checked={form.applicable_programme_types.includes(opt.value)}
+                            onChange={() => toggleProgrammeType(opt.value)}
+                          />
+                          {opt.label}
+                        </label>
+                      ))}
+                    </div>
+                    <p className={styles.cycleHint}>
+                      Which programmes can apply. Leave all unticked for undergraduate only.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
         </div>
 

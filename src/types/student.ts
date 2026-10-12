@@ -1,6 +1,12 @@
 import type { UUID } from "./common";
 import type { Gender } from "./user";
 
+export type ProgrammeType =
+  | "undergraduate"
+  | "hnd"
+  | "postgraduate_taught"
+  | "postgraduate_research";
+
 /** Response of GET /students/me/ and GET /students/<id>/ */
 export interface Student {
   user_id: UUID;
@@ -17,6 +23,10 @@ export interface Student {
   is_verified: boolean;
   active_award: string; // empty string when none
   has_active_award: boolean;
+  faculty: string; // empty string when not set
+  programme_type: ProgrammeType | ""; // empty string when not set
+  programme_duration_years: number | null;
+  entry_level: number | null; // 100 or 200; only for undergraduates
 }
 
 /** Response of GET /students/bank/ and PATCH /students/bank/ */
@@ -50,4 +60,12 @@ export interface VerifyStudentRequest {
 export interface VerifyStudentResponse {
   is_verified: boolean;
   verification_rejection_reason: string;
+}
+
+/** Academic fields a student can save on their profile (all optional). */
+export interface AcademicProfileUpdate {
+  faculty?: string;
+  programme_type?: ProgrammeType | "";
+  programme_duration_years?: number | null;
+  entry_level?: number | null;
 }

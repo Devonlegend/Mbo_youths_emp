@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   ArrowLeft, BookOpen, GraduationCap, Briefcase,
-  Wrench, Banknote, AlertCircle, CheckCircle2,
+  Banknote, AlertCircle, CheckCircle2,
   Loader2, XCircle, Edit2, Save, X,
-  Users, Calendar, DollarSign, Shield, CalendarRange, Building2, type LucideIcon,
+  Users, Calendar, DollarSign, Shield, CalendarRange, Building2, Repeat, type LucideIcon,
 } from "lucide-react";
 import styles from "./page.module.css";
 
@@ -13,8 +13,11 @@ import { useRoleGuard } from "@/hooks/useRoleGuard";
 
 import { getScheme, publishScheme, closeScheme, updateScheme, reopenScheme } from "@/services";
 import type { Scheme, StackingPolicy } from "@/types/scheme";
+import type { ProgrammeType } from "@/types/student";
+import { PROGRAMME_TYPE_OPTIONS, programmeTypeLabel } from "@/constants/programme";
 
-type EditForm = Omit<Scheme, "total_slots" | "stacking_policy"> & {
+type EditForm = Omit<Scheme, "total_slots" | "stacking_policy" | "min_renewal_cgpa"> & {
+  min_renewal_cgpa: string;
   total_slots: number | string;
   stacking_policy: string;
   min_cgpa: number | string;
@@ -59,6 +62,7 @@ function eligibilityFieldsFromScheme(s: Scheme | null) {
     allowed_trades:    Array.isArray(c.allowed_trades)    ? c.allowed_trades.join(", ")    : "",
     ward_restriction:  Array.isArray(c.ward_restriction)  ? c.ward_restriction.join(", ")  : "",
     max_prior_awards:  c.max_prior_awards ?? "",
+    min_renewal_cgpa:  s?.min_renewal_cgpa ?? "",
   };
 }
 
@@ -128,6 +132,15 @@ export default function SchemeDetailPage() {
     setSaveError("");
   }
 
+  function toggleProgrammeType(value: ProgrammeType) {
+    setForm((f) => ({
+      ...f,
+      applicable_programme_types: f.applicable_programme_types.includes(value)
+        ? f.applicable_programme_types.filter((t) => t !== value)
+        : [...f.applicable_programme_types, value],
+    }));
+  }
+
   async function handleSave() {
     setSaving(true);
     setSaveError("");
@@ -150,6 +163,13 @@ export default function SchemeDetailPage() {
         allowed_trades:         form.allowed_trades,
         ward_restriction:       form.ward_restriction,
         max_prior_awards:       form.max_prior_awards,
+
+        // Recurring award settings (scholarships only)
+        ...(form.award_type === "scholarship" && {
+          is_recurring:               form.is_recurring,
+          min_renewal_cgpa:           form.min_renewal_cgpa,
+          applicable_programme_types: form.applicable_programme_types.join(","),
+        }),
       });
       setScheme(res.data);
       setForm({ ...res.data, ...eligibilityFieldsFromScheme(res.data) });
@@ -446,6 +466,59 @@ export default function SchemeDetailPage() {
                   </>
                 )}
 
+                {catKey === "scholarship" && (
+                  <>
+                    <div className={styles.field} style={{ marginTop: 4 }}>
+                      <label className={styles.fieldLabel}>Recurring Award</label>
+                      <p className={styles.cardSub} style={{ margin: 0 }}>
+                        Pays every academic year until graduation, subject to a yearly CGPA check.
+                      </p>
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Award Term</label>
+                      <select
+                        className={styles.input}
+                        value={form.is_recurring ? "recurring" : "one_time"}
+                        onChange={(e) => setForm((f) => ({ ...f, is_recurring: e.target.value === "recurring" }))}
+                      >
+                        <option value="one_time">One-time — paid once</option>
+                        <option value="recurring">Recurring — paid every year</option>
+                      </select>
+                    </div>
+                    {form.is_recurring && (
+                      <>
+                        <div className={styles.field}>
+                          <label className={styles.fieldLabel}>Minimum Renewal CGPA</label>
+                          <input
+                            type="number" step="0.01" min="0" max="5" className={styles.input}
+                            placeholder="Defaults to the application minimum"
+                            value={form.min_renewal_cgpa}
+                            onChange={(e) => setForm((f) => ({ ...f, min_renewal_cgpa: e.target.value }))}
+                          />
+                          <p className={styles.cardSub} style={{ margin: 0 }}>
+                            On a 5.0 scale. Changes only affect future yearly renewals; awards already created keep their original terms.
+                          </p>
+                        </div>
+                        <div className={styles.field}>
+                          <label className={styles.fieldLabel}>Programme Types</label>
+                          <div className={styles.checkGroup}>
+                            {PROGRAMME_TYPE_OPTIONS.map((opt) => (
+                              <label key={opt.value} className={styles.checkItem}>
+                                <input
+                                  type="checkbox"
+                                  checked={form.applicable_programme_types.includes(opt.value)}
+                                  onChange={() => toggleProgrammeType(opt.value)}
+                                />
+                                {opt.label}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+
                 {(catKey === "empowerment" || catKey === "grant") && (
                   <>
                     <div className={styles.twoCol}>
@@ -518,6 +591,22 @@ export default function SchemeDetailPage() {
                   scheme.stacking_policy === "major_only" ? "Major Only" :
                   "Open"
                 } />
+
+                {scheme.is_recurring && (
+                  <>
+                    <InfoRow icon={Repeat} label="Award Term" value={`Recurring · ${formatCurrency(scheme.award_amount)}/yr`} />
+                    <InfoRow icon={Shield} label="Minimum Renewal CGPA" value={scheme.min_renewal_cgpa ?? scheme.eligibility_criteria?.min_cgpa ?? "—"} />
+                    <InfoRow
+                      icon={GraduationCap}
+                      label="Programme Types"
+                      value={
+                        scheme.applicable_programme_types?.length
+                          ? scheme.applicable_programme_types.map(programmeTypeLabel).join(", ")
+                          : "Undergraduate only"
+                      }
+                    />
+                  </>
+                )}
 
                 {/* ── ELIGIBILITY CRITERIA (read-only) ── */}
                 {scheme.eligibility_criteria?.min_cgpa != null && (
