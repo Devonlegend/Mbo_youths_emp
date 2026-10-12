@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, ClipboardList, Users, BookOpen,
   BadgeCheck, ShieldAlert, ScrollText, Settings,
-  LogOut, X, CalendarRange, Building2, type LucideIcon,
+  LogOut, X, CalendarRange, Building2, Repeat, type LucideIcon,
 } from "lucide-react";
 import styles from "./Sidebar.module.css";
 import { logout } from "@/services";
@@ -34,6 +34,8 @@ const navMain: NavEntry[] = [
 ];
 
 const navRecords: NavEntry[] = [
+  // Multi-year scholarships: register, renewals and payments
+  { label: "Awards",            href: "/admin/awards",            icon: Repeat,      roles: ["admin", "superadmin", "verifier"] },
   { label: "Beneficiaries",     href: "/admin/beneficiaries",     icon: BadgeCheck,  roles: ["admin", "superadmin", "verifier"] },
   { label: "Disqualifications", href: "/admin/disqualifications", icon: ShieldAlert, roles: ["admin", "superadmin", "verifier"] },
   { label: "Audit Log",         href: "/admin/audit-log",         icon: ScrollText,  roles: ["superadmin"] },

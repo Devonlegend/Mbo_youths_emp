@@ -1,0 +1,486 @@
+/* ══════════════════════════════════════════════
+   ADMIN AWARDS REGISTER — RMHCDT Admin Portal
+   Built from the Cycles and Beneficiary Register pages: same header,
+   summary strip, table card, skeleton rows and theme tokens (so dark
+   mode keeps working).
+══════════════════════════════════════════════ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* ── HEADER ── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.headerIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--color-primary-light);
+  border: 1.5px solid var(--color-primary-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.03em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 2px 0 0;
+}
+
+/* ── LOADING SHELL (role check) ── */
+.centerState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 50vh;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── SEARCH ── */
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 260px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 10px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  height: 36px;
+  padding: 0 12px 0 34px;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-primary-light);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+}
+
+.searchInput:focus {
+  border-color: var(--color-primary);
+  background: var(--color-card);
+}
+
+.searchInput::placeholder { color: var(--color-text-placeholder); }
+
+/* ── HEADER BUTTONS ── */
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--color-primary);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.25);
+}
+
+.primaryBtn:hover:not(:disabled) { background: var(--color-primary-hover); }
+.primaryBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.secondaryBtn:hover {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+}
+
+/* little number next to "Renewals" */
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 100px;
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.secondaryBtn:hover .countBadge {
+  background: #ffffff;
+  color: var(--color-primary);
+}
+
+.spin { animation: spin 0.7s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── BANNERS ── */
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--color-error);
+}
+
+/* ── SUMMARY STRIP ── */
+.summaryStrip {
+  display: flex;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.summaryItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 14px 12px;
+  border-right: 1px solid var(--color-border-subtle);
+}
+
+.summaryItem:last-child { border-right: none; }
+
+.summaryValue {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.summaryLabel {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ── FILTERS ── */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.select {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-card);
+  outline: none;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  cursor: pointer;
+  min-width: 170px;
+  max-width: 260px;
+}
+
+.select:focus { border-color: var(--color-primary-border); }
+
+.clearBtn {
+  height: 36px;
+  padding: 0 12px;
+  background: none;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.clearBtn:hover { color: var(--color-primary); }
+
+/* ── TABLE CARD ── */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+/* 6 columns: Student | Scheme | Years paid | Annual amount | Started | Status */
+.tableRow {
+  display: grid;
+  grid-template-columns: 2.1fr 2fr 0.9fr 1.2fr 1fr 1fr;
+  gap: 12px;
+  padding: 0 20px;
+  align-items: center;
+  min-height: 52px;
+}
+
+.tableHeader {
+  min-height: 42px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.tableHeader span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tableRowData {
+  border-bottom: 1px solid var(--color-border-subtle);
+  transition: background 0.12s;
+  min-height: 62px;
+  cursor: pointer;
+}
+
+.tableRowData:last-of-type { border-bottom: none; }
+.tableRowData:hover { background: var(--color-subtle); }
+.tableRowData:focus-visible { outline: 2px solid var(--color-primary-border); outline-offset: -2px; }
+
+/* ── CELLS ── */
+.tdStudent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.studentText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.studentName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.studentName:hover { color: var(--color-primary); text-decoration: underline; }
+
+.cellStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.cellMain {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cellSub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yearsCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* amber icon: the award length should be checked by a person */
+.tenureWarn {
+  display: inline-flex;
+  color: #f59e0b;
+  cursor: help;
+}
+
+/* ── STATUS CHIP ── */
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.st_active     { background: var(--color-primary-light); color: var(--color-primary); border-color: var(--color-primary-border); }
+.st_suspended  { background: var(--color-error-bg);      color: var(--color-error);   border-color: var(--color-error-border); }
+.st_graduated  { background: rgba(59, 130, 246, 0.1);    color: #3b82f6;              border-color: rgba(59, 130, 246, 0.25); }
+.st_terminated { background: var(--color-subtle);        color: var(--color-text-muted); border-color: var(--color-border); }
+
+/* ── SKELETON ── */
+.skeletonCell {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--color-subtle) 25%, var(--color-border) 50%, var(--color-subtle) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── EMPTY / ERROR ── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 20px;
+  text-align: center;
+}
+
+.emptyTitle { font-size: 14px; font-weight: 700; color: var(--color-text); margin: 0; }
+.emptySub   { font-size: 13px; color: var(--color-text-muted); margin: 0; max-width: 360px; }
+
+.errorState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 20px;
+  text-align: center;
+}
+
+.retryBtn {
+  margin-top: 4px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: background 0.15s;
+}
+
+.retryBtn:hover { background: var(--color-subtle); }
+
+.tableFooter {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  text-align: right;
+  padding: 4px 0 0;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) {
+  /* hide the "Started" column on narrower screens */
+  .tableRow { grid-template-columns: 2.1fr 2fr 0.9fr 1.2fr 1fr; }
+  .tableRow > :nth-child(5) { display: none; }
+}
+
+@media (max-width: 768px) {
+  .title { font-size: 18px; }
+  .headerRight { width: 100%; }
+  .searchWrap { width: 100%; }
+  .summaryStrip { flex-wrap: wrap; }
+  .summaryItem { flex: 1 1 50%; border-bottom: 1px solid var(--color-border-subtle); padding: 10px 8px; }
+  .summaryValue { font-size: 20px; }
+
+  /* keep Student, Years paid and Status; hide the rest */
+  .tableRow { grid-template-columns: 1.6fr 0.8fr 1fr; padding: 0 14px; }
+  .tableRow > :nth-child(2),
+  .tableRow > :nth-child(4),
+  .tableRow > :nth-child(5) { display: none; }
+}
