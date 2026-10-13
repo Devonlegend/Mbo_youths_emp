@@ -1,0 +1,597 @@
+/* ══════════════════════════════════════════════
+   ADMIN AWARD DETAIL — RMHCDT Admin Portal
+   Layout copied from the Scheme detail page (main column + side column).
+   Decision panels, toast and confirm buttons copied from the Renewals queue
+   and Send Approvals pages. Theme tokens keep dark mode working.
+══════════════════════════════════════════════ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* ── LOADING / ERROR SHELL ── */
+.centerState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 50vh;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.retryBtn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: background 0.15s;
+}
+
+.retryBtn:hover { background: var(--color-subtle); }
+
+/* ── BACK + HEADER ── */
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.backBtn:hover { background: var(--color-subtle); }
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.headerIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--color-primary-light);
+  border: 1.5px solid var(--color-primary-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text);
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.sub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 3px 0 0;
+}
+
+/* AWARD STATUS PILL */
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.st_active     { background: var(--color-primary-light); color: var(--color-primary); border-color: var(--color-primary-border); }
+.st_suspended  { background: var(--color-error-bg);      color: var(--color-error);   border-color: var(--color-error-border); }
+.st_graduated  { background: rgba(59, 130, 246, 0.1);    color: #3b82f6;              border-color: rgba(59, 130, 246, 0.25); }
+.st_terminated { background: var(--color-subtle);        color: var(--color-text-muted); border-color: var(--color-border); }
+
+/* ── TOAST + BANNERS ── */
+.toastSuccess {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  color: #15803d;
+}
+
+.toastClose {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+}
+
+.toastClose:hover { opacity: 1; }
+
+.warnBanner,
+.errorBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.warnBanner {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #b45309;
+}
+
+.errorBanner {
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  color: var(--color-error);
+}
+
+/* ── BODY (main + side column) ── */
+.body {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+}
+
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 76px;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dangerCard { border-color: var(--color-error-border); }
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardTitle {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.cardSub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: -8px 0 0;
+  line-height: 1.5;
+}
+
+.pendingPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.quoteBox {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  background: var(--color-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  white-space: pre-wrap;
+}
+
+.link {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: underline;
+  width: fit-content;
+}
+
+.cellSub {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ── SIDE CARD INFO ── */
+.infoGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.infoLine {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.infoLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.infoValue {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1.45;
+}
+
+/* ── TIMELINE (one row per payment year) ── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tlItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-card);
+}
+
+/* the current year stands out a little */
+.tlCurrent {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-light);
+}
+
+.tlIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.tlBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tlHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tlTitle {
+  font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.tlStatus {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 100px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.tlLine {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.tlNote {
+  font-size: 12.5px;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+  line-height: 1.5;
+}
+
+/* year status colours (used on both the icon and the small pill) */
+.ist_due       { background: rgba(245, 158, 11, 0.1);  color: #b45309; border-color: rgba(245, 158, 11, 0.3); }
+.ist_review    { background: rgba(59, 130, 246, 0.1);  color: #3b82f6; border-color: rgba(59, 130, 246, 0.25); }
+.ist_approved  { background: var(--color-primary-light); color: var(--color-primary); border-color: var(--color-primary-border); }
+.ist_paid      { background: var(--color-text);        color: var(--color-card);     border-color: var(--color-text); }
+.ist_withheld  { background: var(--color-error-bg);    color: var(--color-error);    border-color: var(--color-error-border); }
+.ist_cancelled { background: var(--color-subtle);      color: var(--color-text-muted); border-color: var(--color-border); }
+
+/* ── ACTION PANELS (verify / pay / appeal / admin actions) ── */
+.actionBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.noteLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.noteHint {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.noteInput {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-card);
+  outline: none;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  resize: vertical;
+  min-height: 80px;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+
+.noteInput:focus { border-color: var(--color-primary-border); }
+.noteInput:disabled { opacity: 0.7; }
+.noteInputError { border-color: var(--color-error); }
+
+.input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-card);
+  outline: none;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.input:focus { border-color: var(--color-primary-border); }
+.input:disabled { opacity: 0.7; }
+
+.fieldError {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-error);
+}
+
+/* ── BUTTONS ── */
+.actionRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.primaryBtn,
+.approveBtn,
+.rejectBtn,
+.withholdBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.approveBtn,
+.rejectBtn,
+.withholdBtn {
+  flex: 1;
+  min-width: 100px;
+}
+
+.primaryBtn {
+  width: fit-content;
+  color: #ffffff;
+  background: #166534;
+  border: 1px solid #166534;
+}
+.primaryBtn:hover { background: var(--color-primary-hover); }
+
+.approveBtn {
+  color: #ffffff;
+  background: #166534;
+  border: 1px solid #166534;
+}
+.approveBtn:hover { background: var(--color-primary-hover); }
+
+.rejectBtn {
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.rejectBtn:hover { background: rgba(245, 158, 11, 0.2); }
+
+.withholdBtn {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.withholdBtn:hover { background: rgba(239, 68, 68, 0.15); }
+
+/* ── CONFIRM (the second tap) ── */
+.confirmBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--color-subtle);
+  border: 1px solid var(--color-border);
+}
+
+.confirmText {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.confirmRow { display: flex; gap: 8px; }
+
+.confirmBtn,
+.confirmBtnAmber,
+.confirmBtnRed {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.confirmBtn      { background: #166534; }
+.confirmBtnAmber { background: #b45309; }
+.confirmBtnRed   { background: #dc2626; }
+
+.confirmBtn:hover:not(:disabled),
+.confirmBtnAmber:hover:not(:disabled),
+.confirmBtnRed:hover:not(:disabled) { filter: brightness(0.92); }
+
+.confirmBtn:disabled,
+.confirmBtnAmber:disabled,
+.confirmBtnRed:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.cancelBtn {
+  width: 40px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #dc2626;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.cancelBtn:hover:not(:disabled) { background: rgba(239, 68, 68, 0.15); }
+.cancelBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.spin { animation: spin 0.7s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .body { grid-template-columns: 1fr; }
+  /* summary and admin actions go under the timeline on narrow screens */
+  .rightCol { position: static; }
+}
+
+@media (max-width: 768px) {
+  .pageHeader { flex-direction: column; align-items: flex-start; }
+  .title { font-size: 17px; }
+  .card { padding: 18px 16px; }
+  .tlItem { padding: 12px; }
+}

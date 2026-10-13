@@ -93,11 +93,11 @@
 .searchInput {
   height: 36px;
   padding: 0 12px 0 34px;
-  border: 1px solid var(--color-primary-border);
+  border: 1px solid var(--color-border);
   border-radius: 9px;
   font-size: 13px;
   color: var(--color-text);
-  background: var(--color-primary-light);
+  background: var(--color-subtle);
   outline: none;
   width: 100%;
   transition: border-color 0.15s, background 0.15s;
@@ -105,7 +105,7 @@
 }
 
 .searchInput:focus {
-  border-color: var(--color-primary);
+  border-color: var(--color-primary-border);
   background: var(--color-card);
 }
 
@@ -216,7 +216,7 @@
 
 .summaryValue {
   font-family: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
@@ -237,22 +237,65 @@
   flex-wrap: wrap;
 }
 
-.select {
+/* Filter dropdown (same as Students page) */
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 14px;
+  max-width: 260px;
   border: 1px solid var(--color-border);
   border-radius: 9px;
+  background: var(--color-subtle);
   font-size: 13px;
-  color: var(--color-text);
-  background: var(--color-card);
-  outline: none;
-  font-family: var(--font-inter), 'Inter', sans-serif;
+  font-weight: 500;
+  color: var(--color-text-muted);
   cursor: pointer;
-  min-width: 170px;
-  max-width: 260px;
+  white-space: nowrap;
+  transition: all 0.15s;
 }
 
-.select:focus { border-color: var(--color-primary-border); }
+.filterBtn:hover { border-color: var(--color-primary-border); color: var(--color-primary); }
+.filterBtnActive { border-color: var(--color-primary-border); color: var(--color-primary); background: var(--color-primary-light); }
+
+.filterBtnLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filterDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 280px;
+  z-index: 50;
+  min-width: 180px;
+}
+
+.filterOption {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+
+.filterOption:hover { background: var(--color-subtle); }
+.filterOptionActive { background: var(--color-primary-light); color: var(--color-primary); font-weight: 600; }
 
 .clearBtn {
   height: 36px;
@@ -474,9 +517,10 @@
   .title { font-size: 18px; }
   .headerRight { width: 100%; }
   .searchWrap { width: 100%; }
-  .summaryStrip { flex-wrap: wrap; }
-  .summaryItem { flex: 1 1 50%; border-bottom: 1px solid var(--color-border-subtle); padding: 10px 8px; }
-  .summaryValue { font-size: 20px; }
+  .summaryStrip { flex-wrap: nowrap; }
+  .summaryItem { flex: 1 1 0; min-width: 0; padding: 14px 8px; }
+  .summaryItem:nth-child(4) { display: none; }
+  .summaryItem:nth-child(3) { border-right: none; }
 
   /* keep Student, Years paid and Status; hide the rest */
   .tableRow { grid-template-columns: 1.6fr 0.8fr 1fr; padding: 0 14px; }

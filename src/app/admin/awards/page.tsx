@@ -1,25 +1,10 @@
 "use client";
-// ─────────────────────────────────────────────────────────────────────────────
-// ADMIN: AWARDS REGISTER — every multi-year (recurring) scholarship award.
-//
-// Data:  GET /awards/?page=&status=&scheme=&search=
-//        → { count, next, previous, results[], summary }
-//        `summary` holds the stat-strip numbers. They are computed by the
-//        backend over the WHOLE filtered set, so never add up `results` here
-//        (that would be wrong as soon as there is more than one page).
-// Export: GET /awards/export/?export=csv  (blob download)
-//
-// Who: verifiers and admins can view. (Disburse / suspend / terminate live on
-//      the award detail page and are admin-only.)
-//
-// Style: copies the Cycles and Beneficiaries admin pages (summary strip,
-//        table rows in a card, skeleton rows, theme tokens for dark mode).
-// ─────────────────────────────────────────────────────────────────────────────
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Repeat, Search, AlertCircle, Download, Loader2, ClipboardCheck,
+  Repeat, Search, AlertCircle, Download, Loader2, ClipboardCheck, Shield, Layers,
 } from "lucide-react";
 
 import { useRoleGuard } from "@/hooks/useRoleGuard";
@@ -59,6 +44,57 @@ function SkeletonRow() {
       {[60, 55, 30, 45, 35, 40].map((w, i) => (
         <div key={i} className={styles.skeletonCell} style={{ width: `${w}%` }} />
       ))}
+    </div>
+  );
+}
+
+// ── Filter dropdown (same look as the Students page filter) ──────────────────
+function FilterDropdown({
+  icon, value, onChange, options,
+}: {
+  icon: ReactNode;
+  value: string;
+  onChange: (value: string) => void;
+  options: { key: string; label: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close when clicking outside
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  const current = options.find((o) => o.key === value) ?? options[0];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        type="button"
+        className={`${styles.filterBtn} ${value ? styles.filterBtnActive : ""}`}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {icon}
+        <span className={styles.filterBtnLabel}>{current.label}</span>
+      </button>
+      {open && (
+        <div className={styles.filterDropdown}>
+          {options.map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              className={`${styles.filterOption} ${value === o.key ? styles.filterOptionActive : ""}`}
+              onClick={() => { onChange(o.key); setOpen(false); }}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -266,28 +302,28 @@ export default function AdminAwardsPage() {
 
       {/* FILTERS */}
       <div className={styles.filters}>
-        <select
-          className={styles.select}
+        <FilterDropdown
+          icon={<Shield size={13} strokeWidth={2} />}
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value as AwardStatus | ""); setPage(1); }}
-        >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
-          <option value="graduated">Graduated</option>
-          <option value="terminated">Terminated</option>
-        </select>
+          onChange={(v) => { setStatusFilter(v as AwardStatus | ""); setPage(1); }}
+          options={[
+            { key: "",           label: "All statuses" },
+            { key: "active",     label: "Active" },
+            { key: "suspended",  label: "Suspended" },
+            { key: "graduated",  label: "Graduated" },
+            { key: "terminated", label: "Terminated" },
+          ]}
+        />
 
-        <select
-          className={styles.select}
+        <FilterDropdown
+          icon={<Layers size={13} strokeWidth={2} />}
           value={schemeFilter}
-          onChange={(e) => { setSchemeFilter(e.target.value); setPage(1); }}
-        >
-          <option value="">All recurring schemes</option>
-          {schemes.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
+          onChange={(v) => { setSchemeFilter(v); setPage(1); }}
+          options={[
+            { key: "", label: "All recurring schemes" },
+            ...schemes.map((s) => ({ key: String(s.id), label: s.name })),
+          ]}
+        />
 
         {filtersActive && (
           <button
