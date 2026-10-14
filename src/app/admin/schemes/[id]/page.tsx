@@ -608,6 +608,17 @@ export default function SchemeDetailPage() {
                   </>
                 )}
 
+                {/* Jump to the awards register, filtered to this scheme */}
+                {scheme.is_recurring && (
+                  <button
+                    className={styles.editBtn}
+                    style={{ alignSelf: "flex-start" }}
+                    onClick={() => router.push(`/admin/awards?scheme=${scheme.id}`)}
+                  >
+                    <Repeat size={13} strokeWidth={2} /> View awards
+                  </button>
+                )}
+
                 {/* ── ELIGIBILITY CRITERIA (read-only) ── */}
                 {scheme.eligibility_criteria?.min_cgpa != null && (
                   <InfoRow icon={Shield} label="Minimum CGPA" value={scheme.eligibility_criteria.min_cgpa} />

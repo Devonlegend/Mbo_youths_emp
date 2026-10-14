@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, Suspense, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Repeat, Search, AlertCircle, Download, Loader2, ClipboardCheck, Shield, Layers,
 } from "lucide-react";
@@ -100,8 +100,27 @@ function FilterDropdown({
 }
 
 // ── PAGE ─────────────────────────────────────────────────────────────────────
+// The page is wrapped in <Suspense> because it now reads the address bar
+// (?scheme=...) with useSearchParams. Next.js requires this for pages that
+// can be pre-built, and a missing wrapper breaks `npm run build`.
 export default function AdminAwardsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className={styles.centerState}>
+          <div className={styles.spinner} />
+        </div>
+      }
+    >
+      <AdminAwardsContent />
+    </Suspense>
+  );
+}
+
+function AdminAwardsContent() {
   const router = useRouter();
+  // Lets another page open this register already filtered, e.g. /admin/awards?scheme=<id>
+  const searchParams = useSearchParams();
   const { checking } = useRoleGuard(["admin", "superadmin", "verifier"]);
 
   // Table data (all of it comes from the one GET /awards/ call)
@@ -119,7 +138,7 @@ export default function AdminAwardsPage() {
   // value that is actually sent to the server.
   const [page,         setPage]         = useState(1);
   const [statusFilter, setStatusFilter] = useState<AwardStatus | "">("");
-  const [schemeFilter, setSchemeFilter] = useState("");
+  const [schemeFilter, setSchemeFilter] = useState(searchParams.get("scheme") ?? ""); // starts from ?scheme= when present
   const [searchInput,  setSearchInput]  = useState("");
   const [search,       setSearch]       = useState("");
 
