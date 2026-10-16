@@ -27,6 +27,7 @@ _UPDATE_FIELDS = [
     'bank_name', 'bank_code', 'account_number', 'account_name', 'name_match_passed',
     'institution_name', 'course_of_study', 'current_level', 'cgpa',
     'admission_year', 'matric_number',
+    'faculty', 'programme_type', 'programme_duration_years', 'entry_level',
     'trade_or_skill', 'training_provider', 'training_duration_months', 'prior_experience',
     'business_name', 'business_stage', 'business_description',
     'requested_amount', 'intended_use',

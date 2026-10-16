@@ -255,6 +255,14 @@ class ScholarshipSchemeViewSet(viewsets.ModelViewSet):
                 {'field_name': 'cgpa',             'field_label': 'CGPA',             'field_type': 'number', 'placeholder': 'e.g. 3.50', 'is_required': True, 'section': 'Academic Information', 'options': []},
                 {'field_name': 'admission_year',   'field_label': 'Admission Year',   'field_type': 'number', 'placeholder': 'e.g. 2023', 'is_required': True, 'section': 'Academic Information', 'options': []},
                 {'field_name': 'matric_number',    'field_label': 'Matric Number',    'field_type': 'text',   'placeholder': 'e.g. U2019/1234567', 'is_required': True, 'section': 'Academic Information', 'options': []},
+                # Academic tenure — collected at apply time (profile is read-only).
+                # entry_level is conditionally required for undergraduates only;
+                # marked not-required here so the generic form validator does not
+                # block HND/PG; the submit serializer enforces the condition.
+                {'field_name': 'faculty', 'field_label': 'Faculty', 'field_type': 'text', 'placeholder': 'e.g. Engineering, Medicine', 'is_required': True, 'section': 'Academic Information', 'options': []},
+                {'field_name': 'programme_type', 'field_label': 'Programme Type', 'field_type': 'select', 'placeholder': '', 'is_required': True, 'section': 'Academic Information', 'options': ['undergraduate', 'hnd', 'postgraduate_taught', 'postgraduate_research']},
+                {'field_name': 'programme_duration_years', 'field_label': 'Programme Duration (years)', 'field_type': 'select', 'placeholder': '', 'is_required': True, 'section': 'Academic Information', 'options': ['1', '2', '3', '4', '5', '6']},
+                {'field_name': 'entry_level', 'field_label': 'Entry Level', 'field_type': 'select', 'placeholder': '', 'is_required': False, 'section': 'Academic Information', 'options': ['100', '200']},
                 {'field_name': 'admission_letter', 'field_label': 'Admission Letter', 'field_type': 'file',   'placeholder': 'Upload your admission letter (PDF, JPG or PNG)', 'is_required': True, 'section': 'Documents', 'options': []},
                 {'field_name': 'last_result',      'field_label': 'Latest Result',    'field_type': 'file',   'placeholder': 'Upload your latest result (PDF, JPG or PNG)',  'is_required': True, 'section': 'Documents', 'options': []},
             ]

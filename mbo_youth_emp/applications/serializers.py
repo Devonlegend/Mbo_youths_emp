@@ -52,6 +52,65 @@ class ScholarshipAnswersSerializer(serializers.Serializer):
     admission_year   = serializers.IntegerField()
     matric_number    = serializers.CharField(max_length=50)
 
+    # ── Academic tenure — collected at apply time (not on the profile) ──
+    # The profile card is read-only; the application is the sole entry point.
+    # On submit these are snapshotted onto the application row AND synced back
+    # onto Student (last-submit-wins) so tenure/eligibility keep working.
+    faculty = serializers.CharField(max_length=120)
+    programme_type = serializers.ChoiceField(choices=[
+        'undergraduate', 'hnd', 'postgraduate_taught', 'postgraduate_research',
+    ])
+    programme_duration_years = serializers.IntegerField(min_value=1, max_value=6)
+    # Required for undergraduates (100/200); must be omitted/null otherwise.
+    # Optional at the field level so non-undergrad payloads validate; the
+    # object-level validate() enforces the conditional requirement.
+    entry_level = serializers.IntegerField(
+        required=False, allow_null=True, default=None)
+
+    # Allowed durations per programme type (mirrors frontend DURATION_OPTIONS).
+    _ALLOWED_DURATIONS = {
+        'undergraduate':          (4, 5, 6),
+        'hnd':                    (2,),
+        'postgraduate_taught':    (1, 2),
+        'postgraduate_research':  (2, 3, 4),
+    }
+
+    def validate_faculty(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Faculty is required.")
+        return value.strip()
+
+    def validate(self, data):
+        ptype = data.get('programme_type')
+        duration = data.get('programme_duration_years')
+        entry = data.get('entry_level')
+
+        if ptype and duration is not None:
+            allowed = self._ALLOWED_DURATIONS.get(ptype, ())
+            if duration not in allowed:
+                raise serializers.ValidationError({
+                    'programme_duration_years': (
+                        f"Invalid duration for {ptype}: expected one of "
+                        f"{list(allowed)}."
+                    )
+                })
+
+        if ptype == 'undergraduate':
+            if entry is None:
+                raise serializers.ValidationError({
+                    'entry_level': "Entry level is required for undergraduates."
+                })
+            if entry not in (100, 200):
+                raise serializers.ValidationError({
+                    'entry_level': "Entry level must be 100 or 200."
+                })
+        else:
+            # HND / PG have no entry-level concept — coerce to None so the
+            # snapshot and the Student sync stay clean.
+            data['entry_level'] = None
+
+        return data
+
 
 class EmpowermentAnswersSerializer(serializers.Serializer):
     trade_or_skill           = serializers.CharField(max_length=120)

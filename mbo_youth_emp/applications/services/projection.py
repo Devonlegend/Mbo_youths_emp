@@ -40,6 +40,7 @@ _COPIED_FIELDS = [
     # scholarship
     'institution_name', 'course_of_study', 'current_level', 'cgpa',
     'admission_year', 'matric_number',
+    'faculty', 'programme_type', 'programme_duration_years', 'entry_level',
     # empowerment
     'trade_or_skill', 'training_provider', 'training_duration_months',
     'prior_experience',

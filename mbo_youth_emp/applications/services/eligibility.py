@@ -161,7 +161,9 @@ class EligibilityEngine:
 
         details    = details or {}
         applicable = scheme.applicable_programme_types or [ProgrammeType.UNDERGRADUATE]
-        student_type = student.programme_type
+        # Apply-time source of truth: prefer the submitted programme_type
+        # (synced to Student by creation, but robust if ordering changes).
+        student_type = details.get('programme_type') or student.programme_type
         inferred     = False
 
         if not student_type:

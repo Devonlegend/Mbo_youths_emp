@@ -148,6 +148,12 @@ class Application(models.Model):
     cgpa             = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     admission_year   = models.IntegerField(null=True, blank=True)
     matric_number    = models.CharField(max_length=50, blank=True, default='')
+    # Academic tenure snapshot (scholarship only; blank for other award types).
+    # Collected at apply time; submit also syncs these onto Student.
+    faculty                  = models.CharField(max_length=120, blank=True, default='')
+    programme_type           = models.CharField(max_length=30, blank=True, default='')
+    programme_duration_years = models.IntegerField(null=True, blank=True)
+    entry_level              = models.IntegerField(null=True, blank=True)
 
     trade_or_skill           = models.CharField(max_length=120, blank=True, default='')
     training_provider        = models.CharField(max_length=200, blank=True, default='')

@@ -35,6 +35,30 @@ def decide_status(result):
     return ApplicationStatus.SUBMITTED
 
 
+def _sync_student_academics(student, scheme, answers):
+    """Sync apply-time tenure fields onto Student (last-submit-wins).
+
+    Scholarship-only. Called before eligibility so `_check_programme_type`
+    and later tenure resolution see fresh values. Returns True when the
+    student object was mutated (caller saves inside its transaction).
+    """
+    if scheme.award_type != 'scholarship':
+        return False
+    if not isinstance(answers, dict):
+        return False
+    if 'programme_type' not in answers:
+        return False
+    ptype = answers.get('programme_type') or ''
+    student.faculty = (answers.get('faculty') or '').strip()
+    student.programme_type = ptype
+    student.programme_duration_years = answers.get('programme_duration_years')
+    if ptype == 'undergraduate':
+        student.entry_level = answers.get('entry_level')
+    else:
+        student.entry_level = None
+    return True
+
+
 def create_application(
     *,
     scheme,
@@ -70,6 +94,11 @@ def create_application(
     Returns:
         (application_row, eligibility_result)
     """
+    # Apply-time academics are the source of truth: sync onto Student first
+    # (in-memory) so eligibility sees fresh values; the save happens atomically
+    # with the application row below.
+    _sync_student_academics(student, scheme, answers)
+
     result = EligibilityEngine.run_full_check(student, scheme, answers)
 
     status = status_override if status_override is not None else decide_status(result)
@@ -83,6 +112,14 @@ def create_application(
 
     now = timezone.now()
     with transaction.atomic():
+        # Persist the Student sync with the application — never one without
+        # the other. Only scholarship submits mutate these columns.
+        if scheme.award_type == 'scholarship' and isinstance(answers, dict) \
+                and 'programme_type' in answers:
+            student.save(update_fields=[
+                'faculty', 'programme_type',
+                'programme_duration_years', 'entry_level',
+            ])
         if write_unified():
             application = Application.objects.create(
                 student=student, scheme=scheme, status=status, submission_date=now,

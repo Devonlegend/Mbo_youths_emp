@@ -125,6 +125,12 @@ def _award_fields(award_type):
             'cgpa':             models.DecimalField(max_digits=4, decimal_places=2),
             'admission_year':   models.IntegerField(),
             'matric_number':    models.CharField(max_length=50),
+            # Academic tenure — collected at apply time, snapshotted per
+            # application (profile is read-only; submit syncs back to Student).
+            'faculty':                  models.CharField(max_length=120),
+            'programme_type':           models.CharField(max_length=30),
+            'programme_duration_years': models.IntegerField(),
+            'entry_level':              models.IntegerField(null=True, blank=True),
         }
     if award_type == 'empowerment':
         return {
@@ -153,7 +159,9 @@ def _award_fields(award_type):
 # keys belong to the typed payload vs the shared/bank fields.
 ANSWER_FIELDS = {
     'scholarship': ['institution_name', 'course_of_study', 'current_level',
-                    'cgpa', 'admission_year', 'matric_number'],
+                    'cgpa', 'admission_year', 'matric_number',
+                    'faculty', 'programme_type', 'programme_duration_years',
+                    'entry_level'],
     'empowerment': ['trade_or_skill', 'training_provider',
                     'training_duration_months', 'prior_experience'],
     'grant':       ['business_name', 'business_stage', 'business_description',

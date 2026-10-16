@@ -125,6 +125,8 @@ class WithdrawApplicationTests(TestCase):
             institution_name='X University', course_of_study='CS',
             current_level='300', cgpa=Decimal('3.50'),
             admission_year=2025, matric_number='MAT/001',
+            faculty='Engineering', programme_type='undergraduate',
+            programme_duration_years=4, entry_level=100,
         )
         return scheme, app
 
@@ -196,6 +198,8 @@ class ApprovedListExportTests(APITestCase):
             institution_name='University of Uyo', course_of_study='Computer Science',
             current_level='300', cgpa=Decimal('3.50'),
             admission_year=2023, matric_number='U2023/0001',
+            faculty='Engineering', programme_type='undergraduate',
+            programme_duration_years=4, entry_level=100,
         )
         ApplicationStatusHistory.objects.create(
             application_id=app.id, scheme=self.scheme,
@@ -230,6 +234,8 @@ class ApprovedListExportTests(APITestCase):
             institution_name='Uniuyo', course_of_study='CS',
             current_level='300', cgpa=Decimal('3.00'),
             admission_year=2022, matric_number='U2022/0002',
+            faculty='Engineering', programme_type='undergraduate',
+            programme_duration_years=4, entry_level=100,
         )
         self.client.force_authenticate(user=self.verifier)
         resp = self.client.get(
@@ -291,6 +297,8 @@ class ApprovedListExportTests(APITestCase):
             institution_name='University of Uyo', course_of_study='Computer Science',
             current_level='300', cgpa=Decimal('3.50'),
             admission_year=2023, matric_number='U2023/00' + firstname[0],
+            faculty='Engineering', programme_type='undergraduate',
+            programme_duration_years=4, entry_level=100,
         )
         ApplicationStatusHistory.objects.create(
             application_id=app.id, scheme=self.scheme,
@@ -471,6 +479,8 @@ class EndedRecurringAwardExportTests(APITestCase):
             institution_name='University of Uyo', course_of_study='Computer Science',
             current_level='300', cgpa=Decimal('3.50'),
             admission_year=2023, matric_number='U2023/0001',
+            faculty='Engineering', programme_type='undergraduate',
+            programme_duration_years=4, entry_level=100,
         )
         ApplicationStatusHistory.objects.create(
             application_id=app.id, scheme=self.scheme,
@@ -565,6 +575,8 @@ class ApplicationProjectionTests(TestCase):
             institution_name='University of Uyo', course_of_study='Computer Science',
             current_level='300', cgpa=Decimal('3.50'),
             admission_year=2023, matric_number='U2023/0001',
+            faculty='Engineering', programme_type='undergraduate',
+            programme_duration_years=4, entry_level=100,
         )
         ApplicationStatusHistory.objects.create(
             application_id=app.id, scheme=self.scheme, from_status='',
@@ -715,6 +727,10 @@ class WriteUnifiedTests(TestCase):
                 'course_of_study': 'Computer Science',
                 'current_level': '300', 'cgpa': Decimal('3.50'),
                 'admission_year': 2023, 'matric_number': 'U2023/0001',
+                'faculty': 'Engineering',
+                'programme_type': 'undergraduate',
+                'programme_duration_years': 4,
+                'entry_level': 100,
             },
             bank={'bank_name': 'UBA', 'bank_code': '033',
                   'account_number': '1010101010', 'account_name': 'Ada Okon',
@@ -777,3 +793,86 @@ class WriteUnifiedTests(TestCase):
 
 
 
+
+
+class ApplyTimeAcademicsTests(TestCase):
+    """Academics are collected at apply time; submit syncs back to Student."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from schemes.models import SchemeProvider
+        cls.provider = SchemeProvider.objects.create(
+            name='Academics Provider', provider_type='lga')
+        student_user = User.objects.create_user(
+            email='academics@test.com', firstname='Ada', lastname='Okon',
+            phone_number='08030000099', role='student',
+            nin_hash='nin-hash-academics-001', password='x', passport='')
+        cls.student = Student.attach_to_user(student_user, ward='efiat')
+        cls.scheme = ScholarshipScheme.objects.create(
+            provider=cls.provider, name='Academics Scheme',
+            description='x', academic_year='2026/2027', award_amount=100000,
+            total_slots=5, remaining_slots=5,
+            application_open_date=timezone.now().date() - timedelta(days=1),
+            application_close_date=timezone.now().date() + timedelta(days=30),
+        )
+        cls.model = build_application_table(cls.scheme)
+
+    def _answers(self, **over):
+        from decimal import Decimal as D
+        base = {
+            'institution_name': 'University of Uyo',
+            'course_of_study': 'Computer Science',
+            'current_level': '200', 'cgpa': D('3.50'),
+            'admission_year': 2024, 'matric_number': 'U2024/0001',
+            'faculty': 'Engineering',
+            'programme_type': 'undergraduate',
+            'programme_duration_years': 5,
+            'entry_level': 200,
+        }
+        base.update(over)
+        return base
+
+    def test_serializer_rejects_bad_duration(self):
+        from applications.serializers import ScholarshipAnswersSerializer
+        s = ScholarshipAnswersSerializer(data=self._answers(
+            programme_duration_years=2))  # undergrad allows 4/5/6 only
+        self.assertFalse(s.is_valid())
+        self.assertIn('programme_duration_years', s.errors)
+
+    def test_serializer_requires_entry_level_for_undergrad(self):
+        from applications.serializers import ScholarshipAnswersSerializer
+        data = self._answers()
+        del data['entry_level']
+        s = ScholarshipAnswersSerializer(data=data)
+        self.assertFalse(s.is_valid())
+        self.assertIn('entry_level', s.errors)
+
+    def test_serializer_coerces_entry_level_for_hnd(self):
+        from applications.serializers import ScholarshipAnswersSerializer
+        s = ScholarshipAnswersSerializer(data=self._answers(
+            programme_type='hnd', programme_duration_years=2,
+            entry_level=100))
+        self.assertTrue(s.is_valid(), s.errors)
+        self.assertIsNone(s.validated_data['entry_level'])
+
+    def test_create_syncs_student_and_snapshots_row(self):
+        from applications.services.creation import create_application
+        app, _result = create_application(
+            scheme=self.scheme, student=self.student,
+            answers=self._answers(),
+            bank={'bank_name': 'UBA', 'bank_code': '033',
+                  'account_number': '1010101010', 'account_name': 'Ada Okon',
+                  'name_match_passed': True},
+            self_declaration_received_support=False,
+            self_declaration_details=[], attestation_agreed=True,
+            documents={}, changed_by=self.student.user,
+        )
+        self.student.refresh_from_db()
+        self.assertEqual(self.student.faculty, 'Engineering')
+        self.assertEqual(self.student.programme_type, 'undergraduate')
+        self.assertEqual(self.student.programme_duration_years, 5)
+        self.assertEqual(self.student.entry_level, 200)
+        row = self.model.objects.get(id=app.id)
+        self.assertEqual(row.faculty, 'Engineering')
+        self.assertEqual(row.programme_duration_years, 5)
+        self.assertEqual(row.entry_level, 200)
